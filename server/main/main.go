@@ -9,6 +9,7 @@ import (
 func main() {
 	http.HandleFunc("/home", handler.ListRooms)
 	http.HandleFunc("/room", handler.CreateRoom)
+	http.HandleFunc("/room/", handler.LoadRoom)
 
 	err := http.ListenAndServe(":8080", nil)
 	if err != nil {

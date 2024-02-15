@@ -22,7 +22,7 @@ export default (
         <Route path="/" element={<Index/>}/>
         <Route element={<HomeLayout/>}>
             <Route path={HOME.PATH} element={<Home/>}/>
-            <Route path="/room/*" element={<Room/>}/>
+            <Route path="/room/:roomId" element={<Room/>}/>
         </Route>
         <Route path="*" element={<NotFound/>}/>
     </Routes>

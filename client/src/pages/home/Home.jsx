@@ -10,10 +10,10 @@ const PlayID = genShortUUID()
 
 function Home() {
     const navigate = useNavigate()
-    const jumpToPath = path => {
-        navigate(path, {
+    const jumpToPath = roomId => {
+        navigate(`/room/${roomId}`, {
             replace: true,
-            state: { path }
+            state: { roomId }
         })
     }
 
@@ -39,7 +39,7 @@ function Home() {
             socket.send("list rooms")
         }
         socket.onmessage = function(event) {
-            console.log("Received message from server:", JSON.parse(event.data))
+            // console.log("Received message from server:", JSON.parse(event.data))
             if (event.data !== null) {
                 setRoomList(JSON.parse(event.data))
             }
@@ -56,7 +56,7 @@ function Home() {
         player.name = playerName
         let roomInfo = {
             id: genShortUUID(),
-            name: roomName,
+            name: "房间-" + roomName,
             password: roomPassword,
             state: "等待开始",
             players: [player],
@@ -66,7 +66,7 @@ function Home() {
             console.log("WebSocket for creating room connected!")
             socket.send(JSON.stringify(roomInfo))
         }
-        jumpToPath("/room/" + roomInfo.id)
+        jumpToPath(roomInfo.id)
     }
     
     const [roomName, setRoomName] = useState(genShortUUID())

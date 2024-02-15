@@ -28,15 +28,15 @@ type Room struct {
 }
 
 type Player struct {
-	ID            string
-	Name          string
-	Character     string
-	CharacterType string
+	ID            string `json:"id"`
+	Name          string `json:"name"`
+	Character     string `json:"character"`
+	CharacterType string `json:"characterType"`
 	Status
 }
 
 type Status struct {
-	Dead  bool
-	Evil  bool
-	Demon bool
+	Dead  bool `json:"dead"`
+	Evil  bool `json:"evil"`
+	Demon bool `json:"demon"`
 }
