@@ -1,0 +1,26 @@
+#ROOM {
+    position: relative;
+    background-color: #357e5b;
+    color: white;
+    width: 100vw;
+    max-width: 1200px;
+    min-width: 375px;
+    height: fit-content;
+    min-height: 100vh;
+
+    display: flex;
+    flex-direction: column;
+    justify-content: space-evenly;
+    align-items: center;
+}
+
+.layout {
+    width: 100%;
+}
+
+.btn {
+    width: 300px;
+    height: 60px;
+    font-size: 24px;
+    margin: 24px 0;
+}

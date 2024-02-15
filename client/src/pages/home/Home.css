@@ -49,3 +49,31 @@
     font-size: 20px !important;
 }
 
+.small-btn {
+    width: 80px;
+    height: 40px;
+    font-size: 20px;
+}
+
+.ant-drawer-content-wrapper {
+    height: 80% !important;
+}
+
+.ant-drawer-title {
+    font-size: 24px !important;
+}
+
+.input {
+    font-size: 24px;
+    width: 90vw;
+}
+
+p {
+    margin-bottom: 5px;
+}
+
+.list-item-desc {
+    display: flex;
+
+}
+
