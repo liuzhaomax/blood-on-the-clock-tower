@@ -6,7 +6,7 @@ import { Button, Flex, List, Avatar, Drawer, Space, Input } from "antd"
 import {genShortUUID} from "../../utils/uuid"
 import { useNavigate } from "react-router-dom"
 
-const PlayID = genShortUUID()
+window.PlayerID = genShortUUID()
 
 function Home() {
     const navigate = useNavigate()
@@ -52,7 +52,7 @@ function Home() {
     const onClick = () => {
         onClose()
         let player = {}
-        player.id = PlayID
+        player.id = window.PlayerID
         player.name = playerName
         let roomInfo = {
             id: genShortUUID(),
@@ -99,13 +99,16 @@ function Home() {
                             <List.Item className="list-item">
                                 <List.Item.Meta
                                     avatar={<Avatar src={`https://api.dicebear.com/7.x/miniavs/svg?seed=${index}`} />}
-                                    title={<a href="https://ant.design">{item.name}</a>}
+                                    title={
+                                        <span>{item.name}</span>
+                                    }
                                     description={
                                         <Flex horizontal="true" gap="middle" justify="space-between" align="center" wrap="wrap">
                                             <span>当前房间人数：{item.players === null ? 0 : item.players.length}</span>
                                             <span>{item.state}</span>
                                         </Flex>
                                     }
+                                    onClick={jumpToPath.bind(this, item.id)}
                                 />
                             </List.Item>
                         )}

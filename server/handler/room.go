@@ -79,7 +79,7 @@ func LoadRoom(w http.ResponseWriter, r *http.Request) {
 	}
 	defer conn.Close()
 
-	messageType, _, err := conn.ReadMessage()
+	messageType, p, err := conn.ReadMessage()
 	if err != nil {
 		if websocket.IsCloseError(err, websocket.CloseGoingAway) {
 			log.Println("Client disconnected:", err)
@@ -100,15 +100,36 @@ func LoadRoom(w http.ResponseWriter, r *http.Request) {
 	roomId := parts[2]
 	room := findRoom(roomId)
 
-	marshalRoom, err := json.Marshal(room)
-	if err != nil {
-		log.Println("JSON marshal error:", err)
-		return
-	}
+	if string(p) == "quit_room" {
+		playerId := parts[3]
+		var newPlayers []model.Player
+		for _, player := range room.Players {
+			if playerId != player.Id {
+				newPlayers = append(newPlayers, player)
+			}
+		}
+		room.Players = newPlayers
+		if len(room.Players) == 0 {
+			cfg := model.GetConfig()
+			var newRooms []model.Room
+			for _, roomm := range cfg.Rooms {
+				if roomId != roomm.Id {
+					newRooms = append(newRooms, roomm)
+				}
+			}
+			cfg.Rooms = newRooms
+		}
+	} else {
+		marshalRoom, err := json.Marshal(room)
+		if err != nil {
+			log.Println("JSON marshal error:", err)
+			return
+		}
 
-	if err = conn.WriteMessage(messageType, marshalRoom); err != nil {
-		log.Println("Write error:", err)
-		return
+		if err = conn.WriteMessage(messageType, marshalRoom); err != nil {
+			log.Println("Write error:", err)
+			return
+		}
 	}
 }
 

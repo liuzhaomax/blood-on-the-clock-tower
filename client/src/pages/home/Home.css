@@ -39,11 +39,6 @@
     height: 50px !important;
 }
 
-.ant-list-item-meta-title a {
-    color: white !important;
-    font-size: 24px;
-}
-
 .ant-list-item-meta-description {
     color: white !important;
     font-size: 20px !important;
@@ -59,8 +54,9 @@
     height: 80% !important;
 }
 
-.ant-drawer-title {
+.list-item span {
     font-size: 24px !important;
+    color: white;
 }
 
 .input {
@@ -70,10 +66,5 @@
 
 p {
     margin-bottom: 5px;
-}
-
-.list-item-desc {
-    display: flex;
-
 }
 
