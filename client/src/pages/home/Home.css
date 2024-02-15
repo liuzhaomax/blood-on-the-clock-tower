@@ -1,0 +1,51 @@
+#HOME {
+    position: relative;
+    background-color: #357e5b;
+    color: white;
+    width: 100vw;
+    max-width: 1200px;
+    min-width: 375px;
+    height: fit-content;
+    min-height: 100vh;
+
+    display: flex;
+    flex-direction: column;
+    justify-content: space-evenly;
+    align-items: center;
+}
+
+.layout {
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-evenly;
+    align-items: center;
+}
+
+.btn {
+    width: 300px;
+    height: 60px;
+    font-size: 24px;
+    margin: 24px 0;
+}
+
+.list-item {
+    width: 80%;
+    margin: 0 auto;
+}
+
+.ant-list-item-meta-avatar, .ant-list-item-meta-avatar img, .ant-list-item-meta-avatar span {
+    width: 50px !important;
+    height: 50px !important;
+}
+
+.ant-list-item-meta-title a {
+    color: white !important;
+    font-size: 24px;
+}
+
+.ant-list-item-meta-description {
+    color: white !important;
+    font-size: 20px !important;
+}
+

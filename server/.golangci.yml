@@ -1,0 +1,49 @@
+service:
+  golangci-lint-version: 1.52.2
+
+linters:
+  disable-all: true
+  enable:
+    - asciicheck
+    - bodyclose
+#    - depguard # internal中不含外部依赖 go mod vendor
+    - dogsled
+    - errcheck
+#    - gochecknoinits # 不适用init
+    - gocognit
+    - goconst
+    - gocritic
+    - gocyclo
+#    - godot # 注释结尾句号
+#    - gofmt # gofmt规范
+#    - goimports # 引用未使用
+    - gomodguard
+    - goprintffuncname
+    - gosimple
+    - govet
+    - ineffassign
+    - misspell
+    - nakedret
+    - nolintlint
+    - prealloc
+    - rowserrcheck
+    - staticcheck
+    - typecheck
+    - unconvert
+#    - unparam # 传入永远是一样的，无需使用变量
+    - whitespace
+
+#issues:
+#  exclude-rules:
+#    - path: internal
+#      text: "123"
+#      linters:
+#        - scopelint
+
+run:
+  concurrency: 16
+  tests: true
+  skip-dirs:
+    - vendor
+    - main
+  allow-parallel-runners: true

@@ -1,0 +1,7 @@
+# github.com/gorilla/websocket v1.5.1
+## explicit; go 1.20
+github.com/gorilla/websocket
+# golang.org/x/net v0.17.0
+## explicit; go 1.17
+golang.org/x/net/internal/socks
+golang.org/x/net/proxy

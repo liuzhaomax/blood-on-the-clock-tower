@@ -1,0 +1,197 @@
+//#!groovy
+
+pipeline {
+    // 指定集群节点
+    agent any
+    // 选项
+    options {
+        timestamps() //日志会有时间
+        skipDefaultCheckout() //删除隐式checkout scm语句
+        disableConcurrentBuilds() //禁止并行
+        timeout(time: 1, unit: "HOURS") //流水线超市设置1h
+    }
+    // 声明全局变量
+    environment {
+        harborUsername = "admin"
+        harborPassword = "Harbor12345"
+        harborAddress = "10.192.0.5:9002"
+        harborRepo = "maxblog-fe-main"
+    }
+    // 流水线阶段
+    stages {
+        // 拉取代码
+        stage("Checkout") {
+            steps {
+                echo "--------------------- Checkout Start ---------------------"
+                timeout(time: 5, unit: "MINUTES"){
+                    checkout poll: false, scm: [$class: 'GitSCM', branches: [[name: '**']], extensions: [], userRemoteConfigs: [[url: 'https://github.com/liuzhaomax/maxblog-fe-main.git']]]
+                }
+                echo "--------------------- Checkout End ---------------------"
+            }
+        }
+//         // 本地github会用到
+//         stage("Update GitHub") {
+//             steps {
+//                 echo "--------------------- Update GitHub Start ---------------------"
+//                 script {
+//                     timeout(time: 20, unit: "MINUTES"){
+//                         sh """
+//                             git config --get remote.origin.url
+//                             tr -d
+//                             git rev-parse HEAD
+//                         """
+//                         // setting commit status
+//                     }
+//                 }
+//                 echo "--------------------- Update GitHub End ---------------------"
+//             }
+//         }
+        // 检查App版本
+        stage("Version") {
+            steps {
+                echo "--------------------- Version Start ---------------------"
+                echo "Branch: ${JOB_NAME}"
+                script {
+                    npmHome = tool "npm"
+                    sh """
+                        export NODE_HOME=${npmHome}
+                        export PATH=\$NODE_HOME/bin:\$PATH
+                        rm -rf server/build
+                        rm -rf node_modules package-lock.json server/node_modules server/package-lock.json
+                        ${npmHome}/bin/npm cache clear --force
+                        ${npmHome}/bin/node --version
+                        ${npmHome}/bin/npm --version
+                    """
+                    // grep "^go .*" go.mod
+                    // cut -f 2 -d
+                    // echo go version
+                    // 赋予go env sh 执行权限
+                    // run set go env sh
+                }
+                echo "--------------------- Version End ---------------------"
+            }
+        }
+        // 语法格式检查
+        stage("Lint") {
+            steps {
+                echo "--------------------- Lint Start ---------------------"
+                script {
+                    timeout(time: 15, unit: "MINUTES"){
+                        npmHome = tool "npm"
+                        sh """
+                            export NODE_HOME=${npmHome}
+                            export PATH=\$NODE_HOME/bin:\$PATH
+                            ${npmHome}/bin/npm config set registry https://registry.npmjs.org/
+                            # ${npmHome}/bin/npm install --max_old_space_size=1024
+                            ${npmHome}/bin/npm i --package-lock-only --max_old_space_size=1024
+                            ${npmHome}/bin/npm ci --max_old_space_size=1024
+                            # ${npmHome}/bin/npm install -g npm@6
+                            # ${npmHome}/bin/npm install --save-dev eslint
+                            # ${npmHome}/bin/npm install --save-dev eslint-plugin-react
+                            ${npmHome}/bin/npm run lint
+                            # ${npmHome}/bin/npm run lint:report
+                        """
+                    }
+                }
+                echo "--------------------- Lint End ---------------------"
+            }
+        }
+        // 构建
+        stage("Build") {
+            steps {
+                echo "--------------------- Build Start ---------------------"
+                script {
+                    timeout(time: 15, unit: "MINUTES"){
+                        npmHome = tool "npm" //变量名npm在jenkins全局工具里定义的
+                        sh """
+                            export NODE_HOME=${npmHome}
+                            export PATH=\$NODE_HOME/bin:\$PATH
+                            ${npmHome}/bin/npm config set registry https://registry.npmjs.org/
+                            ${npmHome}/bin/npm run build
+                            cd server
+                            ${npmHome}/bin/npm install --max_old_space_size=1024
+                            cd ..
+                        """
+                        // tar -zcvf 文件名.tar.gz 打包
+                        // cd到别处
+                        // rm -rf *
+                        // mv 路径/server/文件名.tar.gz ./
+                        // tar -zxvf 文件名.tar.gz -C ./  解压缩
+                        // rm -rf 文件名.tar.gz  删除压缩包
+                    }
+                }
+                echo "--------------------- Build End ---------------------"
+            }
+        }
+        // 静态代码分析SonarQube
+        stage("SonarQube") {
+            steps {
+                echo "--------------------- SonarQube Start ---------------------"
+                script {
+                    timeout(time: 20, unit: "MINUTES"){
+                        sonarScannerHome = tool "sonar-scanner"
+                        String[] strArr
+                        strArr = JOB_NAME.split("/")
+                        String projectKey = strArr[0]
+                        for (int i = 1; i < strArr.size(); i++) {
+                            projectKey = projectKey + "_" + strArr[i]
+                        }
+                        strArr = projectKey.split("%2F")
+                        projectKey = strArr[0]
+                        for (int i = 1; i < strArr.size(); i++) {
+                            projectKey = projectKey + "_" + strArr[i]
+                        }
+                        sh """
+                            ${npmHome}/bin/npm run test -- --coverage a
+                            ${sonarScannerHome}/bin/sonar-scanner \
+                                -Dsonar.sources=./ \
+                                -Dsonar.projectname=${JOB_NAME} \
+                                -Dsonar.login=5cbe5f7092c9a2b8168d610c8efee1dfe938a6ad \
+                                -Dsonar.projectKey=${projectKey} \
+                                -Dsonar.nodejs.executable=/usr/bin/node \
+                                -Dsonar.inclusions=src/pages/**/*.js \
+                                -Dsonar.coverage.exclusions=node_modules/**/*,coverage/**/*,server/build/**/*,config/**/*,scripts/**/*,public/**/*,src/config/**/*,src/app/**/*,src/assets/**/*,src/env/**/*,src/layouts/**/*,src/index.js,src/state/**/*,*/**/*.test.js \
+                                -Dsonar.qualitygate.wait=true \
+                                -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
+                                # -Dsonar.testExecutionReportPaths=coverage/clover.xml
+                        """
+                    }
+                }
+                echo "--------------------- SonarQube End ---------------------"
+            }
+        }
+//         // 安全漏洞扫描Checkmarx
+//         stage("Checkmarx") {
+//             steps {
+//                 echo "--------------------- Checkmarx Start ---------------------"
+//                 echo "Checkmarx - SUCCESS"
+//                 echo "--------------------- Checkmarx End ---------------------"
+//             }
+//         }
+    }
+    // 构建后的操作
+    post {
+        always {
+            echo "********************************************************************"
+            echo "********************************************************************"
+            echo "****************** CI Pipeline about to Finish *********************"
+            echo "********************************************************************"
+            echo "********************************************************************"
+        }
+
+        success {
+            echo "SUCCESS 成功"
+            sh "docker image prune -f"
+        }
+
+        failure {
+            echo "FAILURE 失败"
+            error "错误发生，流水线失败"
+        }
+
+        aborted {
+            echo "ABORTED 取消"
+            error "流水线被终止"
+        }
+    }
+}

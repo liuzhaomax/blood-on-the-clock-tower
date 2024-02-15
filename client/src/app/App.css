@@ -1,0 +1,41 @@
+.App {
+    overflow-x: hidden;
+    width: 100%;
+}
+
+::-webkit-scrollbar {
+    width : 15px;
+    height: 1px;
+}
+
+::-webkit-scrollbar-thumb {
+    border-radius: 10px;
+    box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.2);
+    background: #535353;
+}
+
+::-webkit-scrollbar-track {
+    border-radius: 10px;
+    box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.2);
+    background: #ededed;
+}
+
+.NotFound {
+    height: 60vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-evenly;
+    align-items: center;
+}
+
+.NotFound #nf-cound-down {
+    color: red;
+    font-weight: bold;
+    font-size: 20px;
+}
+
+#app-locker-container {
+    width: 100vw;
+    height: 100px;
+    text-align: center;
+}

@@ -1,6 +1,10 @@
 .idea
 .vscode
 
+client/node_modules/
+
+sever/go.sum
+
 # Logs
 logs
 *.log
