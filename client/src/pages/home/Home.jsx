@@ -39,7 +39,7 @@ function Home() {
             socket.send("list rooms")
         }
         socket.onmessage = function(event) {
-            // console.log("Received message from server:", JSON.parse(event.data))
+            console.log("Received message from server:", JSON.parse(event.data))
             if (event.data !== null) {
                 setRoomList(JSON.parse(event.data))
             }
@@ -53,6 +53,7 @@ function Home() {
         onClose()
         let player = {}
         player.id = PlayID
+        player.name = playerName
         let roomInfo = {
             id: genShortUUID(),
             name: roomName,
@@ -70,6 +71,7 @@ function Home() {
     
     const [roomName, setRoomName] = useState(genShortUUID())
     const [roomPassword, setRoomPassword] = useState("")
+    const [playerName, setPlayerName] = useState("好人1号")
 
     const handleRoomNameChange = (event) => {
         setRoomName(event.target.value)
@@ -77,6 +79,10 @@ function Home() {
 
     const handleRoomPasswordChange = (event) => {
         setRoomPassword(event.target.value)
+    }
+
+    const handlePlayerNameChange = (event) => {
+        setPlayerName(event.target.value)
     }
     
     return (
@@ -129,6 +135,10 @@ function Home() {
                     <p>房间密码</p>
                     <Space.Compact>
                         <Input className="input" value={roomPassword} onChange={handleRoomPasswordChange} />
+                    </Space.Compact>
+                    <p>我的名字</p>
+                    <Space.Compact>
+                        <Input className="input" value={playerName} onChange={handlePlayerNameChange} />
                     </Space.Compact>
                 </Space>
             </Drawer>
