@@ -8,14 +8,14 @@
 ----功能 API
 --------输入输出
 
-+ 房间列表页
-    + 加载房间列表 /home
++ 房间列表页 √
+    + 加载房间列表 /home 
         + 输入：无
         + 输出：roomList
-    + 创建房间 /createRoom
+    + 创建房间 /createRoom 
         + 输入：无
         + 输出：无
-    + 加入房间 /joinRoom/:roomId/:roomPassword
+    + 加入房间 /joinRoom/:roomId/:roomPassword 
         + 输入：player{id, name}
         + 输出：无
 + 等待开始页
@@ -34,7 +34,7 @@
     + 返回房间
 + 其他功能
     + 房间15分钟没有开始，自动销毁
-    + 等待开始时，断线重连
+    + 等待开始时，断线重连 √
     + 游戏中时，断线重连
 
 

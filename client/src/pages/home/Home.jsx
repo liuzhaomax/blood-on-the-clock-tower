@@ -139,7 +139,7 @@ function Home() {
                                     }
                                     description={
                                         <Flex horizontal="true" gap="middle" justify="space-between" align="center" wrap="wrap">
-                                            <span>当前房间人数：{item.players === null ? 0 : item.players.length}</span>
+                                            <span>当前人数：{item.players === null ? 0 : item.players.length}</span>
                                             <span>{item.state}</span>
                                         </Flex>
                                     }

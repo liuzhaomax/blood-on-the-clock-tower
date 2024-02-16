@@ -116,3 +116,7 @@ func QuitRoom(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 }
+
+func Start(w http.ResponseWriter, r *http.Request) {
+
+}

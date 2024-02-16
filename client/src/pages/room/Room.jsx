@@ -1,6 +1,6 @@
 import React, {useEffect, useState} from "react"
 import "./Room.css"
-import { Flex, Button } from "antd"
+import {Button, Flex} from "antd"
 import {useNavigate, useParams} from "react-router-dom"
 
 function Room() {
@@ -56,9 +56,14 @@ function Room() {
         }
     }
 
-    const place = Array.from({ length: 14 }, (_, index) => (
-        <Button key={index} className="btn place">空位{index+1<10?"0"+(index+1):index+1}</Button>
-    ))
+    const sit = () => {
+        return Array.from({length: 14}, (_, index) => {
+            if (room && room.players[index]) {
+                return <Button key={index} className="btn place">{room.players[index].name}</Button>
+            }
+            return <Button key={index} className="btn place">空位</Button>
+        })
+    }
 
     return (
         <div id="ROOM" className="ROOM">
@@ -68,7 +73,7 @@ function Room() {
             </Flex>
             <p>我的名字：<span>{room === null ? "" : findPlayerName()}</span></p>
             <Flex className="layout" horizontal="true" gap="middle" justify="space-evenly" align="center" wrap="wrap">
-                {place}
+                {sit()}
             </Flex>
         </div>
     )
