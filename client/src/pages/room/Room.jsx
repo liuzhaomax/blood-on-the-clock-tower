@@ -72,7 +72,7 @@ function Room() {
             replace: true,
             state: `/game/${roomId}`,
         })
-        const socket = new WebSocket(`ws://localhost:8080/quitRoom/${roomId}`)
+        const socket = new WebSocket(`ws://localhost:8080/startGame/${roomId}`)
         socket.onopen = function() {
             let playerInfo = {
                 id: localStorage.getItem("PlayerID")
