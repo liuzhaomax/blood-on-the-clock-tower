@@ -11,7 +11,7 @@ function Room() {
     useEffect(() => {
         setTimeout(() => {
             loadRoom()
-        }, 500)
+        }, 100)
     }, [room])
 
     const loadRoom = () => {

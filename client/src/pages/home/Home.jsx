@@ -42,7 +42,7 @@ function Home() {
     useEffect(() => {
         setTimeout(() => {
             loadRoomList()
-        }, 500)
+        }, 100)
     })
 
     const loadRoomList = () => {
