@@ -36,6 +36,23 @@
     height: fit-content;
 }
 
+.mini-btn {
+    font-size: 20px;
+    width: fit-content;
+    height: 40px;
+    border-radius: 50px;
+    line-height: 10px;
+}
+
+.skill-btn {
+    width: 50px;
+    height: 50px;
+}
+
+.mini-btn span {
+    padding: 0 !important;
+}
+
 .place {
     padding: 10px;
     margin: 0;
@@ -49,15 +66,28 @@
     height: fit-content;
 }
 
+.info-wrap {
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    align-items: center;
+    flex: 1;
+    overflow-y: auto;
+}
+
 .my-info {
     display: flex;
     flex-direction: column;
     flex-wrap: wrap;
     justify-content: space-evenly;
+    align-items: flex-start;
+
+    height: 96px;
 }
 
 .east span, .my-info span {
-    font-size: 18px;
+    font-size: 16px;
     padding: 4px 4px 4px 10px;
 }
 
@@ -67,7 +97,6 @@
     flex-wrap: wrap;
     justify-content: flex-start;
     align-items: center;
-    overflow-y: auto;
 }
 
 .east {
@@ -82,6 +111,13 @@
     overflow-y: auto;
 }
 
+.south {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
 /* 竖屏样式 */
 @media screen and (orientation: portrait) {
     .west {
@@ -90,8 +126,8 @@
     .east {
         width: 100%;
     }
-    .my-info {
-        align-items: center;
+    .south {
+        justify-content: space-evenly;
     }
     #GAMING {
         height: fit-content;
@@ -101,21 +137,21 @@
 /* 横屏样式 */
 @media screen and (orientation: landscape) {
     .west {
-        width: 29%;
-        height: 97.5vh;
+        width: 50%;
+        height: 97vh;
     }
     .east {
         flex: 1;
-        height: 97.5vh;
+        height: 97vh;
+    }
+    .south {
+        justify-content: flex-start;
     }
     #GAMING {
         height: 100vh;
         overflow-y: auto;
     }
-    .my-info {
-        align-items: flex-start;
-    }
-    .my-info span, .title, .south span {
+    .title, .south span {
         font-size: 18px;
     }
 }

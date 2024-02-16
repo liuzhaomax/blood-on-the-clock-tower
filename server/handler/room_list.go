@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/gorilla/websocket"
 	"github.com/liuzhaomax/blood-on-the-clock-tower/server/model"
 	"log"
@@ -68,6 +69,16 @@ func CreateRoom(w http.ResponseWriter, r *http.Request) {
 	defer cfgMutex.Unlock()
 	cfg := model.GetConfig()
 	room.State = "等待开始"
+
+	// TODO 删除测试代码
+	var player model.Player
+	for i := 0; i < 13; i++ {
+		player.Id = fmt.Sprintf("111111111%d", i)
+		player.Name = fmt.Sprintf("机器人%d", i)
+		room.Players = append(room.Players, player)
+	}
+	// TODO 测试代码结尾
+
 	cfg.Rooms = append(cfg.Rooms, room)
 
 	if err = conn.WriteMessage(messageType, p); err != nil {
