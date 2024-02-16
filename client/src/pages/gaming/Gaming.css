@@ -22,6 +22,10 @@
     font-size: 20px;
 }
 
+.ant-switch-checked {
+    background-color: cornflowerblue !important;
+}
+
 .title {
     font-size: 20px;
     margin-top: 10px;
@@ -98,6 +102,7 @@
 @media screen and (orientation: landscape) {
     .west {
         width: 29%;
+        height: 97.5vh;
     }
     .east {
         flex: 1;

@@ -1,5 +1,5 @@
 import {useNavigate, useParams} from "react-router-dom"
-import {Button} from "antd"
+import {Button, Switch} from "antd"
 import React, {useEffect, useState} from "react"
 import "./Gaming.css"
 
@@ -58,11 +58,23 @@ function Gaming() {
         })
     }
 
+    const checkSwitch = () => {
+        let myInfo = document.getElementsByClassName("keyword")
+        for (let i = 0; i < myInfo.length; i++) {
+            if (myInfo[i].style.visibility === "hidden") {
+                myInfo[i].style.visibility = "visible"
+            } else {
+                myInfo[i].style.visibility = "hidden"
+            }
+        }
+    }
+
     return (
         <div id="GAMING" className="GAMING">
             <div className="layout west">
                 <div className="layout north">
                     <Button className="btn small-btn" onClick={returnRoom}>返回房间</Button>
+                    <Switch className="switch" checkedChildren="显示身份" unCheckedChildren="隐藏身份" defaultChecked onChange={checkSwitch} />
                 </div>
                 <div className="layout my-info">
                     <span>我的名字：<span>{game === null ? "" : findPlayer().name}</span></span>
