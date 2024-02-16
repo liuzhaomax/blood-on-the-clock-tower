@@ -5,26 +5,35 @@
     width: 100vw;
     max-width: 1200px;
     min-width: 375px;
-    height: fit-content;
     min-height: 100vh;
 
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
+    flex-wrap: wrap;
     justify-content: space-evenly;
-    align-items: center;
+    align-items: flex-start;
 }
 
 .layout {
     width: 100%;
-    display: flex;
-    flex-direction: row;
-    justify-content: space-evenly;
-    align-items: center;
+}
+
+.btn, .south span {
+    font-size: 20px;
+}
+
+.title {
+    font-size: 20px;
+    margin-top: 10px;
+}
+
+.small-btn {
+    width: fit-content;
+    height: fit-content;
 }
 
 .place {
     padding: 10px;
-    font-size: 22px;
     margin: 0;
 }
 
@@ -34,4 +43,74 @@
     border: 0;
     width: fit-content;
     height: fit-content;
+}
+
+.my-info {
+    display: flex;
+    flex-direction: column;
+    flex-wrap: wrap;
+    justify-content: space-evenly;
+}
+
+.east span, .my-info span {
+    font-size: 18px;
+    padding: 4px 4px 4px 10px;
+}
+
+.west {
+    display: flex;
+    flex-direction: column;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    align-items: center;
+    overflow-y: auto;
+}
+
+.east {
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    align-items: flex-start;
+
+    padding: 5px 0;
+    height: 100%;
+    overflow-y: auto;
+}
+
+/* 竖屏样式 */
+@media screen and (orientation: portrait) {
+    .west {
+        width: 100%;
+    }
+    .east {
+        width: 100%;
+    }
+    .my-info {
+        align-items: center;
+    }
+    #GAMING {
+        height: fit-content;
+    }
+}
+
+/* 横屏样式 */
+@media screen and (orientation: landscape) {
+    .west {
+        width: 29%;
+    }
+    .east {
+        flex: 1;
+        height: 97.5vh;
+    }
+    #GAMING {
+        height: 100vh;
+        overflow-y: auto;
+    }
+    .my-info {
+        align-items: flex-start;
+    }
+    .my-info span, .title, .south span {
+        font-size: 18px;
+    }
 }

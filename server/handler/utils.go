@@ -3,6 +3,7 @@ package handler
 import (
 	"github.com/gorilla/websocket"
 	"github.com/liuzhaomax/blood-on-the-clock-tower/server/model"
+	"math/rand"
 	"net/http"
 	"sync"
 )
@@ -25,4 +26,22 @@ func findRoom(roomId string) (*model.Room, int) {
 		}
 	}
 	return nil, 0
+}
+
+func Shuffle(strSlice []string) []string {
+	// 使用 Fisher-Yates 算法随机排列切片中的元素
+	for i := len(strSlice) - 1; i > 0; i-- {
+		j := rand.Intn(i + 1)
+		strSlice[i], strSlice[j] = strSlice[j], strSlice[i]
+	}
+	return strSlice
+}
+
+func Contains(s []string, e string) bool {
+	for _, v := range s {
+		if v == e {
+			return true
+		}
+	}
+	return false
 }

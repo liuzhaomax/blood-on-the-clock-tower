@@ -32,3 +32,44 @@ const (
 
 	Imp = "小恶魔"
 )
+
+var TownsfolkPool = []string{
+	Washerwoman,
+	Librarian,
+	Investigator,
+	Chef,
+	Empath,
+	FortuneTeller,
+	Undertaker,
+	Monk,
+	Ravenkeeper,
+	Virgin,
+	Slayer,
+	Soldier,
+	Mayor,
+}
+
+var OutsidersPool = []string{
+	Butler,
+	Drunk,
+	Recluse,
+	Saint,
+}
+
+var MinionsPool = []string{
+	Poisoner,
+	Spy,
+	ScarletWoman,
+	Baron,
+}
+
+var DemonsPool = []string{
+	Imp,
+}
+
+var CharacterPool = map[string][]string{
+	Townsfolk: TownsfolkPool,
+	Outsiders: OutsidersPool,
+	Minions:   MinionsPool,
+	Demons:    DemonsPool,
+}

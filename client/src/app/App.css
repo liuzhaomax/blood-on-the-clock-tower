@@ -1,6 +1,7 @@
 .App {
     overflow-x: hidden;
     width: 100%;
+    overflow-y: hidden;
 }
 
 ::-webkit-scrollbar {
