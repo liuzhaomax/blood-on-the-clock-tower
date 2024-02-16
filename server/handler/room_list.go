@@ -27,6 +27,8 @@ func ListRooms(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	cfgMutex.Lock()
+	defer cfgMutex.Unlock()
 	cfg := model.GetConfig()
 	marshalRooms, err := json.Marshal(cfg.Rooms)
 	if err != nil {
@@ -62,6 +64,8 @@ func CreateRoom(w http.ResponseWriter, r *http.Request) {
 	if err = json.Unmarshal(p, &room); err != nil {
 		log.Println("JSON unmarshal error:", err)
 	}
+	cfgMutex.Lock()
+	defer cfgMutex.Unlock()
 	cfg := model.GetConfig()
 	cfg.Rooms = append(cfg.Rooms, room)
 
@@ -71,7 +75,7 @@ func CreateRoom(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func LoadRoom(w http.ResponseWriter, r *http.Request) {
+func JoinRoom(w http.ResponseWriter, r *http.Request) {
 	conn, err := Upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println("Upgrade error:", err)
@@ -89,56 +93,43 @@ func LoadRoom(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 解析 URL，获取路径
+	// 获取URL参数
 	path := r.URL.Path
-	// 提取 roomId 参数
 	parts := strings.Split(path, "/")
-	if len(parts) < 3 {
+	if len(parts) < 4 {
 		http.NotFound(w, r)
 		return
 	}
-	roomId := parts[2]
-	room := findRoom(roomId)
+	roomIdIn := parts[2]
+	roomPasswordIn := parts[3]
 
-	if string(p) == "quit_room" {
-		playerId := parts[3]
-		var newPlayers []model.Player
-		for _, player := range room.Players {
-			if playerId != player.Id {
-				newPlayers = append(newPlayers, player)
-			}
-		}
-		room.Players = newPlayers
-		if len(room.Players) == 0 {
-			cfg := model.GetConfig()
-			var newRooms []model.Room
-			for _, roomm := range cfg.Rooms {
-				if roomId != roomm.Id {
-					newRooms = append(newRooms, roomm)
-				}
-			}
-			cfg.Rooms = newRooms
-		}
-	} else {
-		marshalRoom, err := json.Marshal(room)
-		if err != nil {
-			log.Println("JSON marshal error:", err)
-			return
-		}
-
-		if err = conn.WriteMessage(messageType, marshalRoom); err != nil {
-			log.Println("Write error:", err)
-			return
-		}
-	}
-}
-
-func findRoom(roomId string) *model.Room {
+	cfgMutex.Lock()
+	defer cfgMutex.Unlock()
 	cfg := model.GetConfig()
-	for _, room := range cfg.Rooms {
-		if room.Id == roomId {
-			return &room
+	room, roomIndex := findRoom(roomIdIn)
+
+	if room.Password != roomPasswordIn {
+		return
+	}
+
+	var playerIn model.Player
+	if err = json.Unmarshal(p, &playerIn); err != nil {
+		log.Println("JSON unmarshal error:", err)
+	}
+
+	var hasCurrentPlayer bool
+	for _, player := range room.Players {
+		if playerIn.Id == player.Id {
+			hasCurrentPlayer = true
+			break
 		}
 	}
-	return nil
+	if !hasCurrentPlayer {
+		cfg.Rooms[roomIndex].Players = append(room.Players, playerIn)
+	}
+
+	if err = conn.WriteMessage(messageType, p); err != nil {
+		log.Println("Write error:", err)
+		return
+	}
 }

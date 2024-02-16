@@ -7,9 +7,15 @@ import (
 )
 
 func main() {
+	// 房间列表页
 	http.HandleFunc("/home", handler.ListRooms)
-	http.HandleFunc("/room", handler.CreateRoom)
+	http.HandleFunc("/createRoom", handler.CreateRoom)
+	http.HandleFunc("/joinRoom/", handler.JoinRoom)
+	// 等待开始页
 	http.HandleFunc("/room/", handler.LoadRoom)
+	http.HandleFunc("/quitRoom/", handler.QuitRoom)
+	// http.HandleFunc("/start/", handler.Start)
+	// 游戏中页
 
 	err := http.ListenAndServe(":8080", nil)
 	if err != nil {

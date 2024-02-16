@@ -50,6 +50,10 @@
     font-size: 20px;
 }
 
+.ant-drawer-title {
+    font-size: 24px !important;
+}
+
 .ant-drawer-content-wrapper {
     height: 80% !important;
 }

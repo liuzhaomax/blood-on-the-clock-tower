@@ -10,14 +10,14 @@ function Room() {
 
     useEffect(() => {
         setTimeout(() => {
-            loadPlayerList()
+            loadRoom()
         }, 500)
     }, [room])
 
-    const loadPlayerList = () => {
-        const socket = new WebSocket("ws://localhost:8080/room/" + roomId)
+    const loadRoom = () => {
+        const socket = new WebSocket(`ws://localhost:8080/room/${roomId}`)
         socket.onopen = function() {
-            socket.send("list_players")
+            socket.send("load_room")
         }
         socket.onmessage = function(event) {
             // console.log("Received message from server:", JSON.parse(event.data))
@@ -31,7 +31,7 @@ function Room() {
     const findPlayerName = () => {
         if (room !== null) {
             for (let i = 0; i < room.players.length; i++) {
-                if (room.players[i].id === window.PlayerID) {
+                if (room.players[i].id ===  localStorage.getItem("PlayerID")) {
                     return room.players[i].name
                 }
             }
@@ -44,13 +44,12 @@ function Room() {
             replace: true,
             state: "/home",
         })
-        const socket = new WebSocket(`ws://localhost:8080/room/${roomId}/${window.PlayerID}`)
+        const socket = new WebSocket(`ws://localhost:8080/quitRoom/${roomId}`)
         socket.onopen = function() {
-            socket.send("quit_room")
-        }
-        socket.onmessage = function(event) {
-            // console.log("Received message from server:", JSON.parse(event.data))
-            setRoom(JSON.parse(event.data))
+            let playerInfo = {
+                id: localStorage.getItem("PlayerID")
+            }
+            socket.send(JSON.stringify(playerInfo))
         }
         socket.onerror = function(error) {
             console.error("WebSocket error:", error)
@@ -58,7 +57,7 @@ function Room() {
     }
 
     const place = Array.from({ length: 14 }, (_, index) => (
-        <Button key={index} className="btn place">空位</Button>
+        <Button key={index} className="btn place">空位{index+1<10?"0"+(index+1):index+1}</Button>
     ))
 
     return (

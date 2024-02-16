@@ -1,10 +1,5 @@
 package handler
 
-import (
-	"github.com/gorilla/websocket"
-	"net/http"
-)
-
 const (
 	Townsfolk = "村民"
 	Outsiders = "外来者"
@@ -37,11 +32,3 @@ const (
 
 	Imp = "小恶魔"
 )
-
-var Upgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
-	CheckOrigin: func(r *http.Request) bool {
-		return true
-	},
-}

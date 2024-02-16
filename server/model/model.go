@@ -32,7 +32,7 @@ type Player struct {
 	Name          string `json:"name"`
 	Character     string `json:"character"`
 	CharacterType string `json:"characterType"`
-	Status
+	Status        Status `json:"status"`
 }
 
 type Status struct {

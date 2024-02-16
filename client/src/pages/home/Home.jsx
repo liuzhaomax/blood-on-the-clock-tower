@@ -6,7 +6,9 @@ import { Button, Flex, List, Avatar, Drawer, Space, Input } from "antd"
 import {genShortUUID} from "../../utils/uuid"
 import { useNavigate } from "react-router-dom"
 
-window.PlayerID = genShortUUID()
+if (localStorage.getItem("PlayerID") === "") {
+    localStorage.setItem("PlayerID", genShortUUID())
+}
 
 function Home() {
     const navigate = useNavigate()
@@ -23,6 +25,16 @@ function Home() {
     }
     const onClose = () => {
         setOpen(false)
+    }
+
+    const [open1, setOpen1] = useState(false)
+    const showDrawer1 = room => {
+        setOpen1(true)
+        setRoomId(room.id)
+        setRoomName(room.name)
+    }
+    const onClose1 = () => {
+        setOpen1(false)
     }
 
     const [roomList, setRoomList] = useState(null)
@@ -49,19 +61,19 @@ function Home() {
         }
     }
 
-    const onClick = () => {
+    const createRoom = () => {
         onClose()
         let player = {}
-        player.id = window.PlayerID
+        player.id = localStorage.getItem("PlayerID")
         player.name = playerName
         let roomInfo = {
-            id: genShortUUID(),
-            name: "房间-" + roomName,
+            id: roomId,
+            name: roomName,
             password: roomPassword,
             state: "等待开始",
             players: [player],
         }
-        const socket = new WebSocket("ws://localhost:8080/room")
+        const socket = new WebSocket("ws://localhost:8080/createRoom")
         socket.onopen = function() {
             console.log("WebSocket for creating room connected!")
             socket.send(JSON.stringify(roomInfo))
@@ -69,7 +81,8 @@ function Home() {
         jumpToPath(roomInfo.id)
     }
     
-    const [roomName, setRoomName] = useState(genShortUUID())
+    const [roomId, setRoomId] = useState(genShortUUID())
+    const [roomName, setRoomName] = useState("房间-" + genShortUUID())
     const [roomPassword, setRoomPassword] = useState("")
     const [playerName, setPlayerName] = useState("好人1号")
 
@@ -83,6 +96,28 @@ function Home() {
 
     const handlePlayerNameChange = (event) => {
         setPlayerName(event.target.value)
+    }
+
+    const joinRoom = () => {
+        onClose1()
+        let playerInfo = {
+            id: localStorage.getItem("PlayerID"),
+            name: playerName,
+        }
+        const socket = new WebSocket(`ws://localhost:8080/joinRoom/${roomId}/${roomPassword}`)
+        socket.onopen = function() {
+            socket.send(JSON.stringify(playerInfo))
+        }
+        socket.onmessage = function(event) {
+            // console.log("Received message from server:", JSON.parse(event.data))
+            if (event.data !== null) {
+                jumpToPath(roomId)
+            }
+            // TODO else 弹出密码错误对话框
+        }
+        socket.onerror = function(error) {
+            console.error("WebSocket error:", error)
+        }
     }
     
     return (
@@ -108,7 +143,7 @@ function Home() {
                                             <span>{item.state}</span>
                                         </Flex>
                                     }
-                                    onClick={jumpToPath.bind(this, item.id)}
+                                    onClick={showDrawer1.bind(this, item)}
                                 />
                             </List.Item>
                         )}
@@ -126,7 +161,35 @@ function Home() {
                 extra={
                     <Space>
                         <Button className="small-btn" onClick={onClose}>取消</Button>
-                        <Button className="small-btn" type="primary" onClick={onClick}>确定</Button>
+                        <Button className="small-btn" type="primary" onClick={createRoom}>确定</Button>
+                    </Space>
+                }
+            >
+                <Space direction="vertical" size="middle">
+                    <p>房间名称</p>
+                    <Space.Compact>
+                        <Input className="input" value={roomName} onChange={handleRoomNameChange} />
+                    </Space.Compact>
+                    <p>房间密码</p>
+                    <Space.Compact>
+                        <Input className="input" value={roomPassword} onChange={handleRoomPasswordChange} />
+                    </Space.Compact>
+                    <p>我的名字</p>
+                    <Space.Compact>
+                        <Input className="input" value={playerName} onChange={handlePlayerNameChange} />
+                    </Space.Compact>
+                </Space>
+            </Drawer>
+            <Drawer
+                title="加入房间"
+                placement={"bottom"}
+                width={500}
+                onClose={onClose1}
+                open={open1}
+                extra={
+                    <Space>
+                        <Button className="small-btn" onClick={onClose1}>取消</Button>
+                        <Button className="small-btn" type="primary" onClick={joinRoom}>确定</Button>
                     </Space>
                 }
             >
