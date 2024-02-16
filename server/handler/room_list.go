@@ -67,6 +67,7 @@ func CreateRoom(w http.ResponseWriter, r *http.Request) {
 	cfgMutex.Lock()
 	defer cfgMutex.Unlock()
 	cfg := model.GetConfig()
+	room.State = "等待开始"
 	cfg.Rooms = append(cfg.Rooms, room)
 
 	if err = conn.WriteMessage(messageType, p); err != nil {
@@ -118,8 +119,9 @@ func JoinRoom(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var hasCurrentPlayer bool
-	for _, player := range room.Players {
+	for i, player := range room.Players {
 		if playerIn.Id == player.Id {
+			cfg.Rooms[roomIndex].Players[i].Name = playerIn.Name
 			hasCurrentPlayer = true
 			break
 		}

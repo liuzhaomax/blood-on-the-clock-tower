@@ -14,8 +14,12 @@ func main() {
 	// 等待开始页
 	http.HandleFunc("/room/", handler.LoadRoom)
 	http.HandleFunc("/quitRoom/", handler.QuitRoom)
-	http.HandleFunc("/start/", handler.Start)
+	http.HandleFunc("/startGame/", handler.StartGame)
 	// 游戏中页
+	http.HandleFunc("/game/", handler.LoadGame)
+	// 游戏结算页
+	// http.HandleFunc("/checkout/", handler.LoadCheckout)
+	// http.HandleFunc("/return/", handler.ReturnRoom)
 
 	err := http.ListenAndServe(":8080", nil)
 	if err != nil {

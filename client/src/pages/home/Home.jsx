@@ -12,7 +12,7 @@ if (localStorage.getItem("PlayerID") === "") {
 
 function Home() {
     const navigate = useNavigate()
-    const jumpToPath = roomId => {
+    const jump = roomId => {
         navigate(`/room/${roomId}`, {
             replace: true,
             state: { roomId }
@@ -70,7 +70,6 @@ function Home() {
             id: roomId,
             name: roomName,
             password: roomPassword,
-            state: "等待开始",
             players: [player],
         }
         const socket = new WebSocket("ws://localhost:8080/createRoom")
@@ -78,7 +77,7 @@ function Home() {
             console.log("WebSocket for creating room connected!")
             socket.send(JSON.stringify(roomInfo))
         }
-        jumpToPath(roomInfo.id)
+        jump(roomInfo.id)
     }
     
     const [roomId, setRoomId] = useState(genShortUUID())
@@ -99,6 +98,7 @@ function Home() {
     }
 
     const joinRoom = () => {
+        // TODO 如果房间state是游戏中，则无法加入，弹出错误提示
         onClose1()
         let playerInfo = {
             id: localStorage.getItem("PlayerID"),
@@ -111,7 +111,7 @@ function Home() {
         socket.onmessage = function(event) {
             // console.log("Received message from server:", JSON.parse(event.data))
             if (event.data !== null) {
-                jumpToPath(roomId)
+                jump(roomId)
             }
             // TODO else 弹出密码错误对话框
         }

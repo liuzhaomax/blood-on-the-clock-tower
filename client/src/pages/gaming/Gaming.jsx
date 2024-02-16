@@ -1,9 +1,9 @@
-import React, {useEffect, useState} from "react"
-import "./Room.css"
-import {Button, Flex} from "antd"
 import {useNavigate, useParams} from "react-router-dom"
+import {Button, Flex} from "antd"
+import React, {useEffect, useState} from "react"
+import "./Gaming.css"
 
-function Room() {
+function Gaming() {
     const navigate = useNavigate()
     let { roomId } = useParams()
     const [room, setRoom] = useState(null)
@@ -14,6 +14,12 @@ function Room() {
         }, 100)
     }, [room])
 
+    const returnRoom = () => {
+        navigate(`/room/${roomId}`, {
+            replace: true,
+            state: { roomId }
+        })
+    }
     const loadRoom = () => {
         const socket = new WebSocket(`ws://localhost:8080/room/${roomId}`)
         socket.onopen = function() {
@@ -39,60 +45,24 @@ function Room() {
         return ""
     }
 
-    const quitRoom = () => {
-        navigate("/home", {
-            replace: true,
-            state: "/home",
-        })
-        const socket = new WebSocket(`ws://localhost:8080/quitRoom/${roomId}`)
-        socket.onopen = function() {
-            let playerInfo = {
-                id: localStorage.getItem("PlayerID")
-            }
-            socket.send(JSON.stringify(playerInfo))
-        }
-        socket.onerror = function(error) {
-            console.error("WebSocket error:", error)
-        }
-    }
-
+    // 已落座玩家加载
     const sit = () => {
         // 写死，只允许14名玩家
         return Array.from({length: 14}, (_, index) => {
             if (room && room.players[index]) {
                 return <span key={index} className="place place-sit">{room.players[index].name}</span>
             }
-            return <span key={index} className="place place-empty">空位</span>
         })
-    }
-
-    const startGame = () => {
-        // if (room.players.length >= 5) {
-        navigate(`/game/${roomId}`, {
-            replace: true,
-            state: `/game/${roomId}`,
-        })
-        const socket = new WebSocket(`ws://localhost:8080/quitRoom/${roomId}`)
-        socket.onopen = function() {
-            let playerInfo = {
-                id: localStorage.getItem("PlayerID")
-            }
-            socket.send(JSON.stringify(playerInfo))
-        }
-        socket.onerror = function(error) {
-            console.error("WebSocket error:", error)
-        }
-        // }
-        // TODO 游戏小于5人不能开始，弹出错误提示
     }
 
     return (
-        <div id="ROOM" className="ROOM">
+        <div id="GAMING" className="GAMING">
             <Flex className="layout" horizontal="true" gap="middle" justify="space-evenly" align="center" wrap="wrap">
-                <Button className="btn small-btn" onClick={quitRoom}>退出房间</Button>
-                <Button className="btn small-btn start" type="primary" onClick={startGame}>开始游戏</Button>
+                <Button className="btn small-btn" onClick={returnRoom}>返回房间</Button>
             </Flex>
-            <p>我的名字：<span>{room === null ? "" : findPlayerName()}</span></p>
+            <div>
+                <p>我的名字：<span>{room === null ? "" : findPlayerName()}</span></p>
+            </div>
             <p>↓ 场上玩家 ↓</p>
             <Flex className="layout" horizontal="true" gap="middle" justify="space-evenly" align="center" wrap="wrap">
                 {sit()}
@@ -101,4 +71,4 @@ function Room() {
     )
 }
 
-export default Room
+export default Gaming
