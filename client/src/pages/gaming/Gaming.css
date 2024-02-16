@@ -18,7 +18,11 @@
     width: 100%;
 }
 
-.btn, .south span {
+.north .btn {
+    margin: 10px;
+}
+
+.south span {
     font-size: 20px;
 }
 
