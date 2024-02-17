@@ -25,7 +25,7 @@ function Gaming() {
             socket.send("load_game")
         }
         socket.onmessage = function(event) {
-            console.log("Received message from server:", JSON.parse(event.data))
+            // console.log("Received message from server:", JSON.parse(event.data))
             setGame(JSON.parse(event.data))
         }
         socket.onerror = function(error) {
