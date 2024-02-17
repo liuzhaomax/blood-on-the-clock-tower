@@ -113,14 +113,18 @@ function Gaming() {
 
     // 建立长连接
     useEffect(() => {
+        gamingConn()
+    }, [])
+    const gamingConn = () => {
         socketGaming = new WebSocket(`ws://192.168.1.14:8080/gaming/${roomId}/${localStorage.getItem("PlayerID")}`)
         socketGaming.onmessage = function(event) {
             console.log("Received message from server:", event.data)
         }
         socketGaming.onerror = function(error) {
             console.error("WebSocket error:", error)
+            gamingConn() // 断线重连
         }
-    }, [])
+    }
 
     // 已落座玩家加载
     const sit = () => {

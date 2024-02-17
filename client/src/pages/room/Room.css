@@ -7,7 +7,6 @@
     min-width: 375px;
     height: fit-content;
     min-height: 100vh;
-    padding: 0 20px;
 
     display: flex;
     flex-direction: column;
@@ -15,41 +14,49 @@
     align-items: center;
 }
 
-.layout {
+#ROOM .layout {
     width: 100%;
 }
 
-.btn {
+#ROOM .btn {
     /*width: 300px;*/
     /*height: 60px;*/
     font-size: 24px;
     margin: 24px 0;
 }
 
-.small-btn {
+#ROOM .small-btn {
     width: fit-content;
     height: fit-content;
 }
 
-.start {
+#ROOM .start {
     background-color: #357e5b;
     border: 2px solid white;
 }
 
-.place {
+#ROOM .seat-wrap {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: space-evenly;
+    align-items: flex-start;
+}
+
+#ROOM .place {
     padding: 10px;
     font-size: 22px;
     margin: 0;
 }
 
-.place-empty {
+#ROOM .place-empty {
     color: white;
     border: 2px dashed white;
     width: fit-content;
     height: fit-content;
 }
 
-.place-sit {
+#ROOM .place-sit {
     color: white;
     border: 0;
     width: fit-content;

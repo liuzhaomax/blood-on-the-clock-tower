@@ -105,9 +105,9 @@ function Room() {
             </Flex>
             <p>我的名字：<span>{room === null ? "" : findPlayerName()}</span></p>
             <p>↓ 场上玩家 ↓</p>
-            <Flex className="layout" horizontal="true" gap="middle" justify="space-evenly" align="center" wrap="wrap">
+            <div className="layout seat-wrap" align="center">
                 {sit()}
-            </Flex>
+            </div>
         </div>
     )
 }

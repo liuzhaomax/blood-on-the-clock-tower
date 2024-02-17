@@ -14,33 +14,33 @@
     align-items: flex-start;
 }
 
-.layout {
+#GAMING .layout {
     width: 100%;
 }
 
-.north .btn {
+#GAMING .north .btn {
     margin: 10px;
 }
 
-.south div {
+#GAMING .south div {
     font-size: 16px;
 }
 
-.ant-switch-checked {
+#GAMING .ant-switch-checked {
     background-color: cornflowerblue !important;
 }
 
-.title {
+#GAMING .title {
     font-size: 20px;
     margin-top: 10px;
 }
 
-.small-btn {
+#GAMING .small-btn {
     width: fit-content;
     height: fit-content;
 }
 
-.mini-btn {
+#GAMING .mini-btn {
     font-size: 20px;
     width: fit-content;
     height: 50px;
@@ -48,28 +48,27 @@
     line-height: 10px;
 }
 
-.skill-btn {
+#GAMING .skill-btn {
     width: 50px;
     height: 50px;
 }
 
-.mini-btn span {
+#GAMING .mini-btn span {
     padding: 0 !important;
 }
 
-.place {
+#GAMING .place {
     padding: 10px;
     margin: 0;
-    flex-grow: 1;
 }
 
-.place-sit {
+#GAMING .place-sit {
     border: 0;
     width: fit-content;
     height: fit-content;
 }
 
-.info-wrap {
+#GAMING .info-wrap {
     display: flex;
     flex-direction: column;
     flex-wrap: nowrap;
@@ -79,7 +78,7 @@
     overflow-y: auto;
 }
 
-.my-info {
+#GAMING .my-info {
     display: flex;
     flex-direction: column;
     flex-wrap: wrap;
@@ -89,12 +88,12 @@
     height: 96px;
 }
 
-.east span, .my-info span {
+#GAMING .east span, #GAMING .my-info span {
     font-size: 16px;
     padding: 4px 4px 4px 10px;
 }
 
-.west {
+#GAMING .west {
     display: flex;
     flex-direction: column;
     flex-wrap: wrap;
@@ -102,7 +101,7 @@
     align-items: center;
 }
 
-.east {
+#GAMING .east {
     display: flex;
     flex-direction: column;
     flex-wrap: nowrap;
@@ -114,7 +113,7 @@
     overflow-y: auto;
 }
 
-.south {
+#GAMING .south {
     width: 100%;
     display: flex;
     flex-direction: row;
@@ -125,10 +124,10 @@
 
 /* 竖屏样式 */
 @media screen and (orientation: portrait) {
-    .west {
+    #GAMING .west {
         width: 100%;
     }
-    .east {
+    #GAMING .east {
         width: 100%;
     }
     #GAMING {
@@ -138,11 +137,11 @@
 
 /* 横屏样式 */
 @media screen and (orientation: landscape) {
-    .west {
+    #GAMING .west {
         width: 50%;
         height: 97vh;
     }
-    .east {
+    #GAMING .east {
         flex: 1;
         height: 97vh;
     }
@@ -150,7 +149,7 @@
         height: 100vh;
         overflow-y: auto;
     }
-    .title, .south div {
+    #GAMING .title, #GAMING .south div {
         font-size: 16px;
     }
 }
