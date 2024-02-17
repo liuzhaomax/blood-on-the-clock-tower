@@ -29,5 +29,8 @@ func ToggleNight(w http.ResponseWriter, r *http.Request) {
 	cfg := model.GetConfig()
 	_, roomIndex := findRoom(roomId)
 
+	if !cfg.Rooms[roomIndex].Night {
+		cfg.Rooms[roomIndex].Day = cfg.Rooms[roomIndex].Day + 1
+	}
 	cfg.Rooms[roomIndex].Night = !cfg.Rooms[roomIndex].Night
 }
