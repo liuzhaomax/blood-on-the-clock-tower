@@ -32,11 +32,19 @@ type Player struct {
 	Name          string `json:"name"`
 	Character     string `json:"character"`
 	CharacterType string `json:"characterType"`
-	Status        Status `json:"status"` // 别人眼中他的状态
+	Status        Status `json:"status"`
 }
 
 type Status struct {
-	Dead  bool `json:"dead"`
-	Evil  bool `json:"evil"`
-	Demon bool `json:"demon"`
+	Dead      bool   `json:"dead"`
+	Nominate  bool   `json:"nominate"`
+	Nominated bool   `json:"nominated"`
+	Vote      bool   `json:"vote"`
+	Evil      bool   `json:"evil"`     // 隐士
+	Demon     bool   `json:"demon"`    // 占卜
+	Dunk      bool   `json:"dunk"`     // 酒鬼
+	Poisoned  bool   `json:"poisoned"` // 下毒
+	Master    string `json:"master"`   // 管家
+	Bullet    bool   `json:"bullet"`   // 杀手
+	Blessed   bool   `json:"Blessed"`  // 圣女
 }

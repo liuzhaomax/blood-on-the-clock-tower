@@ -21,7 +21,7 @@ function Gaming() {
     }
 
     const loadGame = () => {
-        const socket = new WebSocket(`ws://localhost:8080/game/${roomId}`)
+        const socket = new WebSocket(`ws://192.168.1.14:8080/game/${roomId}`)
         socket.onopen = function() {
             socket.send("load_game")
         }

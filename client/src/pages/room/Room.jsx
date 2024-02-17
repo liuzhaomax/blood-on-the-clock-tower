@@ -15,7 +15,7 @@ function Room() {
     }, [room])
 
     const loadRoom = () => {
-        const socket = new WebSocket(`ws://localhost:8080/room/${roomId}`)
+        const socket = new WebSocket(`ws://192.168.1.14:8080/room/${roomId}`)
         socket.onopen = function() {
             socket.send("load_room")
         }
@@ -44,7 +44,7 @@ function Room() {
             replace: true,
             state: "/home",
         })
-        const socket = new WebSocket(`ws://localhost:8080/quitRoom/${roomId}`)
+        const socket = new WebSocket(`ws://192.168.1.14:8080/quitRoom/${roomId}`)
         socket.onopen = function() {
             let playerInfo = {
                 id: localStorage.getItem("PlayerID")
@@ -72,7 +72,7 @@ function Room() {
             replace: true,
             state: `/game/${roomId}`,
         })
-        const socket = new WebSocket(`ws://localhost:8080/startGame/${roomId}`)
+        const socket = new WebSocket(`ws://192.168.1.14:8080/startGame/${roomId}`)
         socket.onopen = function() {
             let playerInfo = {
                 id: localStorage.getItem("PlayerID")
