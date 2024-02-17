@@ -83,8 +83,8 @@ function Gaming() {
 
     // 已落座玩家加载
     const sit = () => {
-        // 写死，只允许14名玩家
-        return Array.from({length: 14}, (_, index) => {
+        // 写死，只允许15名玩家
+        return Array.from({length: 15}, (_, index) => {
             if (game && game.players[index]) {
                 return <span key={index} className="place place-sit">{game.players[index].name}</span>
             }

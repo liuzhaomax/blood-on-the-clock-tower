@@ -100,6 +100,7 @@ function Home() {
 
     const joinRoom = () => {
         // TODO 如果房间state是游戏中，则无法加入，弹出错误提示
+        // TODO 如果当前人数大于等于15，则无法加入房间，弹出错误提示
         onClose1()
         let playerInfo = {
             id: localStorage.getItem("PlayerID"),

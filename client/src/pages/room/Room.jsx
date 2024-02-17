@@ -57,8 +57,8 @@ function Room() {
     }
 
     const sit = () => {
-        // 写死，只允许14名玩家
-        return Array.from({length: 14}, (_, index) => {
+        // 写死，只允许15名玩家
+        return Array.from({length: 15}, (_, index) => {
             if (room && room.players[index]) {
                 return <span key={index} className="place place-sit">{room.players[index].name}</span>
             }
@@ -90,7 +90,12 @@ function Room() {
         <div id="ROOM" className="ROOM">
             <Flex className="layout" horizontal="true" gap="middle" justify="space-evenly" align="center" wrap="wrap">
                 <Button className="btn small-btn" onClick={quitRoom}>退出房间</Button>
-                <Button className="btn small-btn start" type="primary" onClick={startGame}>开始游戏</Button>
+                { room && room.host === localStorage.getItem("PlayerID")
+                    ?
+                    <Button className="btn small-btn start" type="primary" onClick={startGame}>开始游戏</Button>
+                    :
+                    <></>
+                }
             </Flex>
             <p>我的名字：<span>{room === null ? "" : findPlayerName()}</span></p>
             <p>↓ 场上玩家 ↓</p>

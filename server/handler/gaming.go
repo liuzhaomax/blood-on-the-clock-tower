@@ -88,6 +88,8 @@ func allocateCharacter(players []model.Player) ([]model.Player, string) {
 		characterNumSlice = []int{9, 0, 3, 1}
 	case 14:
 		characterNumSlice = []int{9, 1, 3, 1}
+	case 15:
+		characterNumSlice = []int{9, 2, 3, 1}
 	default:
 		characterNumSlice = []int{5, 2, 1, 1} // 9人
 	}
