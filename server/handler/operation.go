@@ -77,6 +77,7 @@ func toggleNight(roomId string, playerId string) {
 		}
 	}
 
+	// 将日夜切换日志群发
 	for _, conn := range cfg.ConnPool {
 		if err := conn.WriteMessage(websocket.TextMessage, []byte(msg)); err != nil {
 			log.Println("Write error:", err)

@@ -12,20 +12,28 @@ function Gaming() {
     let { roomId } = useParams()
     const [game, setGame] = useState(null)
 
+    // 加载游戏
     useEffect(() => {
         setTimeout(() => {
             loadGame()
             socketGaming.send("ping")
         }, 100)
     }, [game])
-
-    useEffect(() => {
-        if (game && game.night !== Night) {
-            toggleSunMoon()
-            Night = game.night
+    const loadGame = () => {
+        const socket = new WebSocket(`ws://192.168.1.14:8080/game/${roomId}`)
+        socket.onopen = function() {
+            socket.send("load_game")
         }
-    }, [game])
+        socket.onmessage = function(event) {
+            // console.log("Received message from server:", JSON.parse(event.data))
+            setGame(JSON.parse(event.data))
+        }
+        socket.onerror = function(error) {
+            console.error("WebSocket error:", error)
+        }
+    }
 
+    // 退出房间
     const returnRoom = () => {
         showModal()
     }
@@ -54,20 +62,7 @@ function Gaming() {
         setIsModalOpen(false)
     }
 
-    const loadGame = () => {
-        const socket = new WebSocket(`ws://192.168.1.14:8080/game/${roomId}`)
-        socket.onopen = function() {
-            socket.send("load_game")
-        }
-        socket.onmessage = function(event) {
-            // console.log("Received message from server:", JSON.parse(event.data))
-            setGame(JSON.parse(event.data))
-        }
-        socket.onerror = function(error) {
-            console.error("WebSocket error:", error)
-        }
-    }
-
+    // 显示玩家信息
     const findPlayer = () => {
         if (game !== null) {
             for (let i = 0; i < game.players.length; i++) {
@@ -83,6 +78,7 @@ function Gaming() {
         return {}
     }
 
+    // 显示隐藏身份
     const checkSwitch = () => {
         let myInfo = document.getElementsByClassName("keyword")
         for (let i = 0; i < myInfo.length; i++) {
@@ -104,6 +100,13 @@ function Gaming() {
         })
     }
 
+    // 日夜切换
+    useEffect(() => {
+        if (game && game.night !== Night) {
+            toggleSunMoon()
+            Night = game.night
+        }
+    }, [game])
     const [iconSunMoon, setIconSunMoon] = useState(true)
     const toggleSunMoon = () => {
         if (iconSunMoon) {
@@ -118,6 +121,7 @@ function Gaming() {
         socketGaming.send("toggle_night")
     }
 
+    // 建立长连接
     useEffect(() => {
         socketGaming = new WebSocket(`ws://192.168.1.14:8080/gaming/${roomId}/${localStorage.getItem("PlayerID")}`)
         socketGaming.onmessage = function(event) {
