@@ -194,6 +194,7 @@ func allocateCharacter(players []model.Player) ([]model.Player, string) {
 	for i := range players {
 		newPlayer.Id = players[i].Id
 		newPlayer.Name = players[i].Name
+		newPlayer.Index = i
 		newPlayer.Character = characterPoolForSelection[i]
 		newPlayer.CharacterType = characterTypePoolForSelection[i]
 		newPlayers = append(newPlayers, newPlayer)

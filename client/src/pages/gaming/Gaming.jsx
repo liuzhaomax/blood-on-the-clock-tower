@@ -25,7 +25,7 @@ function Gaming() {
             socket.send("load_game")
         }
         socket.onmessage = function(event) {
-            // console.log("Received message from server:", JSON.parse(event.data))
+            console.log("Received message from server:", JSON.parse(event.data))
             setGame(JSON.parse(event.data))
         }
         socket.onerror = function(error) {
@@ -90,16 +90,6 @@ function Gaming() {
         }
     }
 
-    // 已落座玩家加载
-    const sit = () => {
-        // 写死，只允许15名玩家
-        return Array.from({length: 15}, (_, index) => {
-            if (game && game.players[index]) {
-                return <span key={index} className="place place-sit">{game.players[index].name}</span>
-            }
-        })
-    }
-
     // 日夜切换
     useEffect(() => {
         if (game && game.night !== Night) {
@@ -132,6 +122,42 @@ function Gaming() {
         }
     }, [])
 
+    // 已落座玩家加载
+    const sit = () => {
+        return(
+            <div className="south">
+                <div>
+                    {
+                        Array.from({ length: game ? game.players.length / 2 : 15 / 2 }, (_, index) => {
+                            if (game && game.players[index]) {
+                                return (
+                                    <div key={index} className="place place-sit seat">
+                                        {game.players[index].name}
+                                    </div>
+                                )
+                            }
+                        })
+                    }
+                </div>
+                <Button className="mini-btn skill-btn" onClick={returnRoom}><FireOutlined /></Button>
+                <div>
+                    {
+                        Array.from({ length: game ? game.players.length / 2 : 15 / 2 }, (_, index) => {
+                            const reversedIndex = game ? game.players.length - 1 - index : 15 - 1 - index
+                            if (game && game.players[reversedIndex]) {
+                                return (
+                                    <div key={reversedIndex} className="place place-sit seat">
+                                        {game.players[reversedIndex].name}
+                                    </div>
+                                )
+                            }
+                        })
+                    }
+                </div>
+            </div>
+        )
+    }
+
     return (
         <div id="GAMING" className="GAMING">
             <div className="layout west">
@@ -152,48 +178,13 @@ function Gaming() {
                         <span>身份类型：<span className="keyword">{game === null ? "" : findPlayer().characterType}</span></span>
                         <Button className="mini-btn" onClick={returnRoom}>提名</Button>
                         <Button className="mini-btn" onClick={returnRoom}>投票</Button>
-                        <Button className="mini-btn skill-btn" onClick={returnRoom}><FireOutlined /></Button>
                     </div>
                     <span className="layout title">↓ 场上玩家 ↓</span>
-                    <div className="layout south">
-                        {sit()}
-                    </div>
+                    {sit()}
                 </div>
             </div>
             <div className="layout east" >
                 <span>未开始，尚未入第一夜</span>
-                <span>123</span>
-                <span>123</span>
-                <span>123</span>
-                <span>123</span>
-                <span>123</span>
-                <span>123</span>
-                <span>123</span>
-                <span>123</span>
-                <span>123</span>
-                <span>123</span>
-                <span>123</span>
-                <span>123</span>
-                <span>123</span>
-                <span>123</span>
-                <span>123</span>
-                <span>123</span>
-                <span>123</span>
-                <span>123</span>
-                <span>123</span>
-                <span>123</span>
-                <span>123</span>
-                <span>123</span>
-                <span>123</span>
-                <span>123</span>
-                <span>123</span>
-                <span>123</span>
-                <span>123123123123123</span>
-                <span>123</span>
-                <span>123</span>
-                <span>123</span>
-                <span>123</span>
-                <span>123</span>
                 <span>123</span>
                 <span>123</span>
                 <span>123</span>

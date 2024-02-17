@@ -40,6 +40,7 @@ type Room struct {
 type Player struct {
 	Id            string `json:"id"`
 	Name          string `json:"name"`
+	Index         int    `json:"index"`
 	Character     string `json:"character"`
 	CharacterType string `json:"characterType"`
 	Status        Status `json:"status"`
