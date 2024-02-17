@@ -1,6 +1,9 @@
 package model
 
-import "sync"
+import (
+	"github.com/gorilla/websocket"
+	"sync"
+)
 
 var cfg *Config
 var once sync.Once
@@ -8,6 +11,7 @@ var once sync.Once
 func init() {
 	once.Do(func() {
 		cfg = &Config{}
+		cfg.ConnPool = map[string]*websocket.Conn{}
 	})
 }
 
@@ -16,7 +20,8 @@ func GetConfig() *Config {
 }
 
 type Config struct {
-	Rooms []Room
+	Rooms    []Room
+	ConnPool map[string]*websocket.Conn
 }
 
 type Room struct {
@@ -29,6 +34,7 @@ type Room struct {
 	Night    bool     `json:"night"`
 	Day      int      `json:"day"`
 	Players  []Player `json:"players"`
+	Log      string   `json:"log"`
 }
 
 type Player struct {

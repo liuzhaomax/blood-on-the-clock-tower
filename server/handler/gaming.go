@@ -253,7 +253,7 @@ func initStatus(players []model.Player, replaceDrunk string) []model.Player {
 			for {
 				randIdx := rand.Intn(len(players))
 				if players[randIdx].CharacterType == Townsfolk {
-					players[randIdx].Status.Evil = true
+					players[randIdx].Status.Demon = true
 					break
 				}
 			}

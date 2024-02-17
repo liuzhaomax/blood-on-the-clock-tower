@@ -5,6 +5,7 @@ import React, {useEffect, useState} from "react"
 import "./Gaming.css"
 
 let Night = false
+let socketGaming
 
 function Gaming() {
     const navigate = useNavigate()
@@ -14,6 +15,7 @@ function Gaming() {
     useEffect(() => {
         setTimeout(() => {
             loadGame()
+            socketGaming.send("ping")
         }, 100)
     }, [game])
 
@@ -58,7 +60,7 @@ function Gaming() {
             socket.send("load_game")
         }
         socket.onmessage = function(event) {
-            console.log("Received message from server:", JSON.parse(event.data))
+            // console.log("Received message from server:", JSON.parse(event.data))
             setGame(JSON.parse(event.data))
         }
         socket.onerror = function(error) {
@@ -113,17 +115,18 @@ function Gaming() {
         }
     }
     const toggleNight = () => {
-        const socket = new WebSocket(`ws://192.168.1.14:8080/gaming/toggleNight/${roomId}`)
-        socket.onopen = function() {
-            socket.send("toggle_night")
+        socketGaming.send("toggle_night")
+    }
+
+    useEffect(() => {
+        socketGaming = new WebSocket(`ws://192.168.1.14:8080/gaming/${roomId}/${localStorage.getItem("PlayerID")}`)
+        socketGaming.onmessage = function(event) {
+            console.log("Received message from server:", event.data)
         }
-        socket.onmessage = function() {
-            toggleSunMoon()
-        }
-        socket.onerror = function(error) {
+        socketGaming.onerror = function(error) {
             console.error("WebSocket error:", error)
         }
-    }
+    }, [])
 
     return (
         <div id="GAMING" className="GAMING">
