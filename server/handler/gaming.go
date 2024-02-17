@@ -40,16 +40,19 @@ func LoadGame(w http.ResponseWriter, r *http.Request) {
 	cfgMutex.Lock()
 	defer cfgMutex.Unlock()
 	cfg := model.GetConfig()
-	_, roomIndex := findRoom(roomId)
+	room, roomIndex := findRoom(roomId)
 
-	// 分配身份
-	var replaceDrunk string
-	if cfg.Rooms[roomIndex].Players[0].Character == "" {
-		cfg.Rooms[roomIndex].Players, replaceDrunk = allocateCharacter(cfg.Rooms[roomIndex].Players)
+	if !room.Init {
+		// 分配身份
+		var replaceDrunk string
+		if cfg.Rooms[roomIndex].Players[0].Character == "" {
+			cfg.Rooms[roomIndex].Players, replaceDrunk = allocateCharacter(cfg.Rooms[roomIndex].Players)
+		}
+		// 初始化玩家状态 依赖身份
+		cfg.Rooms[roomIndex].Players = initStatus(cfg.Rooms[roomIndex].Players, replaceDrunk)
+		// 初始化完成
+		cfg.Rooms[roomIndex].Init = true
 	}
-
-	// 初始化玩家状态 依赖身份
-	cfg.Rooms[roomIndex].Players = initStatus(cfg.Rooms[roomIndex].Players, replaceDrunk)
 
 	marshaledRoom, err := json.Marshal(cfg.Rooms[roomIndex])
 	if err != nil {

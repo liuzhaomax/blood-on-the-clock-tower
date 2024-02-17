@@ -11,6 +11,13 @@ if (localStorage.getItem("PlayerID") === null) {
 }
 
 function Home() {
+    const [roomList, setRoomList] = useState(null)
+
+    useEffect(() => {
+        setTimeout(() => {
+            loadRoomList()
+        }, 100)
+    })
     const navigate = useNavigate()
     const jump = roomId => {
         navigate(`/room/${roomId}`, {
@@ -36,14 +43,6 @@ function Home() {
     const onClose1 = () => {
         setOpen1(false)
     }
-
-    const [roomList, setRoomList] = useState(null)
-
-    useEffect(() => {
-        setTimeout(() => {
-            loadRoomList()
-        }, 100)
-    })
 
     const loadRoomList = () => {
         const socket = new WebSocket("ws://192.168.1.14:8080/home")

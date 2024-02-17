@@ -37,6 +37,7 @@
         + 功能：根据人数，分配身份；夜晚读秒
         + 输入：无
         + 输出：无
+    + 切换入夜 /gaming/toggleNight/:roomId
 + 游戏结算页
     + 加载结算 /checkout/:roomId
         + 输入：无

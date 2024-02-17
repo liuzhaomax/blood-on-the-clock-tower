@@ -4,14 +4,25 @@ import { RollbackOutlined, SmileFilled, SmileOutlined, FireOutlined } from "@ant
 import React, {useEffect, useState} from "react"
 import "./Gaming.css"
 
+let Night = false
+
 function Gaming() {
     const navigate = useNavigate()
     let { roomId } = useParams()
     const [game, setGame] = useState(null)
 
     useEffect(() => {
-        loadGame()
-    }, [])
+        setTimeout(() => {
+            loadGame()
+        }, 100)
+    }, [game])
+
+    useEffect(() => {
+        if (game && game.night !== Night) {
+            toggleSunMoon()
+            Night = game.night
+        }
+    }, [game])
 
     const returnRoom = () => {
         showModal()
@@ -101,6 +112,18 @@ function Gaming() {
             document.getElementById("GAMING").style.backgroundColor = "#357e5b"
         }
     }
+    const toggleNight = () => {
+        const socket = new WebSocket(`ws://192.168.1.14:8080/gaming/toggleNight/${roomId}`)
+        socket.onopen = function() {
+            socket.send("toggle_night")
+        }
+        socket.onmessage = function() {
+            toggleSunMoon()
+        }
+        socket.onerror = function(error) {
+            console.error("WebSocket error:", error)
+        }
+    }
 
     return (
         <div id="GAMING" className="GAMING">
@@ -110,7 +133,7 @@ function Gaming() {
                     <Switch className="switch" checkedChildren="显示身份" unCheckedChildren="隐藏身份" defaultChecked onChange={checkSwitch} />
                     { game && game.host === localStorage.getItem("PlayerID")
                         ?
-                        <Button className="btn small-btn" onClick={toggleSunMoon}>{iconSunMoon ? <SmileFilled /> : <SmileOutlined />}</Button>
+                        <Button className="btn small-btn" onClick={toggleNight}>{iconSunMoon ? <SmileFilled /> : <SmileOutlined />}</Button>
                         :
                         <></>
                     }

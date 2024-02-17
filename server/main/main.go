@@ -17,6 +17,7 @@ func main() {
 	http.HandleFunc("/startGame/", handler.StartGame)
 	// 游戏中页
 	http.HandleFunc("/game/", handler.LoadGame)
+	http.HandleFunc("/gaming/toggleNight/", handler.ToggleNight)
 	// 游戏结算页
 	// http.HandleFunc("/checkout/", handler.LoadCheckout)
 	// http.HandleFunc("/return/", handler.ReturnRoom)
