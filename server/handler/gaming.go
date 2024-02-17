@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/gorilla/websocket"
 	"github.com/liuzhaomax/blood-on-the-clock-tower/server/model"
 	"log"
@@ -43,9 +44,13 @@ func LoadGame(w http.ResponseWriter, r *http.Request) {
 	_, roomIndex := findRoom(roomId)
 
 	// 分配身份
+	var replaceDrunk string
 	if cfg.Rooms[roomIndex].Players[0].Character == "" {
-		cfg.Rooms[roomIndex].Players = allocateCharacter(cfg.Rooms[roomIndex].Players)
+		cfg.Rooms[roomIndex].Players, replaceDrunk = allocateCharacter(cfg.Rooms[roomIndex].Players)
 	}
+
+	// 初始化玩家状态 依赖身份
+	cfg.Rooms[roomIndex].Players = initStatus(cfg.Rooms[roomIndex].Players, replaceDrunk)
 
 	marshaledRoom, err := json.Marshal(cfg.Rooms[roomIndex])
 	if err != nil {
@@ -59,7 +64,7 @@ func LoadGame(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func allocateCharacter(players []model.Player) []model.Player {
+func allocateCharacter(players []model.Player) ([]model.Player, string) {
 	playerNum := len(players)
 	var characterNumSlice []int
 	// 索引0是村民，索引1是外来者，索引2是爪牙，索引3是恶魔
@@ -110,19 +115,62 @@ func allocateCharacter(players []model.Player) []model.Player {
 	}
 
 	var characterPoolForSelection []string
-	for _, randIdx := range townsfolkRandNums {
-		characterPoolForSelection = append(characterPoolForSelection, TownsfolkPool[randIdx])
+	var replaceDrunk string
+	var repeatFlag bool
+	for _, randIdx := range demonsRandNums {
+		characterPoolForSelection = append(characterPoolForSelection, DemonsPool[randIdx])
+	}
+	for _, randIdx := range minionsRandNums {
+		characterPoolForSelection = append(characterPoolForSelection, MinionsPool[randIdx])
+		// 处理男爵
+		if MinionsPool[randIdx] == Baron {
+			outsidersNumsLength := len(outsidersRandNums)
+			for {
+				if len(outsidersRandNums) == outsidersNumsLength+2 {
+					break
+				}
+				repeatFlag = false
+				randIdxOutsiders := rand.Intn(len(OutsidersPool))
+				for _, num := range outsidersRandNums {
+					if randIdxOutsiders == num {
+						repeatFlag = true
+						break
+					}
+				}
+				if !repeatFlag {
+					outsidersRandNums = append(outsidersRandNums, randIdxOutsiders)
+				}
+			}
+			townsfolkRandNums = townsfolkRandNums[:len(townsfolkRandNums)-2]
+		}
 	}
 	if len(outsidersRandNums) != 0 {
 		for _, randIdx := range outsidersRandNums {
 			characterPoolForSelection = append(characterPoolForSelection, OutsidersPool[randIdx])
+			// 处理酒鬼 酒鬼还在池中，后续阶段由replaceDrunk替换
+			if OutsidersPool[randIdx] == Drunk {
+				for {
+					if replaceDrunk != "" {
+						break
+					}
+					repeatFlag = false
+					randIdxTownsfolk := rand.Intn(len(TownsfolkPool))
+					for _, num := range townsfolkRandNums {
+						if randIdxTownsfolk == num {
+							repeatFlag = true
+							break
+						}
+					}
+					if !repeatFlag {
+						replaceDrunk = TownsfolkPool[randIdxTownsfolk]
+						break
+					}
+				}
+			}
 		}
 	}
-	for _, randIdx := range minionsRandNums {
-		characterPoolForSelection = append(characterPoolForSelection, MinionsPool[randIdx])
-	}
-	for _, randIdx := range demonsRandNums {
-		characterPoolForSelection = append(characterPoolForSelection, DemonsPool[randIdx])
+	for _, randIdx := range townsfolkRandNums {
+		characterPoolForSelection = append(characterPoolForSelection, TownsfolkPool[randIdx])
 	}
 
 	// 打乱顺序
@@ -137,6 +185,8 @@ func allocateCharacter(players []model.Player) []model.Player {
 		}
 	}
 
+	fmt.Println(characterPoolForSelection)
+
 	var newPlayers []model.Player
 	var newPlayer model.Player
 	for i := range players {
@@ -147,7 +197,7 @@ func allocateCharacter(players []model.Player) []model.Player {
 		newPlayers = append(newPlayers, newPlayer)
 	}
 
-	return newPlayers
+	return newPlayers, replaceDrunk
 }
 
 func genRandomPositionSlice(indexSliceForCharacterTypePool []int, characterByTypePool []string, num int) []int {
@@ -170,4 +220,43 @@ func genRandomPositionSlice(indexSliceForCharacterTypePool []int, characterByTyp
 		}
 	}
 	return indexSliceForCharacterTypePool
+}
+
+func initStatus(players []model.Player, replaceDrunk string) []model.Player {
+	for i, player := range players {
+		players[i].Status.Nominate = true
+		players[i].Status.Nominated = true
+		players[i].Status.Vote = true
+		switch player.Character {
+		case Imp:
+			players[i].Status.Evil = true
+			players[i].Status.Demon = true
+		case Poisoner:
+			players[i].Status.Evil = true
+		case ScarletWoman:
+			players[i].Status.Evil = true
+		case Baron:
+			players[i].Status.Evil = true
+		case Virgin:
+			players[i].Status.Blessed = true
+		case Slayer:
+			players[i].Status.Bullet = true
+		case Recluse:
+			players[i].Status.Evil = true
+		case Drunk:
+			players[i].CharacterType = Townsfolk
+			players[i].Character = replaceDrunk
+			players[i].Status.Drunk = true
+		case FortuneTeller:
+			for {
+				randIdx := rand.Intn(len(players))
+				if players[randIdx].CharacterType == Townsfolk {
+					players[randIdx].Status.Evil = true
+					break
+				}
+			}
+		}
+	}
+
+	return players
 }
