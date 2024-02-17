@@ -7,6 +7,7 @@ import (
 )
 
 func main() {
+	log.Println("服务启动")
 	// 房间列表页
 	http.HandleFunc("/home", handler.ListRooms)
 	http.HandleFunc("/createRoom", handler.CreateRoom)

@@ -68,9 +68,34 @@ function Room() {
             if (room && room.players[index]) {
                 return <span key={index} className="place place-sit">{room.players[index].name}</span>
             }
-            return <span key={index} className="place place-empty">空位</span>
+            return <span key={index} className="place place-empty">`空位-${index<10?"0"+(index+1):index+1}`</span>
         })
     }
+
+    // const sit = (room) => {
+    //     // 写死，只允许15名玩家
+    //     const numPlayers = 15
+    //     const radius = 100 // 调整圆形的半径
+    //     const step = (2 * Math.PI) / numPlayers
+    //     const centerX = 150 // 圆心的 x 坐标
+    //     const centerY = 150 // 圆心的 y 坐标
+    //
+    //     return Array.from({ length: numPlayers }, (_, index) => {
+    //         const angle = index * step
+    //         const x = Math.round(centerX + radius * Math.cos(angle))
+    //         const y = Math.round(centerY + radius * Math.sin(angle))
+    //         const player = room && room.players[index]
+    //         return (
+    //             <span
+    //                 key={index}
+    //                 className={`place ${player ? "place-sit" : "place-empty"}`}
+    //                 style={{ left: `${x}px`, top: `${y}px` }}
+    //             >
+    //                 {player ? player.name : `空位-${index<10?"0"+(index+1):index+1}`}
+    //             </span>
+    //         )
+    //     })
+    // }
 
     const startGame = () => {
         // if (room.players.length >= 5) {
@@ -105,9 +130,9 @@ function Room() {
             </Flex>
             <p>我的名字：<span>{room === null ? "" : findPlayerName()}</span></p>
             <p>↓ 场上玩家 ↓</p>
-            <Flex className="layout" horizontal="true" gap="middle" justify="space-evenly" align="center" wrap="wrap">
+            <div className="layout seat">
                 {sit()}
-            </Flex>
+            </div>
         </div>
     )
 }
