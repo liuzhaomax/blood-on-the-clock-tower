@@ -1,6 +1,6 @@
 import {useNavigate, useParams} from "react-router-dom"
-import {Button, Switch} from "antd"
-import { RollbackOutlined, SmileFilled, FireOutlined } from "@ant-design/icons"
+import {Button, Switch, Modal} from "antd"
+import { RollbackOutlined, SmileFilled, SmileOutlined, FireOutlined } from "@ant-design/icons"
 import React, {useEffect, useState} from "react"
 import "./Gaming.css"
 
@@ -14,10 +14,31 @@ function Gaming() {
     }, [])
 
     const returnRoom = () => {
-        navigate(`/room/${roomId}`, {
+        showModal()
+    }
+    const [isModalOpen, setIsModalOpen] = useState(false)
+    const showModal = () => {
+        setIsModalOpen(true)
+    }
+    const handleOk = () => {
+        setIsModalOpen(false)
+        navigate("/home", {
             replace: true,
-            state: { roomId }
+            state: "/home",
         })
+        const socket = new WebSocket(`ws://192.168.1.14:8080/quitRoom/${roomId}`)
+        socket.onopen = function() {
+            let playerInfo = {
+                id: localStorage.getItem("PlayerID")
+            }
+            socket.send(JSON.stringify(playerInfo))
+        }
+        socket.onerror = function(error) {
+            console.error("WebSocket error:", error)
+        }
+    }
+    const handleCancel = () => {
+        setIsModalOpen(false)
     }
 
     const loadGame = () => {
@@ -70,13 +91,29 @@ function Gaming() {
         })
     }
 
+    const [iconSunMoon, setIconSunMoon] = useState(true)
+    const toggleSunMoon = () => {
+        if (iconSunMoon) {
+            setIconSunMoon(false)
+            document.getElementById("GAMING").style.backgroundColor = "#35557EFF"
+        } else {
+            setIconSunMoon(true)
+            document.getElementById("GAMING").style.backgroundColor = "#357e5b"
+        }
+    }
+
     return (
         <div id="GAMING" className="GAMING">
             <div className="layout west">
                 <div className="layout north">
                     <Button className="btn small-btn" onClick={returnRoom}><RollbackOutlined /></Button>
                     <Switch className="switch" checkedChildren="显示身份" unCheckedChildren="隐藏身份" defaultChecked onChange={checkSwitch} />
-                    <Button className="btn small-btn" onClick={returnRoom}><SmileFilled /></Button>
+                    { game && game.host === localStorage.getItem("PlayerID")
+                        ?
+                        <Button className="btn small-btn" onClick={toggleSunMoon}>{iconSunMoon ? <SmileFilled /> : <SmileOutlined />}</Button>
+                        :
+                        <></>
+                    }
                 </div>
                 <div className="layout info-wrap">
                     <div className="layout my-info">
@@ -132,6 +169,9 @@ function Gaming() {
                 <span>123</span>
                 <span>123</span>
             </div>
+            <Modal title="退出游戏" open={isModalOpen} onOk={handleOk} onCancel={handleCancel}>
+                <p>退出游戏后，不可重新进入游戏中的房间，确定退出请点击“OK”</p>
+            </Modal>
         </div>
     )
 }

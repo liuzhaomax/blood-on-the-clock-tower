@@ -70,6 +70,7 @@ function Home() {
             id: roomId,
             name: roomName,
             password: roomPassword,
+            host: localStorage.getItem("PlayerID"),
             players: [player],
         }
         const socket = new WebSocket("ws://192.168.1.14:8080/createRoom")

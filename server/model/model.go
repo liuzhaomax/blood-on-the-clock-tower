@@ -23,7 +23,10 @@ type Room struct {
 	Id       string   `json:"id"`
 	Name     string   `json:"name"`
 	Password string   `json:"password"`
+	Host     string   `json:"host"`
 	State    string   `json:"state"`
+	Night    bool     `json:"night"`
+	Day      int      `json:"day"`
 	Players  []Player `json:"players"`
 }
 
