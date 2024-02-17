@@ -60,6 +60,7 @@
 .place {
     padding: 10px;
     margin: 0;
+    flex-grow: 1;
 }
 
 .place-sit {
@@ -150,6 +151,7 @@
     }
     .south {
         justify-content: flex-start;
+        flex-grow: 1;
     }
     #GAMING {
         height: 100vh;
