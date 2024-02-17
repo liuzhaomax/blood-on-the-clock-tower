@@ -2,7 +2,6 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/gorilla/websocket"
 	"github.com/liuzhaomax/blood-on-the-clock-tower/server/model"
 	"log"
@@ -184,8 +183,6 @@ func allocateCharacter(players []model.Player) ([]model.Player, string) {
 			}
 		}
 	}
-
-	fmt.Println(characterPoolForSelection)
 
 	var newPlayers []model.Player
 	var newPlayer model.Player
