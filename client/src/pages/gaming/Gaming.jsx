@@ -162,7 +162,7 @@ function Gaming() {
             <div className="south">
                 <div>
                     {
-                        Array.from({ length: game ? game.players.length / 2 : 15 / 2 }, (_, index) => {
+                        Array.from({ length: game ? Math.ceil(game.players.length / 2) : Math.ceil(15 / 2) }, (_, index) => {
                             if (game && game.players[index]) {
                                 return (
                                     <div key={index} className="place place-sit seat">
