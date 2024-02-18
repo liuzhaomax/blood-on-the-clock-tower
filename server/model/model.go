@@ -44,6 +44,7 @@ type Player struct {
 	Character     string `json:"character"`
 	CharacterType string `json:"characterType"`
 	Status        Status `json:"status"`
+	Log           string `json:"log"`
 }
 
 type Status struct {

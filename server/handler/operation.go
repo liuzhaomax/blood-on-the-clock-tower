@@ -62,11 +62,16 @@ func toggleNight(roomId string, playerId string) {
 		if !cfg.Rooms[roomIndex].Night {
 			cfg.Rooms[roomIndex].Day = cfg.Rooms[roomIndex].Day + 1
 			msg = fmt.Sprintf("第%d天，入夜~", cfg.Rooms[roomIndex].Day)
-			cfg.Rooms[roomIndex].Log += msg + "\n"
 		} else {
 			msg = fmt.Sprintf("第%d天，天亮了~", cfg.Rooms[roomIndex].Day)
-			cfg.Rooms[roomIndex].Log += msg + "\n"
 		}
+		// 存入总日志
+		cfg.Rooms[roomIndex].Log += msg + "\n"
+		// 存入个人日志，刷新的时候加载
+		for i := range cfg.Rooms[roomIndex].Players {
+			cfg.Rooms[roomIndex].Players[i].Log += msg + "\n"
+		}
+
 		cfg.Rooms[roomIndex].Night = !cfg.Rooms[roomIndex].Night
 
 		// 让所有活人重新可以投票

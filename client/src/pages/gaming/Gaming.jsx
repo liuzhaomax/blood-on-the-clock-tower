@@ -96,19 +96,21 @@ function Gaming() {
 
     // 日夜切换
     useEffect(() => {
-        if (game && game.night !== Night) {
+        setTimeout(() => {
             toggleSunMoon()
-            Night = game.night
-        }
+        }, 50)
     }, [game])
     const [iconSunMoon, setIconSunMoon] = useState(true)
     const toggleSunMoon = () => {
-        if (iconSunMoon) {
-            setIconSunMoon(false)
-            document.getElementById("GAMING").style.backgroundColor = "#35557EFF"
-        } else {
-            setIconSunMoon(true)
-            document.getElementById("GAMING").style.backgroundColor = "#357e5b"
+        if (game && game.night !== Night) {
+            if (iconSunMoon) {
+                setIconSunMoon(false)
+                document.getElementById("GAMING").style.backgroundColor = "#35557EFF"
+            } else {
+                setIconSunMoon(true)
+                document.getElementById("GAMING").style.backgroundColor = "#357e5b"
+            }
+            Night = game.night
         }
     }
     const toggleNight = () => {
@@ -128,6 +130,7 @@ function Gaming() {
                 event.data,
                 [/[0-9]/g, "highlight highlight-number"], // 数字
             )
+            loadGame()
         }
         socketGaming.onerror = function(error) {
             console.error("WebSocket error:", error)
@@ -137,23 +140,55 @@ function Gaming() {
 
     // 增加一条log 并上色  addLog(event.data, [/[0-9]/g, "highlight"], ["天", "highlight"])
     const addLog = (text, ...wordClassPairs) => {
-        let replacedText = replaceText(text, ...wordClassPairs[0])
+        let replacedText = updateText(text, ...wordClassPairs[0])
         if (wordClassPairs.length > 1) {
             for (let i = 1; i < wordClassPairs.length; i++) {
-                replacedText = replaceText(replacedText, ...wordClassPairs[i])
+                replacedText = updateText(replacedText, ...wordClassPairs[i])
             }
         }
         if (document.getElementById("LOG")) {
             document.getElementById("LOG").innerHTML = document.getElementById("LOG").innerHTML + `<span>${replacedText}</span>`
-            console.log(document.getElementById("LOG").innerHTML)
         }
     }
-    const replaceText = (text, word, className) => {
+    const updateText = (text, word, className) => {
         if (typeof word === "string") {
             let regex = new RegExp(word, "g")
             return text.replace(regex, `<span class="${className}">${word}</span>`)
         }
         return text.replace(word, match => `<span class="${className}">${match}</span>`)
+    }
+    const replaceLog = (text, ...wordClassPairs) => {
+        let replacedText = updateText(text, ...wordClassPairs[0])
+        if (wordClassPairs.length > 1) {
+            for (let i = 1; i < wordClassPairs.length; i++) {
+                replacedText = updateText(replacedText, ...wordClassPairs[i])
+            }
+        }
+        let removedNTextArr = replacedText.split("\n").map(item => {
+            return `<span>${item}</span>`
+        })
+        let resultText = removedNTextArr.join("")
+        if (document.getElementById("LOG")) {
+            document.getElementById("LOG").innerHTML = `${resultText}`
+        }
+    }
+
+    // 刷新页面日志加载
+    useEffect(() => {
+        loadPersonalLog()
+    }, [game])
+    const loadPersonalLog = () => {
+        if (game) {
+            for (let i = 0; i < game.players.length; i++) {
+                if (game.players[i].id === localStorage.getItem("PlayerID")) {
+                    replaceLog(
+                        game.players[i].log,
+                        [/[0-9]/g, "highlight highlight-number"], // 数字
+                    )
+                    break
+                }
+            }
+        }
     }
 
     // 已落座玩家加载
