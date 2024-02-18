@@ -58,5 +58,5 @@ type Status struct {
 	Poisoned  bool   `json:"poisoned"` // 下毒
 	Master    string `json:"master"`   // 管家
 	Bullet    bool   `json:"bullet"`   // 杀手
-	Blessed   bool   `json:"Blessed"`  // 圣女
+	Blessed   bool   `json:"blessed"`  // 圣女
 }
