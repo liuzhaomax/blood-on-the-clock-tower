@@ -155,19 +155,45 @@
     }
 }
 
+#GAMING .individual {
+    margin: 0 5px 0 0;
+    padding: 5px;
+}
+
+#GAMING .individual-tag {
+    font-size: 10px;
+    padding: 0 2px;
+}
+
+#GAMING .tag-tou {
+    background-color: chocolate;
+}
+
+#GAMING .tag-ti {
+    background-color: dodgerblue;
+}
+
+#GAMING .tag-bei {
+    background-color: palevioletred;
+}
+
+#GAMING .seat-selected {
+    background-color: brown;
+}
+
 #GAMING .east {
     font-size: 16px;
     padding: 10px;
 }
 
-.highlight {
+#GAMING .highlight {
     padding: 0 5px;
 }
 
-.highlight-number {
-    color: #d900d9;
+#GAMING .highlight-number {
+    color: orchid;
 }
 
-.highlight-dead {
+#GAMING .highlight-dead {
     text-decoration: line-through;
 }

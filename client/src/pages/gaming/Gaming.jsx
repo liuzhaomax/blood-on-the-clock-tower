@@ -3,6 +3,7 @@ import {Button, Modal, Switch} from "antd"
 import {FireOutlined, RollbackOutlined, SmileFilled, SmileOutlined} from "@ant-design/icons"
 import React, {useEffect, useState} from "react"
 import "./Gaming.css"
+import {remove} from "../../utils/array"
 
 let Night = false
 let socketGaming
@@ -191,6 +192,19 @@ function Gaming() {
         }
     }
 
+    // 点击玩家名字，选中玩家，保存被选中的玩家ID
+    let selectedPlayers = []
+    const selectPlayer = (event) => {
+        event.preventDefault()
+        if (event.target.classList.contains("seat-selected")) {
+            event.target.classList.remove("seat-selected")
+            remove(selectedPlayers, event.target.id)
+        } else {
+            event.target.classList.add("seat-selected")
+            selectedPlayers.push(event.target.id)
+        }
+    }
+
     // 已落座玩家加载
     const sit = () => {
         return(
@@ -201,7 +215,10 @@ function Gaming() {
                             if (game && game.players[index]) {
                                 return (
                                     <div key={index} className="place place-sit seat">
-                                        {game.players[index].name}
+                                        <span className="individual" onClick={selectPlayer} id={game.players[index].id}>{game.players[index].name}</span>
+                                        <span className="individual-tag tag-tou">投</span>
+                                        <span className="individual-tag tag-ti">提</span>
+                                        <span className="individual-tag tag-bei">被</span>
                                     </div>
                                 )
                             }
@@ -215,8 +232,11 @@ function Gaming() {
                             const reversedIndex = game ? game.players.length - 1 - index : 15 - 1 - index
                             if (game && game.players[reversedIndex]) {
                                 return (
-                                    <div key={reversedIndex} className="place place-sit seat">
-                                        {game.players[reversedIndex].name}
+                                    <div key={index} className="place place-sit seat">
+                                        <span className="individual" onClick={selectPlayer} id={game.players[index].id}>{game.players[reversedIndex].name}</span>
+                                        <span className="individual-tag tag-tou">投</span>
+                                        <span className="individual-tag tag-ti">提</span>
+                                        <span className="individual-tag tag-bei">被</span>
                                     </div>
                                 )
                             }
