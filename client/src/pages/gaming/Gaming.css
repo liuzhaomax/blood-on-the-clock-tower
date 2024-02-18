@@ -160,7 +160,14 @@
     padding: 10px;
 }
 
+.highlight {
+    padding: 0 5px;
+}
+
 .highlight-number {
     color: purple;
-    padding: 0 5px;
+}
+
+.highlight-dead {
+    text-decoration: line-through;
 }

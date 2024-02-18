@@ -126,7 +126,7 @@ function Gaming() {
             // console.log("Received message from server:", event.data)
             addLog(
                 event.data,
-                [/[0-9]/g, "highlight-number"], // 数字
+                [/[0-9]/g, "highlight highlight-number"], // 数字
             )
         }
         socketGaming.onerror = function(error) {
@@ -145,14 +145,15 @@ function Gaming() {
         }
         if (document.getElementById("LOG")) {
             document.getElementById("LOG").innerHTML = document.getElementById("LOG").innerHTML + `<span>${replacedText}</span>`
+            console.log(document.getElementById("LOG").innerHTML)
         }
     }
     const replaceText = (text, word, className) => {
         if (typeof word === "string") {
             let regex = new RegExp(word, "g")
-            return text.replace(regex, `<span class=${className}>${word}</span>`)
+            return text.replace(regex, `<span class="${className}">${word}</span>`)
         }
-        return text.replace(word, match => `<span class=${className}>${match}</span>`)
+        return text.replace(word, match => `<span class="${className}">${match}</span>`)
     }
 
     // 已落座玩家加载
