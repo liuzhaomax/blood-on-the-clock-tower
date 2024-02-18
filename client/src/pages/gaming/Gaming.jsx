@@ -40,14 +40,14 @@ function Gaming() {
 
     // 退出房间
     const returnRoom = () => {
-        showModal()
+        showReturnRoomModal()
     }
-    const [isModalOpen, setIsModalOpen] = useState(false)
-    const showModal = () => {
-        setIsModalOpen(true)
+    const [isReturnRoomModalOpen, setIsReturnRoomModalOpen] = useState(false)
+    const showReturnRoomModal = () => {
+        setIsReturnRoomModalOpen(true)
     }
-    const handleOk = () => {
-        setIsModalOpen(false)
+    const handleReturnRoomOk = () => {
+        setIsReturnRoomModalOpen(false)
         navigate("/home", {
             replace: true,
             state: "/home",
@@ -63,8 +63,8 @@ function Gaming() {
             console.error("WebSocket error:", error)
         }
     }
-    const handleCancel = () => {
-        setIsModalOpen(false)
+    const handleReturnRoomCancel = () => {
+        setIsReturnRoomModalOpen(false)
     }
 
     // 显示玩家信息
@@ -225,7 +225,7 @@ function Gaming() {
                         })
                     }
                 </div>
-                <Button className="mini-btn skill-btn" onClick={returnRoom}><FireOutlined /></Button>
+                <Button className="mini-btn skill-btn" onClick={cast}><FireOutlined /></Button>
                 <div>
                     {
                         Array.from({ length: game ? game.players.length / 2 : 15 / 2 }, (_, index) => {
@@ -247,6 +247,51 @@ function Gaming() {
         )
     }
 
+    // 提名玩家
+    const nominate = () => {
+        showNominateModal()
+    }
+    const [isNominateModalOpen, setIsNominateModalOpen] = useState(false)
+    const showNominateModal = () => {
+        setIsNominateModalOpen(true)
+    }
+    const handleNominateOk = () => {
+        setIsNominateModalOpen(false)
+    }
+    const handleNominateCancel = () => {
+        setIsNominateModalOpen(false)
+    }
+
+    // 投票玩家
+    const vote = () => {
+        showVoteModal()
+    }
+    const [isVoteModalOpen, setIsVoteModalOpen] = useState(false)
+    const showVoteModal = () => {
+        setIsVoteModalOpen(true)
+    }
+    const handleVoteOk = () => {
+        setIsVoteModalOpen(false)
+    }
+    const handleVoteCancel = () => {
+        setIsVoteModalOpen(false)
+    }
+
+    // 发动技能
+    const cast = () => {
+        showCastModal()
+    }
+    const [isCastModalOpen, setIsCastModalOpen] = useState(false)
+    const showCastModal = () => {
+        setIsCastModalOpen(true)
+    }
+    const handleCastOk = () => {
+        setIsCastModalOpen(false)
+    }
+    const handleCastCancel = () => {
+        setIsCastModalOpen(false)
+    }
+
     return (
         <div id="GAMING" className="GAMING">
             <div className="layout west">
@@ -265,8 +310,8 @@ function Gaming() {
                         <span>我的名字：<span>{game === null ? "" : findPlayer().name}</span></span>
                         <span>我的身份：<span className="keyword">{game === null ? "" : findPlayer().character}</span></span>
                         <span>身份类型：<span className="keyword">{game === null ? "" : findPlayer().characterType}</span></span>
-                        <Button className="mini-btn" onClick={returnRoom}>提名</Button>
-                        <Button className="mini-btn" onClick={returnRoom}>投票</Button>
+                        <Button className="mini-btn" onClick={nominate}>提名</Button>
+                        <Button className="mini-btn" onClick={vote}>投票</Button>
                     </div>
                     <span className="layout title">↓ 场上玩家 ↓</span>
                     {sit()}
@@ -275,8 +320,17 @@ function Gaming() {
             <div className="layout east" id="LOG" >
                 <span>未开始，尚未入第一夜</span>
             </div>
-            <Modal title="退出游戏" open={isModalOpen} onOk={handleOk} onCancel={handleCancel}>
+            <Modal title="退出游戏" open={isReturnRoomModalOpen} onOk={handleReturnRoomOk} onCancel={handleReturnRoomCancel}>
                 <p>退出游戏后，不可重新进入游戏中的房间，确定退出请点击“OK”</p>
+            </Modal>
+            <Modal title="提名" open={isNominateModalOpen} onOk={handleNominateOk} onCancel={handleNominateCancel}>
+                <p>提名</p>
+            </Modal>
+            <Modal title="投票" open={isVoteModalOpen} onOk={handleVoteOk} onCancel={handleVoteCancel}>
+                <p>投票</p>
+            </Modal>
+            <Modal title="发动技能" open={isCastModalOpen} onOk={handleCastOk} onCancel={handleCastCancel}>
+                <p>投票</p>
             </Modal>
         </div>
     )
