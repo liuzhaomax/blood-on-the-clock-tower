@@ -88,7 +88,7 @@
     height: 96px;
 }
 
-#GAMING .east span, #GAMING .my-info span {
+#GAMING .my-info span {
     font-size: 16px;
     padding: 4px 4px 4px 10px;
 }
@@ -149,7 +149,18 @@
         height: 100vh;
         overflow-y: auto;
     }
-    #GAMING .title, #GAMING .south div {
+    #GAMING .title,
+    #GAMING .south div {
         font-size: 16px;
     }
+}
+
+#GAMING .east {
+    font-size: 16px;
+    padding: 10px;
+}
+
+.highlight-number {
+    color: purple;
+    padding: 0 5px;
 }
