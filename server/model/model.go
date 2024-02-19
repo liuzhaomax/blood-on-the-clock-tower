@@ -40,9 +40,9 @@ type GameState struct {
 	Night        bool `json:"night"`
 	Day          int  `json:"day"`
 	Stage        int  `json:"stage"`
-	CastingStep  bool `json:"castingStep"`
-	VotingStep   bool `json:"votingStep"`
-	CheckoutStep bool `json:"checkoutStep"`
+	CastingStep  bool `json:"castingStep"`  // 夜晚技能，白天投票环节
+	VotingStep   bool `json:"votingStep"`   // 投票环节
+	CheckoutStep bool `json:"checkoutStep"` // 系统结算环节
 }
 
 type Player struct {

@@ -1,6 +1,6 @@
 import {useNavigate, useParams} from "react-router-dom"
 import {Button, Modal, Switch} from "antd"
-import {FireOutlined, RollbackOutlined, SmileFilled, SmileOutlined} from "@ant-design/icons"
+import {FireOutlined, RollbackOutlined, SmileFilled, SmileOutlined, StopOutlined} from "@ant-design/icons"
 import React, {useEffect, useState} from "react"
 import "./Gaming.css"
 import {remove} from "../../utils/array"
@@ -290,6 +290,11 @@ function Gaming() {
         resetSelectedPlayers()
         if (GameState.checkoutStep) {
             GameState.stage++
+            if (GameState.stage % 2 === 1) {
+                setCurrentStep("施放技能")
+            } else {
+                setCurrentStep("自由发言")
+            }
             GameState.checkoutStep = false
             GameState.castingStep = true
             socketGaming.send("toggle_night")
@@ -514,6 +519,15 @@ function Gaming() {
         return content
     }
 
+    const endVotingStep = () => {
+        GameState.votingStep = false
+        // 这里检查是进哪个环节
+        // GameState.castingStep = true
+        // GameState.checkoutStep = true
+    }
+
+    const [currentStep, setCurrentStep] = useState("未开始")
+
     return (
         <div id="GAMING" className="GAMING">
             <div className="layout west">
@@ -522,7 +536,10 @@ function Gaming() {
                     <Switch className="switch" checkedChildren="显示身份" unCheckedChildren="隐藏身份" defaultChecked onChange={checkSwitch} />
                     { game && game.host === localStorage.getItem("PlayerID")
                         ?
-                        <Button className="btn small-btn" onClick={toggleNight}>{iconSunMoon ? <SmileFilled /> : <SmileOutlined />}</Button>
+                        <>
+                            <Button className="btn small-btn" onClick={toggleNight}>{iconSunMoon ? <SmileFilled /> : <SmileOutlined />}</Button>
+                            <Button className="btn small-btn" onClick={endVotingStep}><StopOutlined /></Button>
+                        </>
                         :
                         <></>
                     }
@@ -535,7 +552,7 @@ function Gaming() {
                         <Button className="mini-btn" onClick={nominate}>提名</Button>
                         <Button className="mini-btn" onClick={vote}>投票</Button>
                     </div>
-                    <span className="layout title">↓ 场上玩家 ↓</span>
+                    <span className="layout title">当前环节：{currentStep}</span>
                     {sit()}
                 </div>
             </div>
