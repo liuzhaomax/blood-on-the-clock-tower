@@ -138,5 +138,5 @@ func StartGame(w http.ResponseWriter, r *http.Request) {
 	defer cfgMutex.Unlock()
 	cfg := model.GetConfig()
 	_, roomIndex := findRoom(roomId)
-	cfg.Rooms[roomIndex].State = "游戏中"
+	cfg.Rooms[roomIndex].Status = "游戏中"
 }

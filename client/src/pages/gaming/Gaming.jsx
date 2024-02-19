@@ -4,9 +4,17 @@ import {FireOutlined, RollbackOutlined, SmileFilled, SmileOutlined} from "@ant-d
 import React, {useEffect, useState} from "react"
 import "./Gaming.css"
 import {remove} from "../../utils/array"
+import {sleep} from "../../utils/time"
 
-let Night = false
 let socketGaming
+let wolfAudio = new Audio("/audio/wolf.wav")
+let GameState = {
+    night: false, // 是否是黑夜
+    stage: 0, // 偶数是白天，奇数是黑夜，stage==1是特殊的第一夜
+    castingStep: false, // 是否处于释放技能阶段，即讨论阶段，白天晚上同理
+    votingStep: false, // 是否有人被提名，也就是是否进入投票环节
+    checkoutStep: true, // 是否处于对当前阶段的结算环节，对于初始化，只有在这个阶段才能点击切换日夜
+}
 
 // 防断线
 setInterval(() => {
@@ -18,9 +26,9 @@ setInterval(() => {
 function Gaming() {
     const navigate = useNavigate()
     let { roomId } = useParams()
-    const [game, setGame] = useState(null)
 
     // 加载游戏
+    const [game, setGame] = useState(null)
     useEffect(() => {
         loadGame()
     }, [])
@@ -47,6 +55,13 @@ function Gaming() {
         setIsReturnRoomModalOpen(true)
     }
     const handleReturnRoomOk = () => {
+        GameState = {
+            night: false,
+            stage: 0,
+            castingStep: false,
+            votingStep: false,
+            checkoutStep: true,
+        }
         setIsReturnRoomModalOpen(false)
         navigate("/home", {
             replace: true,
@@ -93,30 +108,6 @@ function Gaming() {
                 myInfo[i].style.visibility = "hidden"
             }
         }
-    }
-
-    // 日夜切换
-    useEffect(() => {
-        setTimeout(() => {
-            toggleSunMoon()
-        }, 50)
-    }, [game])
-    const [iconSunMoon, setIconSunMoon] = useState(true)
-    const toggleSunMoon = () => {
-        if (game && game.night !== Night) {
-            if (iconSunMoon) {
-                setIconSunMoon(false)
-                document.getElementById("GAMING").style.backgroundColor = "#35557EFF"
-            } else {
-                setIconSunMoon(true)
-                document.getElementById("GAMING").style.backgroundColor = "#357e5b"
-            }
-            Night = game.night
-        }
-    }
-    const toggleNight = () => {
-        socketGaming.send("toggle_night")
-        loadGame()
     }
 
     // 建立长连接
@@ -193,16 +184,26 @@ function Gaming() {
     }
 
     // 点击玩家名字，选中玩家，保存被选中的玩家ID
-    let selectedPlayers = []
+    const [selectedPlayers, setSelectedPlayers] = useState([])
     const selectPlayer = (event) => {
         event.preventDefault()
+        let selectedPlayersCopy = selectedPlayers.slice()
         if (event.target.classList.contains("seat-selected")) {
             event.target.classList.remove("seat-selected")
-            remove(selectedPlayers, event.target.id)
+            remove(selectedPlayersCopy, event.target.id)
+            setSelectedPlayers(selectedPlayersCopy)
         } else {
             event.target.classList.add("seat-selected")
-            selectedPlayers.push(event.target.id)
+            selectedPlayersCopy.push(event.target.id)
+            setSelectedPlayers(selectedPlayersCopy)
         }
+    }
+    const resetSelectedPlayers = () => {
+        let classes = document.getElementsByClassName("seat-selected")
+        Array.from(classes).forEach(seat => {
+            seat.classList.remove("seat-selected")
+        })
+        setSelectedPlayers([])
     }
 
     // 已落座玩家加载
@@ -247,16 +248,104 @@ function Gaming() {
         )
     }
 
+    // 日夜切换
+    useEffect(() => {
+        setTimeout(() => {
+            toggleSunMoon()
+            updateGameState()
+        }, 50)
+    }, [game])
+    const [iconSunMoon, setIconSunMoon] = useState(true)
+    const toggleSunMoon = () => {
+        if (game && game.state.night !== GameState.night) {
+            if (iconSunMoon) {
+                setIconSunMoon(false)
+                document.getElementById("GAMING").style.backgroundColor = "#35557EFF"
+            } else {
+                setIconSunMoon(true)
+                document.getElementById("GAMING").style.backgroundColor = "#357e5b"
+            }
+            GameState.night = game.state.night
+        }
+    }
+    const updateGameState = () => {
+        if (game && game.state.night !== GameState.night) {
+            GameState.night = game.state.night
+        }
+        if (game && game.state.stage !== GameState.stage) {
+            GameState.stage = game.state.stage
+        }
+        if (game && game.state.castingStep !== GameState.castingStep) {
+            GameState.castingStep = game.state.castingStep
+        }
+        if (game && game.state.votingStep !== GameState.votingStep) {
+            GameState.votingStep = game.state.votingStep
+        }
+        if (game && game.state.checkoutStep !== GameState.checkoutStep) {
+            GameState.checkoutStep = game.state.checkoutStep
+        }
+    }
+    const toggleNight = () => {
+        // 重置选择的玩家
+        resetSelectedPlayers()
+        if (GameState.checkoutStep) {
+            GameState.stage++
+            GameState.checkoutStep = false
+            GameState.castingStep = true
+            socketGaming.send("toggle_night")
+            loadGame()
+            process()
+        } else {
+            console.log("不是当前stage的结算环节")
+        }
+    }
+
+    // 游戏过程
+    const process = async () => {
+        if (GameState.stage === 1) {
+            // 初始化状态
+            GameState.checkoutStep = false
+            // 狼叫
+            wolfAudio.play()
+            // 语音- 请大家操作或输入验证码
+            // 等1秒
+            // 弹出验证码
+            // 等9秒
+            await sleep(2000)
+            // 所有有技能的操作完，没技能的点完验证码，时间等待结束，则进入结算步骤  GameState.checkoutStep = true
+            console.log("是1")
+        }
+        if (GameState.stage !== 1 && GameState.stage % 2 === 0) {
+            console.log("是偶数")
+        }
+        if (GameState.stage !== 1 && GameState.stage % 2 === 1) {
+            console.log("是奇数")
+        }
+    }
+
     // 提名玩家
     const nominate = () => {
         showNominateModal()
     }
     const [isNominateModalOpen, setIsNominateModalOpen] = useState(false)
+    const [nominateModalContent, setNominateModalContent] = useState("抱歉，您此刻无法提名")
     const showNominateModal = () => {
         setIsNominateModalOpen(true)
+        let me
+        for (let i = 0; i < game.players.length; i++) {
+            if (game.players[i].id === localStorage.getItem("PlayerID")) {
+                me = game.players[i]
+                break
+            }
+        }
+        if (GameState.castingStep && !me.ready.nominated) {
+            setNominateModalContent(genNominateModalContent(me))
+        }
     }
     const handleNominateOk = () => {
         setIsNominateModalOpen(false)
+        // 提名的条件是，提名是true，stage是偶数
+        // 提名成功的条件是，最快
     }
     const handleNominateCancel = () => {
         setIsNominateModalOpen(false)
@@ -267,11 +356,23 @@ function Gaming() {
         showVoteModal()
     }
     const [isVoteModalOpen, setIsVoteModalOpen] = useState(false)
+    const [voteModalContent, setVoteModalContent] = useState("抱歉，您此刻无法投票")
     const showVoteModal = () => {
         setIsVoteModalOpen(true)
+        let me
+        for (let i = 0; i < game.players.length; i++) {
+            if (game.players[i].id === localStorage.getItem("PlayerID")) {
+                me = game.players[i]
+                break
+            }
+        }
+        if (GameState.votingStep && !me.ready.voted) {
+            setVoteModalContent(genVoteModalContent(me))
+        }
     }
     const handleVoteOk = () => {
         setIsVoteModalOpen(false)
+        // 投票的条件是，投票是true，stage是偶数，有人被提名GameState.votingStep
     }
     const handleVoteCancel = () => {
         setIsVoteModalOpen(false)
@@ -282,14 +383,132 @@ function Gaming() {
         showCastModal()
     }
     const [isCastModalOpen, setIsCastModalOpen] = useState(false)
+    const [castModalContent, setCastModalContent] = useState("抱歉，您此刻无法发动技能或没有主动技能")
     const showCastModal = () => {
         setIsCastModalOpen(true)
+        let me
+        for (let i = 0; i < game.players.length; i++) {
+            if (game.players[i].id === localStorage.getItem("PlayerID")) {
+                me = game.players[i]
+                break
+            }
+        }
+        if (GameState.castingStep && !me.ready.casted) {
+            if (GameState.stage === 1 &&
+                (me.character === "下毒者" ||
+                me.character === "占卜师" ||
+                me.character === "管家")) {
+                setCastModalContent(genCastModalContent(me))
+                return
+            }
+            if (GameState.stage % 2 === 1 && GameState.stage !== 1 &&
+                (me.character === "下毒者" ||
+                    me.character === "僧侣" ||
+                    me.character === "小恶魔" ||
+                    me.character === "占卜师" ||
+                    me.character === "管家")) {
+                setCastModalContent(genCastModalContent(me))
+                return
+            }
+            if (GameState.stage % 2 === 0 && me.character === "杀手") {
+                setCastModalContent(genCastModalContent(me))
+            }
+        }
     }
     const handleCastOk = () => {
         setIsCastModalOpen(false)
+        // 发动技能的条件是，取决于身份，drunk，白天黑夜，还有没有技能
     }
     const handleCastCancel = () => {
         setIsCastModalOpen(false)
+    }
+
+    // 产生提名Modal的内容
+    const genNominateModalContent = (me) => {
+        if (me.nominate) {
+            let content = "你确定要在今天的处决中，提名玩家 "
+            for (let i = 0; i < selectedPlayers.length; i++) {
+                for (let j = 0; j < game.players.length; j++) {
+                    if (selectedPlayers[i] === game.players[j].id) {
+                        content += "<" + game.players[j].name + "> "
+                        break
+                    }
+                }
+            }
+            content += "吗？"
+            return content
+        }
+        return "抱歉，您此刻无法提名"
+    }
+
+    // 产生投票Modal的内容
+    const genVoteModalContent = (me) => {
+        if (me.vote) {
+            let content = "你确定要投票给玩家 "
+            for (let i = 0; i < selectedPlayers.length; i++) {
+                for (let j = 0; j < game.players.length; j++) {
+                    if (selectedPlayers[i] === game.players[j].id) {
+                        content += "<" + game.players[j].name + "> "
+                        break
+                    }
+                }
+            }
+            content += "吗？"
+            return content
+        }
+        return "抱歉，您此刻无法投票"
+    }
+
+    // 产生技能施放Modal的内容
+    const genCastModalContent = (me) => {
+        let content = "是否要对玩家 "
+        for (let i = 0; i < selectedPlayers.length; i++) {
+            for (let j = 0; j < game.players.length; j++) {
+                if (selectedPlayers[i] === game.players[j].id) {
+                    content += "<" + game.players[j].name + "> "
+                    break
+                }
+            }
+        }
+        switch (me.character) {
+        case "下毒者":
+            if (selectedPlayers.length === 1) {
+                content += "下毒吗？"
+                break
+            }
+            return "您只能选1个人下毒"
+        case "占卜师":
+            if (selectedPlayers.length === 2) {
+                content += "占卜，看看有没有恶魔吗？"
+                break
+            }
+            return "您只能选2个人占卜"
+        case "管家":
+            if (selectedPlayers.length === 1) {
+                content += "跟随，这轮如果投票只能跟随他吗？"
+                break
+            }
+            return "您只能选1个人跟随"
+        case "僧侣":
+            if (selectedPlayers.length === 1) {
+                content += "进行守护吗？"
+                break
+            }
+            return "您只能选1个人守护"
+        case "小恶魔":
+            if (selectedPlayers.length === 1) {
+                content += "进行杀害吗？"
+                break
+            }
+            return "您只能选1个人杀害"
+        case "杀手":
+            if (selectedPlayers.length === 1) {
+                content += "实行枪决吗？"
+                break
+            }
+            return "您只能选1个人枪决"
+        }
+        return content
     }
 
     return (
@@ -323,14 +542,14 @@ function Gaming() {
             <Modal title="退出游戏" open={isReturnRoomModalOpen} onOk={handleReturnRoomOk} onCancel={handleReturnRoomCancel}>
                 <p>退出游戏后，不可重新进入游戏中的房间，确定退出请点击“OK”</p>
             </Modal>
-            <Modal title="提名" open={isNominateModalOpen} onOk={handleNominateOk} onCancel={handleNominateCancel}>
-                <p>提名</p>
+            <Modal id="NominateModal" title="提名" open={isNominateModalOpen} onOk={handleNominateOk} onCancel={handleNominateCancel}>
+                <p>{nominateModalContent}</p>
             </Modal>
-            <Modal title="投票" open={isVoteModalOpen} onOk={handleVoteOk} onCancel={handleVoteCancel}>
-                <p>投票</p>
+            <Modal id="VoteModal" title="投票" open={isVoteModalOpen} onOk={handleVoteOk} onCancel={handleVoteCancel}>
+                <p>{voteModalContent}</p>
             </Modal>
-            <Modal title="发动技能" open={isCastModalOpen} onOk={handleCastOk} onCancel={handleCastCancel}>
-                <p>投票</p>
+            <Modal id="CastModal" title="发动技能" open={isCastModalOpen} onOk={handleCastOk} onCancel={handleCastCancel}>
+                <p>{castModalContent}</p>
             </Modal>
         </div>
     )

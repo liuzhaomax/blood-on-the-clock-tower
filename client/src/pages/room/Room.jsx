@@ -11,7 +11,7 @@ function Room() {
     useEffect(() => {
         setTimeout(() => {
             loadRoom()
-            if (room && room.state === "游戏中") {
+            if (room && room.status === "游戏中") {
                 navigate(`/game/${roomId}`, {
                     replace: true,
                     state: `/game/${roomId}`,

@@ -25,29 +25,38 @@ type Config struct {
 }
 
 type Room struct {
-	Id       string   `json:"id"`
-	Name     string   `json:"name"`
-	Password string   `json:"password"`
-	Host     string   `json:"host"`
-	State    string   `json:"state"`
-	Init     bool     `json:"init"`
-	Night    bool     `json:"night"`
-	Day      int      `json:"day"`
-	Players  []Player `json:"players"`
-	Log      string   `json:"log"`
+	Id       string    `json:"id"`
+	Name     string    `json:"name"`
+	Password string    `json:"password"`
+	Host     string    `json:"host"`
+	Status   string    `json:"status"`
+	Init     bool      `json:"init"`
+	Players  []Player  `json:"players"`
+	Log      string    `json:"log"`
+	State    GameState `json:"state"`
+}
+
+type GameState struct {
+	Night        bool `json:"night"`
+	Day          int  `json:"day"`
+	Stage        int  `json:"stage"`
+	CastingStep  bool `json:"castingStep"`
+	VotingStep   bool `json:"votingStep"`
+	CheckoutStep bool `json:"checkoutStep"`
 }
 
 type Player struct {
-	Id            string `json:"id"`
-	Name          string `json:"name"`
-	Index         int    `json:"index"`
-	Character     string `json:"character"`
-	CharacterType string `json:"characterType"`
-	Status        Status `json:"status"`
-	Log           string `json:"log"`
+	Id            string      `json:"id"`
+	Name          string      `json:"name"`
+	Index         int         `json:"index"`
+	Character     string      `json:"character"`
+	CharacterType string      `json:"characterType"`
+	State         PlayerState `json:"state"`
+	Log           string      `json:"log"`
+	Ready         PlayerReady `json:"ready"`
 }
 
-type Status struct {
+type PlayerState struct {
 	Dead      bool   `json:"dead"`
 	Nominate  bool   `json:"nominate"`
 	Nominated bool   `json:"nominated"`
@@ -59,4 +68,10 @@ type Status struct {
 	Master    string `json:"master"`   // 管家
 	Bullet    bool   `json:"bullet"`   // 杀手
 	Blessed   bool   `json:"blessed"`  // 圣女
+}
+
+type PlayerReady struct {
+	Casted    bool `json:"casted"`
+	Nominated bool `json:"nominated"`
+	Voted     bool `json:"voted"`
 }

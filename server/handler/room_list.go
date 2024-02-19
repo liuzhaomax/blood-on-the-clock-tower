@@ -68,7 +68,7 @@ func CreateRoom(w http.ResponseWriter, r *http.Request) {
 	cfgMutex.Lock()
 	defer cfgMutex.Unlock()
 	cfg := model.GetConfig()
-	room.State = "等待开始"
+	room.Status = "等待开始"
 
 	// TODO 删除测试代码
 	var player model.Player

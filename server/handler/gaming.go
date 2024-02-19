@@ -50,6 +50,8 @@ func LoadGame(w http.ResponseWriter, r *http.Request) {
 		}
 		// 初始化玩家状态 依赖身份
 		cfg.Rooms[roomIndex].Players = initStatus(cfg.Rooms[roomIndex].Players, replaceDrunk)
+		// 设置起始状态为结算环节，只有进入结算环节才能点击切换日夜
+		cfg.Rooms[roomIndex].State.CheckoutStep = true
 		// 初始化完成
 		cfg.Rooms[roomIndex].Init = true
 	}
@@ -227,33 +229,33 @@ func genRandomPositionSlice(indexSliceForCharacterTypePool []int, characterByTyp
 
 func initStatus(players []model.Player, replaceDrunk string) []model.Player {
 	for i, player := range players {
-		players[i].Status.Nominate = true
-		players[i].Status.Vote = true
+		players[i].State.Nominate = true
+		players[i].State.Vote = true
 		switch player.Character {
 		case Imp:
-			players[i].Status.Evil = true
-			players[i].Status.Demon = true
+			players[i].State.Evil = true
+			players[i].State.Demon = true
 		case Poisoner:
-			players[i].Status.Evil = true
+			players[i].State.Evil = true
 		case ScarletWoman:
-			players[i].Status.Evil = true
+			players[i].State.Evil = true
 		case Baron:
-			players[i].Status.Evil = true
+			players[i].State.Evil = true
 		case Virgin:
-			players[i].Status.Blessed = true
+			players[i].State.Blessed = true
 		case Slayer:
-			players[i].Status.Bullet = true
+			players[i].State.Bullet = true
 		case Recluse:
-			players[i].Status.Evil = true
+			players[i].State.Evil = true
 		case Drunk:
 			players[i].CharacterType = Townsfolk
 			players[i].Character = replaceDrunk
-			players[i].Status.Drunk = true
+			players[i].State.Drunk = true
 		case FortuneTeller:
 			for {
 				randIdx := rand.Intn(len(players))
 				if players[randIdx].CharacterType == Townsfolk {
-					players[randIdx].Status.Demon = true
+					players[randIdx].State.Demon = true
 					break
 				}
 			}

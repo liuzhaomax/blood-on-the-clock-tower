@@ -30,6 +30,8 @@ func Gaming(w http.ResponseWriter, r *http.Request) {
 	// 推入连接池
 	cfg := model.GetConfig()
 	cfg.ConnPool[playerId] = conn
+	_, roomIndex := findRoom(roomId)
+	game := &cfg.Rooms[roomIndex]
 	for {
 		_, p, err := conn.ReadMessage()
 		if err != nil {
@@ -44,40 +46,49 @@ func Gaming(w http.ResponseWriter, r *http.Request) {
 		action := string(p)
 		switch action {
 		case "toggle_night":
-			toggleNight(roomId, playerId)
+			toggleNight(game, playerId)
 		}
 		time.Sleep(time.Millisecond * 50)
 	}
 }
 
-func toggleNight(roomId string, playerId string) {
+func toggleNight(game *model.Room, playerId string) {
+	cfg := model.GetConfig()
 	cfgMutex.Lock()
 	defer cfgMutex.Unlock()
-	cfg := model.GetConfig()
-	_, roomIndex := findRoom(roomId)
 
 	var msg string
 
-	if playerId == cfg.Rooms[roomIndex].Host {
-		if !cfg.Rooms[roomIndex].Night {
-			cfg.Rooms[roomIndex].Day = cfg.Rooms[roomIndex].Day + 1
-			msg = fmt.Sprintf("第%d天，入夜~", cfg.Rooms[roomIndex].Day)
+	if playerId == game.Host {
+		// Stage + 1
+		game.State.Stage += 1
+		// 日转夜 Day+1
+		if !game.State.Night {
+			game.State.Day = game.State.Day + 1
+			msg = fmt.Sprintf("第%d天，入夜~", game.State.Day)
 		} else {
-			msg = fmt.Sprintf("第%d天，天亮了~", cfg.Rooms[roomIndex].Day)
+			msg = fmt.Sprintf("第%d天，天亮了~", game.State.Day)
 		}
 		// 存入总日志
-		cfg.Rooms[roomIndex].Log += msg + "\n"
+		game.Log += msg + "\n"
 		// 存入个人日志，刷新的时候加载
-		for i := range cfg.Rooms[roomIndex].Players {
-			cfg.Rooms[roomIndex].Players[i].Log += msg + "\n"
+		for i := range game.Players {
+			game.Players[i].Log += msg + "\n"
 		}
+		// 日夜切换
+		game.State.Night = !game.State.Night
+		// 调整环节
+		game.State.CastingStep = true
+		game.State.CheckoutStep = false
 
-		cfg.Rooms[roomIndex].Night = !cfg.Rooms[roomIndex].Night
-
-		// 让所有活人重新可以投票
-		for i := range cfg.Rooms[roomIndex].Players {
-			if !cfg.Rooms[roomIndex].Players[i].Status.Dead {
-				cfg.Rooms[roomIndex].Players[i].Status.Vote = true
+		for i := range game.Players {
+			// 调整玩家准备状态
+			game.Players[i].Ready.Casted = false
+			game.Players[i].Ready.Nominated = false
+			game.Players[i].Ready.Voted = false
+			// 让所有活人重新可以投票
+			if !game.Players[i].State.Dead {
+				game.Players[i].State.Vote = true
 			}
 		}
 	}

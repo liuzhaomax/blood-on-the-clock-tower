@@ -98,7 +98,7 @@ function Home() {
     }
 
     const joinRoom = () => {
-        // TODO 如果房间state是游戏中，则无法加入，弹出错误提示
+        // TODO 如果房间status是游戏中，则无法加入，弹出错误提示
         // TODO 如果当前人数大于等于15，则无法加入房间，弹出错误提示
         onClose1()
         let playerInfo = {
@@ -141,7 +141,7 @@ function Home() {
                                     description={
                                         <Flex horizontal="true" gap="middle" justify="space-between" align="center" wrap="wrap">
                                             <span>当前人数：{item.players === null ? 0 : item.players.length}</span>
-                                            <span>{item.state}</span>
+                                            <span>{item.status}</span>
                                         </Flex>
                                     }
                                     onClick={showDrawer1.bind(this, item)}
