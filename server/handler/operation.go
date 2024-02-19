@@ -88,7 +88,11 @@ func toggleNight(game *model.Room, playerId string) {
 			game.Players[i].Ready.Voted = false
 			// 让所有活人重新可以投票
 			if !game.Players[i].State.Dead {
-				game.Players[i].State.Vote = true
+				game.Players[i].State.Vote = 1
+			}
+			// 管家无票
+			if game.Players[i].Character == Butler {
+				game.Players[i].State.Vote = 0
 			}
 		}
 	}

@@ -60,7 +60,7 @@ type PlayerState struct {
 	Dead      bool   `json:"dead"`
 	Nominate  bool   `json:"nominate"`
 	Nominated bool   `json:"nominated"`
-	Vote      bool   `json:"vote"`
+	Vote      int    `json:"vote"`
 	Evil      bool   `json:"evil"`     // 隐士
 	Demon     bool   `json:"demon"`    // 占卜
 	Drunk     bool   `json:"drunk"`    // 酒鬼

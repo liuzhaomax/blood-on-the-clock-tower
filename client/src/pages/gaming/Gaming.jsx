@@ -443,7 +443,10 @@ function Gaming() {
 
     // 产生投票Modal的内容
     const genVoteModalContent = (me) => {
-        if (me.vote) {
+        if (me.character === "管家") {
+            return "您只能跟随主人投票"
+        }
+        if (me.vote > 0) {
             let content = "你确定要投票给玩家 "
             for (let i = 0; i < selectedPlayers.length; i++) {
                 for (let j = 0; j < game.players.length; j++) {
@@ -485,7 +488,7 @@ function Gaming() {
             return "您只能选2个人占卜"
         case "管家":
             if (selectedPlayers.length === 1) {
-                content += "跟随，这轮如果投票只能跟随他吗？"
+                content += "跟随，让他这轮有两票吗？"
                 break
             }
             return "您只能选1个人跟随"
