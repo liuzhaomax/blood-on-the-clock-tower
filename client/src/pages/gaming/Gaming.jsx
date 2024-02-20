@@ -326,7 +326,10 @@ function Gaming() {
             console.log("第一夜进入可日夜切换状态")
         }
         if (GameState.stage !== 1 && GameState.stage % 2 === 0) {
-            // 结算前一夜 socket
+            // 结算前一夜
+            let req = JSON.stringify({action: "checkout", targets: []})
+            socketGaming.send(req) // 结算本阶段
+
             console.log("白天")
         }
         if (GameState.stage !== 1 && GameState.stage % 2 === 1) {
@@ -431,13 +434,34 @@ function Gaming() {
             if (GameState.stage % 2 === 0 && me.character === "杀手") {
                 setCastModalContent(genCastModalContent(me))
             }
+        } else {
+            setCastModalContent("抱歉，您本阶段或本局已发动过技能")
         }
     }
     const handleCastOk = () => {
         setIsCastModalOpen(false)
         // 后端判断 发动技能的条件是，取决于身份，drunk，白天黑夜，还有没有技能；前端随便发动，后端判断成不成功
-        let req = JSON.stringify({action: "cast", targets: castToPlayersId})
-        socketGaming.send(req) // 会在后端更新stage、night
+        let me
+        for (let i = 0; i < game.players.length; i++) {
+            if (game.players[i].id === localStorage.getItem("PlayerID")) {
+                me = game.players[i]
+                break
+            }
+        }
+        if (!me.ready.casted &&
+            (castToPlayersId.length === 1 &&
+                (me.character === "下毒者" ||
+                me.character === "管家" ||
+                me.character === "僧侣" ||
+                me.character === "小恶魔" ||
+                me.character === "杀手")
+                ||
+                (castToPlayersId.length === 2 &&
+                me.character === "占卜师")
+            )) {
+            let req = JSON.stringify({action: "cast", targets: castToPlayersId})
+            socketGaming.send(req) // 会在后端更新stage、night
+        }
     }
     const handleCastCancel = () => {
         setIsCastModalOpen(false)

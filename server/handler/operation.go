@@ -33,9 +33,8 @@ func Gaming(w http.ResponseWriter, r *http.Request) {
 	cfg.ConnPool[playerId] = conn
 	_, roomIndex := findRoom(roomId)
 	game := &cfg.Rooms[roomIndex]
-
 	// 技能施放池，存储所有施放技能人，当前阶段施放的技能作用目标
-	castPool := map[model.Player][]string{}
+	game.CastPool = map[string][]string{}
 
 	for {
 		_, p, err := conn.ReadMessage()
@@ -57,7 +56,7 @@ func Gaming(w http.ResponseWriter, r *http.Request) {
 		case "toggle_night":
 			toggleNight(game, playerId)
 		case "cast":
-			cast(game, playerId, actionReq.Targets, castPool)
+			cast(game, playerId, actionReq.Targets)
 		}
 		time.Sleep(time.Millisecond * 50)
 	}
@@ -112,14 +111,14 @@ func toggleNight(game *model.Room, playerId string) {
 	}
 }
 
-func cast(game *model.Room, playerId string, targets []string, castPool map[model.Player][]string) {
+func cast(game *model.Room, playerId string, targets []string) {
 	cfg := model.GetConfig()
 	cfgMutex.Lock()
 	defer cfgMutex.Unlock()
 
 	var msgPlayer = "您"
 	var msgAll string
-	for _, player := range game.Players {
+	for i, player := range game.Players {
 		if player.Id == playerId {
 			msgAll += player.Name
 			switch player.Character {
@@ -186,12 +185,13 @@ func cast(game *model.Room, playerId string, targets []string, castPool map[mode
 					}
 				}
 			}
+			game.Players[i].Ready.Casted = true
 			break
 		}
 	}
+	game.CastPool[playerId] = targets
 	for i, player := range game.Players {
 		if player.Id == playerId {
-			castPool[player] = targets
 			game.Players[i].Log += msgPlayer
 			break
 		}

@@ -34,6 +34,8 @@ type Room struct {
 	Players  []Player  `json:"players"`
 	Log      string    `json:"log"`
 	State    GameState `json:"state"`
+	// 技能施放池，存储所有施放技能人，当前阶段施放的技能作用目标
+	CastPool map[string][]string `json:"castPool"`
 }
 
 type GameState struct {
