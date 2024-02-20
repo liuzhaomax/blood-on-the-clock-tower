@@ -116,10 +116,7 @@ function Gaming() {
         socketGaming = new WebSocket(`ws://192.168.1.14:8080/gaming/${roomId}/${localStorage.getItem("PlayerID")}`)
         socketGaming.onmessage = function(event) {
             // console.log("Received message from server:", event.data)
-            addLog(
-                event.data,
-                [/[0-9]/g, "highlight highlight-number"], // 数字
-            )
+            addLog(event.data, ...wordClassPairs )
             loadGame()
         }
         socketGaming.onerror = function(error) {
@@ -129,6 +126,11 @@ function Gaming() {
     }
 
     // 增加一条log 并上色  addLog(event.data, [/[0-9]/g, "highlight"], ["天", "highlight"])
+    let wordClassPairs = [
+        [/[0-9]/g, "highlight highlight-number"], // 数字
+        [/\[(.*?)]/g, "highlight highlight-player"], // 玩家名字
+        [/(下毒|占卜|认主|守护|杀害|枪毙)/g, "highlight highlight-skill"], // 技能关键字
+    ]
     const addLog = (text, ...wordClassPairs) => {
         let replacedText = updateText(text, ...wordClassPairs[0])
         if (wordClassPairs.length > 1) {
@@ -171,12 +173,7 @@ function Gaming() {
         if (game) {
             for (let i = 0; i < game.players.length; i++) {
                 if (game.players[i].id === localStorage.getItem("PlayerID")) {
-                    replaceLog(
-                        game.players[i].log,
-                        [/[0-9]/g, "highlight highlight-number"], // 数字
-                        [/\[(.*?)]/g, "highlight highlight-player"], // 玩家名字
-                        [/(下毒|占卜|认主|守护|杀害|枪毙)/g, "highlight highlight-skill"], // 技能关键字
-                    )
+                    replaceLog(game.players[i].log, ...wordClassPairs)
                     break
                 }
             }
