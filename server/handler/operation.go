@@ -47,6 +47,8 @@ func Gaming(w http.ResponseWriter, r *http.Request) {
 		switch action {
 		case "toggle_night":
 			toggleNight(game, playerId)
+		case "go_to_casting_step":
+			toggleNight(game, playerId)
 		}
 		time.Sleep(time.Millisecond * 50)
 	}
@@ -77,15 +79,10 @@ func toggleNight(game *model.Room, playerId string) {
 		}
 		// 日夜切换
 		game.State.Night = !game.State.Night
-		// 调整环节
-		game.State.CastingStep = true
-		game.State.CheckoutStep = false
 
 		for i := range game.Players {
 			// 调整玩家准备状态
 			game.Players[i].Ready.Casted = false
-			game.Players[i].Ready.Nominated = false
-			game.Players[i].Ready.Voted = false
 			// 让所有活人重新可以投票
 			if !game.Players[i].State.Dead {
 				game.Players[i].State.Vote = 1

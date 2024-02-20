@@ -50,8 +50,6 @@ func LoadGame(w http.ResponseWriter, r *http.Request) {
 		}
 		// 初始化玩家状态 依赖身份
 		cfg.Rooms[roomIndex].Players = initStatus(cfg.Rooms[roomIndex].Players, replaceDrunk)
-		// 设置起始状态为结算环节，只有进入结算环节才能点击切换日夜
-		cfg.Rooms[roomIndex].State.CheckoutStep = true
 		// 初始化完成
 		cfg.Rooms[roomIndex].Init = true
 	}

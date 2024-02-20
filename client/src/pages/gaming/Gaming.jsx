@@ -11,9 +11,8 @@ let wolfAudio = new Audio("/audio/wolf.wav")
 let GameState = {
     night: false, // 是否是黑夜
     stage: 0, // 偶数是白天，奇数是黑夜，stage==1是特殊的第一夜
-    castingStep: false, // 是否处于释放技能阶段，即讨论阶段，白天晚上同理
     votingStep: false, // 是否有人被提名，也就是是否进入投票环节
-    checkoutStep: true, // 是否处于对当前阶段的结算环节，对于初始化，只有在这个阶段才能点击切换日夜
+    castLock: true, // 入夜后给施放技能的时间，后端没有，只在前端限制，因为只限制主机
 }
 
 // 防断线
@@ -58,9 +57,8 @@ function Gaming() {
         GameState = {
             night: false,
             stage: 0,
-            castingStep: false,
             votingStep: false,
-            checkoutStep: true,
+            castLock: true,
         }
         setIsReturnRoomModalOpen(false)
         navigate("/home", {
@@ -275,56 +273,69 @@ function Gaming() {
         if (game && game.state.stage !== GameState.stage) {
             GameState.stage = game.state.stage
         }
-        if (game && game.state.castingStep !== GameState.castingStep) {
-            GameState.castingStep = game.state.castingStep
-        }
         if (game && game.state.votingStep !== GameState.votingStep) {
             GameState.votingStep = game.state.votingStep
         }
-        if (game && game.state.checkoutStep !== GameState.checkoutStep) {
-            GameState.checkoutStep = game.state.checkoutStep
-        }
     }
     const toggleNight = () => {
-        // 重置选择的玩家
-        resetSelectedPlayers()
-        if (GameState.checkoutStep) {
+        if (checkReadyToToggleNight()) {
+            // 重置选择的玩家
+            resetSelectedPlayers()
+            // 阶段+1
             GameState.stage++
+            // 展示当前环节
             if (GameState.stage % 2 === 1) {
                 setCurrentStep("施放技能")
             } else {
                 setCurrentStep("自由发言")
             }
-            GameState.checkoutStep = false
-            GameState.castingStep = true
-            socketGaming.send("toggle_night")
-            loadGame()
+            // 后端重置状态
+            socketGaming.send("toggle_night") // 会在后端更新stage、night
+            loadGame() // 立即刷新game，即刷新所有人的UI
+            // 锁定与结算过程
             process()
         } else {
             console.log("不是当前stage的结算环节")
         }
     }
+    const checkReadyToToggleNight = () => {
+        let ready = true
+        for (let i = 0; i < game.players.length; i++) {
+            ready = ready && game.players[i].ready.casted
+        }
+        // 所有有技能的操作完，没技能的点完验证码，时间等待结束，不在投票阶段，则切换日夜，切换后首先结算前一阶段
+        return !GameState.votingStep &&
+            !GameState.castLock &&
+            ready ||
+            GameState.stage === 0
+    }
 
     // 游戏过程
     const process = async () => {
         if (GameState.stage === 1) {
-            // 初始化状态
-            GameState.checkoutStep = false
+            // 给host锁定不能切换日夜
+            GameState.castLock = true
             // 狼叫
             wolfAudio.play()
-            // 语音- 请大家操作或输入验证码
-            // 等1秒
-            // 弹出验证码
+            // TODO 语音- 请大家操作或输入验证码
+            // TODO 弹出验证码
             // 等9秒
-            await sleep(2000)
-            // 所有有技能的操作完，没技能的点完验证码，时间等待结束，则进入结算步骤  GameState.checkoutStep = true
-            console.log("是1")
+            await sleep(1000)
+            // 给host解锁可以切换日夜
+            GameState.castLock = false
+
+            console.log("第一夜进入可日夜切换状态")
         }
         if (GameState.stage !== 1 && GameState.stage % 2 === 0) {
-            console.log("是偶数")
+            // 结算前一夜 socket
+            console.log("白天")
         }
         if (GameState.stage !== 1 && GameState.stage % 2 === 1) {
-            console.log("是奇数")
+            // 结算前一日 socket
+            GameState.castLock = true
+            await sleep(2000)
+            GameState.castLock = false
+            console.log("夜晚")
         }
     }
 
@@ -343,7 +354,7 @@ function Gaming() {
                 break
             }
         }
-        if (GameState.castingStep && !me.ready.nominated) {
+        if (!me.ready.nominated) {
             setNominateModalContent(genNominateModalContent(me))
         }
     }
@@ -398,7 +409,7 @@ function Gaming() {
                 break
             }
         }
-        if (GameState.castingStep && !me.ready.casted) {
+        if (!me.ready.casted) {
             if (GameState.stage === 1 &&
                 (me.character === "下毒者" ||
                 me.character === "占卜师" ||
@@ -522,8 +533,6 @@ function Gaming() {
     const endVotingStep = () => {
         GameState.votingStep = false
         // 这里检查是进哪个环节
-        // GameState.castingStep = true
-        // GameState.checkoutStep = true
     }
 
     const [currentStep, setCurrentStep] = useState("未开始")

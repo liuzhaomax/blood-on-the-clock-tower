@@ -37,12 +37,10 @@ type Room struct {
 }
 
 type GameState struct {
-	Night        bool `json:"night"`
-	Day          int  `json:"day"`
-	Stage        int  `json:"stage"`
-	CastingStep  bool `json:"castingStep"`  // 夜晚技能，白天投票环节
-	VotingStep   bool `json:"votingStep"`   // 投票环节
-	CheckoutStep bool `json:"checkoutStep"` // 系统结算环节
+	Night      bool `json:"night"`
+	Day        int  `json:"day"`
+	Stage      int  `json:"stage"`
+	VotingStep bool `json:"votingStep"` // 投票环节
 }
 
 type Player struct {
@@ -71,7 +69,8 @@ type PlayerState struct {
 }
 
 type PlayerReady struct {
-	Casted    bool `json:"casted"`
-	Nominated bool `json:"nominated"`
-	Voted     bool `json:"voted"`
+	// 不同于playerState中的技能，这个是每个阶段的是否放技能的情况，
+	// 也就是说只要要进入的阶段是不能发动技能的，那这个属性直接被赋为true，
+	// 下个阶段开始会变为false
+	Casted bool `json:"casted"`
 }
