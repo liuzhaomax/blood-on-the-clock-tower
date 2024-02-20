@@ -195,6 +195,15 @@
     color: orchid;
 }
 
+#GAMING .highlight-player {
+    color: black;
+    background-color: yellow;
+}
+
+#GAMING .highlight-skill {
+    color: deepskyblue;
+}
+
 #GAMING .highlight-dead {
     text-decoration: line-through;
 }

@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/gorilla/websocket"
 	"github.com/liuzhaomax/blood-on-the-clock-tower/server/model"
@@ -32,6 +33,10 @@ func Gaming(w http.ResponseWriter, r *http.Request) {
 	cfg.ConnPool[playerId] = conn
 	_, roomIndex := findRoom(roomId)
 	game := &cfg.Rooms[roomIndex]
+
+	// 技能施放池，存储所有施放技能人，当前阶段施放的技能作用目标
+	castPool := map[model.Player][]string{}
+
 	for {
 		_, p, err := conn.ReadMessage()
 		if err != nil {
@@ -43,12 +48,16 @@ func Gaming(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		action := string(p)
-		switch action {
+		var actionReq model.ActionReq
+		if err = json.Unmarshal(p, &actionReq); err != nil {
+			log.Println("JSON unmarshal error:", err)
+		}
+
+		switch actionReq.Action {
 		case "toggle_night":
 			toggleNight(game, playerId)
-		case "go_to_casting_step":
-			toggleNight(game, playerId)
+		case "cast":
+			cast(game, playerId, actionReq.Targets, castPool)
 		}
 		time.Sleep(time.Millisecond * 50)
 	}
@@ -97,6 +106,101 @@ func toggleNight(game *model.Room, playerId string) {
 	// 将日夜切换日志群发
 	for _, conn := range cfg.ConnPool {
 		if err := conn.WriteMessage(websocket.TextMessage, []byte(msg)); err != nil {
+			log.Println("Write error:", err)
+			return
+		}
+	}
+}
+
+func cast(game *model.Room, playerId string, targets []string, castPool map[model.Player][]string) {
+	cfg := model.GetConfig()
+	cfgMutex.Lock()
+	defer cfgMutex.Unlock()
+
+	var msgPlayer = "您"
+	var msgAll string
+	for _, player := range game.Players {
+		if player.Id == playerId {
+			msgAll += player.Name
+			switch player.Character {
+			case Poisoner:
+				for _, player := range game.Players {
+					if targets[0] == player.Id {
+						info := fmt.Sprintf("对 [%s] 进行了下毒！", player.Name)
+						msgPlayer += info
+						msgAll += info
+						break
+					}
+				}
+			case FortuneTeller:
+				for _, player := range game.Players {
+					if targets[0] == player.Id {
+						info := "对 [" + player.Name + "]、["
+						msgPlayer += info
+						msgAll += info
+						break
+					}
+				}
+				for _, player := range game.Players {
+					if targets[1] == player.Id {
+						info := player.Name + "] 进行了占卜！"
+						msgPlayer += info
+						msgAll += info
+						break
+					}
+				}
+			case Butler:
+				for _, player := range game.Players {
+					if targets[0] == player.Id {
+						info := fmt.Sprintf(" 对 [%s] 进行了认主！", player.Name)
+						msgPlayer += info
+						msgAll += info
+						break
+					}
+				}
+			case Monk:
+				for _, player := range game.Players {
+					if targets[0] == player.Id {
+						info := fmt.Sprintf(" 对 [%s] 进行了守护！", player.Name)
+						msgPlayer += info
+						msgAll += info
+						break
+					}
+				}
+			case Imp:
+				for _, player := range game.Players {
+					if targets[0] == player.Id {
+						info := fmt.Sprintf(" 对 [%s] 进行了杀害！", player.Name)
+						msgPlayer += info
+						msgAll += info
+						break
+					}
+				}
+			case Slayer:
+				for _, player := range game.Players {
+					if targets[0] == player.Id {
+						info := fmt.Sprintf(" 对 [%s] 进行了枪毙！", player.Name)
+						msgPlayer += info
+						msgAll += info
+						break
+					}
+				}
+			}
+			break
+		}
+	}
+	for i, player := range game.Players {
+		if player.Id == playerId {
+			castPool[player] = targets
+			game.Players[i].Log += msgPlayer
+			break
+		}
+	}
+	game.Log += msgAll + "\n"
+
+	// 发送日志
+	for _, conn := range cfg.ConnPool {
+		if err := conn.WriteMessage(websocket.TextMessage, []byte(msgPlayer)); err != nil {
 			log.Println("Write error:", err)
 			return
 		}

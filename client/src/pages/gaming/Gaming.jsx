@@ -18,7 +18,7 @@ let GameState = {
 // 防断线
 setInterval(() => {
     if (socketGaming) {
-        socketGaming.send("ping")
+        socketGaming.send(JSON.stringify({action: "ping", targets: []}))
     }
 }, 10000)
 
@@ -174,6 +174,8 @@ function Gaming() {
                     replaceLog(
                         game.players[i].log,
                         [/[0-9]/g, "highlight highlight-number"], // 数字
+                        [/\[(.*?)]/g, "highlight highlight-player"], // 玩家名字
+                        [/(下毒|占卜|认主|守护|杀害|枪毙)/g, "highlight highlight-skill"], // 技能关键字
                     )
                     break
                 }
@@ -290,7 +292,8 @@ function Gaming() {
                 setCurrentStep("自由发言")
             }
             // 后端重置状态
-            socketGaming.send("toggle_night") // 会在后端更新stage、night
+            let req = JSON.stringify({action: "toggle_night", targets: []})
+            socketGaming.send(req) // 会在后端更新stage、night
             loadGame() // 立即刷新game，即刷新所有人的UI
             // 锁定与结算过程
             process()
@@ -337,6 +340,9 @@ function Gaming() {
             console.log("夜晚")
         }
     }
+
+    // 技能释放对象
+    const [castToPlayersId, setCastToPlayersId] = useState([])
 
     // 提名玩家
     const nominate = () => {
@@ -432,10 +438,13 @@ function Gaming() {
     }
     const handleCastOk = () => {
         setIsCastModalOpen(false)
-        // 发动技能的条件是，取决于身份，drunk，白天黑夜，还有没有技能
+        // 后端判断 发动技能的条件是，取决于身份，drunk，白天黑夜，还有没有技能；前端随便发动，后端判断成不成功
+        let req = JSON.stringify({action: "cast", targets: castToPlayersId})
+        socketGaming.send(req) // 会在后端更新stage、night
     }
     const handleCastCancel = () => {
         setIsCastModalOpen(false)
+        setCastToPlayersId([])
     }
 
     // 产生提名Modal的内容
@@ -570,6 +579,7 @@ function Gaming() {
             }
             return "您只能选1个人枪决"
         }
+        setCastToPlayersId(selectedPlayers)
         return content
     }
 

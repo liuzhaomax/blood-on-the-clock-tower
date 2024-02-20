@@ -74,3 +74,8 @@ type PlayerReady struct {
 	// 下个阶段开始会变为false
 	Casted bool `json:"casted"`
 }
+
+type ActionReq struct {
+	Action  string   `json:"action"`
+	Targets []string `json:"targets"`
+}
