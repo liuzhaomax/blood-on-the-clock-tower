@@ -323,7 +323,6 @@ function Gaming() {
             await sleep(1000)
             // 给host解锁可以切换日夜
             GameState.castLock = false
-
             console.log("第一夜进入可日夜切换状态")
         }
         if (GameState.stage !== 1 && GameState.stage % 2 === 0) {
@@ -441,14 +440,18 @@ function Gaming() {
 
     // 产生提名Modal的内容
     const genNominateModalContent = (me) => {
+        if (selectedPlayers.length === 0) {
+            return "您想提名不能不选人"
+        }
+        if (selectedPlayers.length > 1) {
+            return "您只能选1人提名"
+        }
         if (me.nominate) {
             let content = "你确定要在今天的处决中，提名玩家 "
-            for (let i = 0; i < selectedPlayers.length; i++) {
-                for (let j = 0; j < game.players.length; j++) {
-                    if (selectedPlayers[i] === game.players[j].id) {
-                        content += "<" + game.players[j].name + "> "
-                        break
-                    }
+            for (let j = 0; j < game.players.length; j++) {
+                if (selectedPlayers[0] === game.players[j].id) {
+                    content += "<" + game.players[j].name + "> "
+                    break
                 }
             }
             content += "吗？"
@@ -459,17 +462,21 @@ function Gaming() {
 
     // 产生投票Modal的内容
     const genVoteModalContent = (me) => {
+        if (selectedPlayers.length === 0) {
+            return "您想投票不能不选人"
+        }
+        if (selectedPlayers.length > 1) {
+            return "您只能选1人投票"
+        }
         if (me.character === "管家") {
             return "您只能跟随主人投票"
         }
         if (me.vote > 0) {
             let content = "你确定要投票给玩家 "
-            for (let i = 0; i < selectedPlayers.length; i++) {
-                for (let j = 0; j < game.players.length; j++) {
-                    if (selectedPlayers[i] === game.players[j].id) {
-                        content += "<" + game.players[j].name + "> "
-                        break
-                    }
+            for (let j = 0; j < game.players.length; j++) {
+                if (selectedPlayers[0] === game.players[j].id) {
+                    content += "<" + game.players[j].name + "> "
+                    break
                 }
             }
             content += "吗？"
@@ -480,22 +487,32 @@ function Gaming() {
 
     // 产生技能施放Modal的内容
     const genCastModalContent = (me) => {
+        let selectedPlayersObj = []
         let content = "是否要对玩家 "
         for (let i = 0; i < selectedPlayers.length; i++) {
             for (let j = 0; j < game.players.length; j++) {
                 if (selectedPlayers[i] === game.players[j].id) {
                     content += "<" + game.players[j].name + "> "
+                    selectedPlayersObj.push(game.players[j])
                     break
                 }
             }
         }
         switch (me.character) {
         case "下毒者":
+            for (let i = 0; i < selectedPlayersObj.length; i++) {
+                if (selectedPlayersObj[i].state.dead) {
+                    return "您不能毒已死的人"
+                }
+                if (selectedPlayersObj[i].character === "下毒者") {
+                    return "您不能毒自己"
+                }
+            }
             if (selectedPlayers.length === 1) {
                 content += "下毒吗？"
                 break
             }
-            return "您只能选1个人下毒"
+            return "您必须且只能选1个人下毒"
         case "占卜师":
             if (selectedPlayers.length === 2) {
                 content += "占卜，看看有没有恶魔吗？"
@@ -503,24 +520,50 @@ function Gaming() {
             }
             return "您只能选2个人占卜"
         case "管家":
+            for (let i = 0; i < selectedPlayersObj.length; i++) {
+                if (selectedPlayersObj[i].character === "管家") {
+                    return "您不能跟随自己"
+                }
+            }
             if (selectedPlayers.length === 1) {
                 content += "跟随，让他这轮有两票吗？"
                 break
             }
             return "您只能选1个人跟随"
         case "僧侣":
+            for (let i = 0; i < selectedPlayersObj.length; i++) {
+                if (selectedPlayersObj[i].state.dead) {
+                    return "您不能守护已死的人"
+                }
+                if (selectedPlayersObj[i].character === "僧侣") {
+                    return "您不能守护自己"
+                }
+            }
             if (selectedPlayers.length === 1) {
                 content += "进行守护吗？"
                 break
             }
             return "您只能选1个人守护"
         case "小恶魔":
+            for (let i = 0; i < selectedPlayersObj.length; i++) {
+                if (selectedPlayersObj[i].state.dead) {
+                    return "您不能杀害已死的人"
+                }
+            }
             if (selectedPlayers.length === 1) {
                 content += "进行杀害吗？"
                 break
             }
             return "您只能选1个人杀害"
         case "杀手":
+            for (let i = 0; i < selectedPlayersObj.length; i++) {
+                if (selectedPlayersObj[i].state.dead) {
+                    return "您不能枪毙已死的人"
+                }
+                if (selectedPlayersObj[i].character === "杀手") {
+                    return "您不能枪毙自己"
+                }
+            }
             if (selectedPlayers.length === 1) {
                 content += "实行枪决吗？"
                 break
