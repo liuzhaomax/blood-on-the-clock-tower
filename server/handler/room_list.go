@@ -72,7 +72,7 @@ func CreateRoom(w http.ResponseWriter, r *http.Request) {
 
 	// TODO 删除测试代码
 	var player model.Player
-	for i := 0; i < 13; i++ {
+	for i := 0; i < 7; i++ {
 		player.Id = fmt.Sprintf("111111111%d", i)
 		player.Name = fmt.Sprintf("机器人%d", i)
 		room.Players = append(room.Players, player)

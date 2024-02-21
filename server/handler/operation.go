@@ -89,8 +89,6 @@ func toggleNight(game *model.Room, playerId string) {
 		game.State.Night = !game.State.Night
 
 		for i := range game.Players {
-			// 调整玩家准备状态
-			game.Players[i].Ready.Casted = false
 			// 让所有活人重新可以投票
 			if !game.Players[i].State.Dead {
 				game.Players[i].State.Vote = 1
@@ -98,6 +96,38 @@ func toggleNight(game *model.Room, playerId string) {
 			// 管家无票
 			if game.Players[i].Character == Butler {
 				game.Players[i].State.Vote = 0
+			}
+			// 调整玩家施放技能的准备状态
+			game.Players[i].Ready.Casted = true
+			if !game.Players[i].State.Dead {
+				switch game.Players[i].Character {
+				case Poisoner:
+					if game.State.Stage%2 == 1 {
+						game.Players[i].Ready.Casted = false
+					}
+				case FortuneTeller:
+					if game.State.Stage%2 == 1 {
+						game.Players[i].Ready.Casted = false
+					}
+				case Butler:
+					if game.State.Stage%2 == 1 {
+						game.Players[i].Ready.Casted = false
+					}
+				case Monk:
+					if game.State.Stage%2 == 1 && game.State.Stage != 1 {
+						game.Players[i].Ready.Casted = false
+					}
+				case Imp:
+					if game.State.Stage%2 == 1 && game.State.Stage != 1 {
+						game.Players[i].Ready.Casted = false
+					}
+				case Slayer:
+					if game.State.Stage%2 == 0 && game.Players[i].State.Bullet {
+						game.Players[i].Ready.Casted = false
+					}
+				default:
+					game.Players[i].Ready.Casted = true
+				}
 			}
 		}
 	}
@@ -120,7 +150,7 @@ func cast(game *model.Room, playerId string, targets []string) {
 	var msgAll string
 	for i, player := range game.Players {
 		if player.Id == playerId {
-			msgAll += player.Name
+			msgAll += fmt.Sprintf("[%s] ", player.Name)
 			switch player.Character {
 			case Poisoner:
 				for _, player := range game.Players {

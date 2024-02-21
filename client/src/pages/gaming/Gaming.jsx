@@ -37,7 +37,7 @@ function Gaming() {
             socket.send("load_game")
         }
         socket.onmessage = function(event) {
-            // console.log("Received message from server:", JSON.parse(event.data))
+            console.log("Received message from server:", JSON.parse(event.data))
             setGame(JSON.parse(event.data))
         }
         socket.onerror = function(error) {
@@ -296,12 +296,14 @@ function Gaming() {
             process()
         } else {
             console.log("不是当前stage的结算环节")
+            // TODO 弹出notification
         }
     }
     const checkReadyToToggleNight = () => {
+        // 死亡或者已放过技能都是ready
         let ready = true
         for (let i = 0; i < game.players.length; i++) {
-            ready = ready && game.players[i].ready.casted
+            ready = ready && (game.players[i].ready.casted || game.players[i].state.dead)
         }
         // 所有有技能的操作完，没技能的点完验证码，时间等待结束，不在投票阶段，则切换日夜，切换后首先结算前一阶段
         return !GameState.votingStep &&
