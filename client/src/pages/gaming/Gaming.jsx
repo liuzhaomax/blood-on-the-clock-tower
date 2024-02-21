@@ -12,7 +12,7 @@ let GameState = {
     night: false, // 是否是黑夜
     stage: 0, // 偶数是白天，奇数是黑夜，stage==1是特殊的第一夜
     votingStep: false, // 是否有人被提名，也就是是否进入投票环节
-    castLock: true, // 入夜后给施放技能的时间，后端没有，只在前端限制，因为只限制主机
+    castLock: false, // 入夜后给施放技能的时间，后端没有，只在前端限制，因为只限制主机
 }
 
 // 防断线
@@ -58,7 +58,7 @@ function Gaming() {
             night: false,
             stage: 0,
             votingStep: false,
-            castLock: true,
+            castLock: false,
         }
         setIsReturnRoomModalOpen(false)
         navigate("/home", {
@@ -115,8 +115,8 @@ function Gaming() {
     const gamingConn = () => {
         socketGaming = new WebSocket(`ws://192.168.1.14:8080/gaming/${roomId}/${localStorage.getItem("PlayerID")}`)
         socketGaming.onmessage = function(event) {
-            // console.log("Received message from server:", event.data)
-            addLog(event.data, ...wordClassPairs )
+            // console.log("Received log from server:", event.data)
+            addLog(event.data, ...wordClassPairs)
             loadGame()
         }
         socketGaming.onerror = function(error) {
@@ -127,8 +127,9 @@ function Gaming() {
 
     // 增加一条log 并上色  addLog(event.data, [/[0-9]/g, "highlight"], ["天", "highlight"])
     let wordClassPairs = [
-        [/[0-9]/g, "highlight highlight-number"], // 数字
-        [/\[(.*?)]/g, "highlight highlight-player"], // 玩家名字
+        [/(?<=第).*?(?=天)/g, "highlight highlight-number"], // 数字
+        [/\[([^\]]+)]/g, "highlight highlight-player"], // 玩家名字
+        [/\{[^}]+}/g, "highlight highlight-skill-result"], // 技能结果关键字
         [/(下毒|占卜|认主|守护|杀害|枪毙)/g, "highlight highlight-skill"], // 技能关键字
     ]
     const addLog = (text, ...wordClassPairs) => {
@@ -288,10 +289,6 @@ function Gaming() {
             } else {
                 setCurrentStep("自由发言")
             }
-            // 后端重置状态
-            let req = JSON.stringify({action: "toggle_night", targets: []})
-            socketGaming.send(req) // 会在后端更新stage、night
-            loadGame() // 立即刷新game，即刷新所有人的UI
             // 锁定与结算过程
             process()
         } else {
@@ -306,15 +303,17 @@ function Gaming() {
             ready = ready && (game.players[i].ready.casted || game.players[i].state.dead)
         }
         // 所有有技能的操作完，没技能的点完验证码，时间等待结束，不在投票阶段，则切换日夜，切换后首先结算前一阶段
-        return !GameState.votingStep &&
-            !GameState.castLock &&
-            ready ||
-            GameState.stage === 0
+        return !GameState.votingStep
+            && !GameState.castLock
+            // && ready
+            || GameState.stage === 0
     }
 
     // 游戏过程
     const process = async () => {
         if (GameState.stage === 1) {
+            // 发送日夜切换指令到后端，后端重置状态
+            emitToggleNight()
             // 给host锁定不能切换日夜
             GameState.castLock = true
             // 狼叫
@@ -328,19 +327,30 @@ function Gaming() {
             console.log("第一夜进入可日夜切换状态")
         }
         if (GameState.stage !== 1 && GameState.stage % 2 === 0) {
-            // 结算前一夜
-            let req = JSON.stringify({action: "checkout", targets: []})
-            socketGaming.send(req) // 结算本阶段
+            // 结算前一夜，此时前端stage是2，但是后端stage依然是1，因为emitToggleNight还未运行
+            emitCheckout()
+            // 发送日夜切换指令到后端，后端重置状态
+            emitToggleNight()
 
             console.log("白天")
         }
         if (GameState.stage !== 1 && GameState.stage % 2 === 1) {
+            // 发送日夜切换指令到后端，后端重置状态
+            emitToggleNight()
             // 结算前一日 socket
             GameState.castLock = true
             await sleep(2000)
             GameState.castLock = false
             console.log("夜晚")
         }
+    }
+    const emitToggleNight = () => {
+        let req = JSON.stringify({action: "toggle_night", targets: []})
+        socketGaming.send(req) // 会在后端更新stage、night
+    }
+    const emitCheckout = () => {
+        let req = JSON.stringify({action: "checkout", targets: []})
+        socketGaming.send(req) // 结算本阶段
     }
 
     // 技能释放对象

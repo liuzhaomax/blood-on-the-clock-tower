@@ -68,6 +68,10 @@
     height: fit-content;
 }
 
+#GAMING .place:hover {
+    cursor: pointer;
+}
+
 #GAMING .info-wrap {
     display: flex;
     flex-direction: column;
@@ -202,6 +206,11 @@
 
 #GAMING .highlight-skill {
     color: deepskyblue;
+}
+
+#GAMING .highlight-skill-result {
+    color: black;
+    background-color: greenyellow;
 }
 
 #GAMING .highlight-dead {
