@@ -702,7 +702,7 @@ function Gaming() {
     }, [game])
     const loadCurrentStage = () => {
         if (GameState.stage % 2 === 1) {
-            setCurrentStep("施放技能")
+            setCurrentStep("技能施放")
         }
         if (GameState.stage % 2 === 0 && !GameState.votingStep) {
             setCurrentStep("自由发言")
