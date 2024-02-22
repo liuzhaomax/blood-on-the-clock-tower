@@ -70,7 +70,7 @@
 
 #GAMING .individual-name:hover {
     cursor: pointer;
-    color: brown;
+    color: blue;
 }
 
 #GAMING .info-wrap {
@@ -192,6 +192,7 @@
     padding: 10px;
 }
 
+/*彩色日志*/
 #GAMING .highlight {
     padding: 0 5px;
 }
@@ -214,6 +215,15 @@
     background-color: greenyellow;
 }
 
+#GAMING .highlight-severe {
+    color: red;
+}
+
 #GAMING .highlight-dead {
     text-decoration: line-through;
+}
+
+/*tag显示*/
+#GAMING .tag-hidden {
+    visibility: hidden;
 }

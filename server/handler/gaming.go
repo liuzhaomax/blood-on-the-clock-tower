@@ -228,7 +228,6 @@ func genRandomPositionSlice(indexSliceForCharacterTypePool []int, characterByTyp
 func initStatus(players []model.Player, replaceDrunk string) []model.Player {
 	for i, player := range players {
 		players[i].Ready.Nominate = true
-		players[i].Ready.Nominated = true
 		players[i].Ready.Vote = 1
 		switch player.Character {
 		case Imp:

@@ -31,7 +31,7 @@ function Gaming() {
             socket.send("load_game")
         }
         socket.onmessage = function(event) {
-            // console.log("Received message from server:", JSON.parse(event.data))
+            console.log("Received message from server:", JSON.parse(event.data))
             setGame(JSON.parse(event.data))
         }
         socket.onerror = function(error) {
@@ -135,7 +135,8 @@ function Gaming() {
         [/(?<=第).*?(?=天)/g, "highlight highlight-number"], // 数字
         [/\[([^\]]+)]/g, "highlight highlight-player"], // 玩家名字
         [/\{[^}]+}/g, "highlight highlight-skill-result"], // 技能结果关键字
-        [/(下毒|占卜|认主|守护|杀害|枪毙)/g, "highlight highlight-skill"], // 技能关键字
+        [/(下毒|占卜|认主|守护|杀害|枪毙|弹)/g, "highlight highlight-skill"], // 技能关键字
+        [/(死亡|处决结果|提名|投票|平安夜)/g, "highlight highlight-severe"], // 重大事件关键字
     ]
     const addLog = (text, ...wordClassPairs) => {
         let replacedText = updateText(text, ...wordClassPairs[0])
@@ -174,6 +175,8 @@ function Gaming() {
     // 刷新页面日志加载
     useEffect(() => {
         loadPersonalLog()
+        updateSeatTag()
+        updateSeatDead()
     }, [game])
     const loadPersonalLog = () => {
         if (game) {
@@ -209,6 +212,50 @@ function Gaming() {
         setSelectedPlayers([])
     }
 
+    // 更新seat死亡状态
+    const updateSeatDead = () => {
+        if (game) {
+            for (let i = 0; i < game.players.length; i++) {
+                if (game.players[i].state.dead) {
+                    let seat = document.getElementById(game.players[i].id)
+                    if (!seat.classList.contains("highlight-dead")) {
+                        seat.classList.add("highlight-dead")
+                    }
+                }
+            }
+        }
+    }
+
+    // 更新seat后面的标签
+    const updateSeatTag = () => {
+        if (game) {
+            let tagTou, tagTi, tagBei
+            for (let i = 0; i < game.players.length; i++) {
+                // 投票标签
+                tagTou = document.getElementById(game.players[i].id + "-tou")
+                if (game.players[i].ready.vote > 0 && tagTou.classList.contains("tag-hidden")) {
+                    tagTou.classList.remove("tag-hidden")
+                } else if (game.players[i].ready.vote === 0 && !tagTou.classList.contains("tag-hidden")) {
+                    tagTou.classList.add("tag-hidden")
+                }
+                // 提名标签
+                tagTi = document.getElementById(game.players[i].id + "-ti")
+                if (game.players[i].ready.nominate && tagTi.classList.contains("tag-hidden")) {
+                    tagTi.classList.remove("tag-hidden")
+                } else if (game.players[i].ready.nominate === 0 && !tagTi.classList.contains("tag-hidden")) {
+                    tagTi.classList.remove("tag-visible")
+                }
+                // 被提名标签
+                tagBei = document.getElementById(game.players[i].id + "-bei")
+                if (game.players[i].ready.nominated && tagBei.classList.contains("tag-hidden")) {
+                    tagBei.classList.remove("tag-hidden")
+                } else if (game.players[i].ready.nominated === 0 && !tagBei.classList.contains("tag-hidden")) {
+                    tagBei.classList.add("tag-hidden")
+                }
+            }
+        }
+    }
+
     // 已落座玩家加载
     const sit = () => {
         return(
@@ -218,11 +265,11 @@ function Gaming() {
                         Array.from({ length: game ? Math.ceil(game.players.length / 2) : Math.ceil(15 / 2) }, (_, index) => {
                             if (game && game.players[index]) {
                                 return (
-                                    <div key={index} className="place place-sit seat" id={game.players[index].id + "-p"}>
+                                    <div key={index} className="place place-sit seat">
                                         <span className="individual individual-name" onClick={selectPlayer} id={game.players[index].id}>{game.players[index].name}</span>
-                                        <span className="individual-tag tag-tou">投</span>
-                                        <span className="individual-tag tag-ti">提</span>
-                                        <span className="individual-tag tag-bei">被</span>
+                                        <span className="individual-tag tag-tou" id={game.players[index].id + "-tou"}>投</span>
+                                        <span className="individual-tag tag-ti" id={game.players[index].id + "-ti"}>提</span>
+                                        <span className="individual-tag tag-bei" id={game.players[index].id + "-bei"}>被</span>
                                     </div>
                                 )
                             }
@@ -236,11 +283,11 @@ function Gaming() {
                             const reversedIndex = game ? game.players.length - 1 - index : 15 - 1 - index
                             if (game && game.players[reversedIndex]) {
                                 return (
-                                    <div key={index} className="place place-sit seat" id={game.players[index].id + "-p"}>
-                                        <span className="individual individual-name" onClick={selectPlayer} id={game.players[index].id}>{game.players[reversedIndex].name}</span>
-                                        <span className="individual-tag tag-tou">投</span>
-                                        <span className="individual-tag tag-ti">提</span>
-                                        <span className="individual-tag tag-bei">被</span>
+                                    <div key={index} className="place place-sit seat" id={game.players[reversedIndex].id + "-p"}>
+                                        <span className="individual individual-name" onClick={selectPlayer} id={game.players[reversedIndex].id}>{game.players[reversedIndex].name}</span>
+                                        <span className="individual-tag tag-tou" id={game.players[reversedIndex].id + "-tou"}>投</span>
+                                        <span className="individual-tag tag-ti" id={game.players[reversedIndex].id + "-ti"}>提</span>
+                                        <span className="individual-tag tag-bei" id={game.players[reversedIndex].id + "-bei"}>被</span>
                                     </div>
                                 )
                             }
@@ -510,7 +557,7 @@ function Gaming() {
                 setCastModalContent(genCastModalContent(me))
             }
         } else {
-            setCastModalContent("抱歉，您本阶段或本局已发动过技能")
+            setCastModalContent("抱歉，您本阶段或本局已发动过技能或没有技能")
         }
     }
     const handleCastOk = () => {
@@ -700,11 +747,17 @@ function Gaming() {
         loadCurrentStage()
     }, [game])
     const loadCurrentStage = () => {
+        if (GameState.stage === 0) {
+            setCurrentStep("本局未开始")
+            return
+        }
         if (GameState.stage % 2 === 1) {
             setCurrentStep("技能施放")
+            return
         }
         if (GameState.stage % 2 === 0 && !GameState.votingStep) {
             setCurrentStep("自由发言")
+            return
         }
         if (GameState.stage % 2 === 0 && GameState.votingStep) {
             setCurrentStep("投票处决")
