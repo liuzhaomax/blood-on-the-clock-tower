@@ -111,6 +111,19 @@ func QuitRoom(w http.ResponseWriter, r *http.Request) {
 		cfg.Rooms = newRooms
 	}
 
+	// 关闭game的conn
+	for id, conn := range cfg.ConnPool {
+		for _, player := range room.Players {
+			if id == player.Id {
+				err := conn.Close()
+				if err != nil {
+					log.Println(err)
+					return
+				}
+			}
+		}
+	}
+
 	if err = conn.WriteMessage(messageType, p); err != nil {
 		log.Println("Write error:", err)
 		return

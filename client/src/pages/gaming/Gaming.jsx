@@ -16,13 +16,6 @@ let GameState = {
     castLock: false, // 入夜后给施放技能的时间，后端没有，只在前端限制，因为只限制主机
 }
 
-// 防断线
-setInterval(() => {
-    if (socketGaming) {
-        socketGaming.send(JSON.stringify({action: "ping", targets: []}))
-    }
-}, 10000)
-
 function Gaming() {
     const navigate = useNavigate()
     let { roomId } = useParams()
@@ -38,13 +31,23 @@ function Gaming() {
             socket.send("load_game")
         }
         socket.onmessage = function(event) {
-            console.log("Received message from server:", JSON.parse(event.data))
+            // console.log("Received message from server:", JSON.parse(event.data))
             setGame(JSON.parse(event.data))
         }
         socket.onerror = function(error) {
             console.error("WebSocket error:", error)
         }
     }
+
+    // 防断线
+    useEffect(() => {
+        let timer = setInterval(() => {
+            if (socketGaming) {
+                socketGaming.send(JSON.stringify({action: "ping", targets: []}))
+            }
+        }, 10000)
+        return () => clearInterval(timer)
+    }, [])
 
     // 退出房间
     const returnRoom = () => {
@@ -316,11 +319,10 @@ function Gaming() {
             wolfAudio.play()
             // TODO 语音- 请大家操作或输入验证码
             // TODO 弹出验证码
-            // TODO 等9秒
-            await sleep(1000)
+            // 防抖等2秒
+            await sleep(2000)
             // 给host解锁可以切换日夜
             GameState.castLock = false
-            console.log("第一夜进入可日夜切换状态")
         }
         if (GameState.stage !== 1 && GameState.stage % 2 === 0) {
             // 夜转日，结算前一夜，此时前端stage是双数，但是后端stage依然是单数，因为emitToggleNight还未运行
@@ -331,11 +333,10 @@ function Gaming() {
             GameState.castLock = true
             // 鸡叫
             cockAudio.play()
-            // TODO 等9秒
+            // 防抖等2秒
             await sleep(2000)
             // 给host解锁可以切换日夜
             GameState.castLock = false
-            console.log("白天")
         }
         if (GameState.stage !== 1 && GameState.stage % 2 === 1) {
             // 日转夜，结算前一天，此时前端stage是单数，但是后端stage依然是双数，因为emitToggleNight还未运行
@@ -348,11 +349,10 @@ function Gaming() {
             wolfAudio.play()
             // TODO 语音- 请大家操作或输入验证码
             // TODO 弹出验证码
-            // TODO 等9秒
+            // 防抖等2秒
             await sleep(2000)
             // 给host解锁可以切换日夜
             GameState.castLock = false
-            console.log("夜晚")
         }
     }
     const emitToggleNight = () => {
@@ -693,7 +693,6 @@ function Gaming() {
     const endVotingStep = () => {
         GameState.votingStep = false
         emitEndVoting()
-        // TODO 这里检查是进哪个环节
     }
 
     const [currentStep, setCurrentStep] = useState("本局未开始")

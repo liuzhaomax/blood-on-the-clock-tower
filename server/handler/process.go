@@ -50,6 +50,7 @@ func Gaming(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			log.Println("Read error:", err)
+			conn.Close()
 			return
 		}
 
