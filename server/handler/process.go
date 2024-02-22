@@ -6,6 +6,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/liuzhaomax/blood-on-the-clock-tower/server/model"
 	"log"
+	"math"
 	"math/rand"
 	"net/http"
 	"reflect"
@@ -273,6 +274,7 @@ func checkoutNight(mux *sync.Mutex, game *model.Room, playerId string, executed 
 	var msgPlayer = "您"
 	var msgAll = ""
 
+	// 承载技能释放者对象的池
 	castPoolObj := map[model.Player][]int{}
 	for fromPlayerId, toPlayerIdSlice := range game.CastPool {
 		for _, player := range game.Players {
@@ -901,5 +903,56 @@ func checkoutNight(mux *sync.Mutex, game *model.Room, playerId string, executed 
 		}
 	}
 	// 判断本局夜晚结算
-
+	var aliveCount int
+	var realEvilCount int
+	var realDemonCount int
+	msgPlayer = "您"
+	msgAll = ""
+	for _, player := range game.Players {
+		if !player.State.Dead {
+			aliveCount++
+		}
+		if player.State.Evil && player.Character != Recluse {
+			realEvilCount++
+		}
+		if player.CharacterType == Demons {
+			realDemonCount++
+		}
+	}
+	if int(math.Ceil(float64(aliveCount/2))) == realEvilCount && realDemonCount != 0 {
+		// 拼接日志
+		info := "本局结束，邪恶胜利"
+		msgPlayer += info
+		msgAll += info
+		for i := range game.Players {
+			game.Players[i].Log += msgPlayer + "\n"
+		}
+		game.Log += msgAll + "\n"
+		// 发送日志
+		for _, conn := range cfg.ConnPool {
+			if err := conn.WriteMessage(websocket.TextMessage, []byte(msgPlayer)); err != nil {
+				log.Println("Write error:", err)
+				return
+			}
+			break
+		}
+	}
+	if realDemonCount == 0 {
+		// 拼接日志
+		info := "本局结束，好人胜利"
+		msgPlayer += info
+		msgAll += info
+		for i := range game.Players {
+			game.Players[i].Log += msgPlayer + "\n"
+		}
+		game.Log += msgAll + "\n"
+		// 发送日志
+		for _, conn := range cfg.ConnPool {
+			if err := conn.WriteMessage(websocket.TextMessage, []byte(msgPlayer)); err != nil {
+				log.Println("Write error:", err)
+				return
+			}
+			break
+		}
+	}
 }
