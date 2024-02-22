@@ -40,7 +40,7 @@ func Gaming(w http.ResponseWriter, r *http.Request) {
 	// 技能施放池，存储所有施放技能人，当前阶段施放的技能作用目标
 	game.CastPool = map[string][]string{}
 
-	var mux *sync.Mutex
+	mux := &sync.Mutex{}
 
 	for {
 		_, p, err := conn.ReadMessage()

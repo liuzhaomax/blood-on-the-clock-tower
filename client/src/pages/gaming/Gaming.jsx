@@ -214,8 +214,8 @@ function Gaming() {
                         Array.from({ length: game ? Math.ceil(game.players.length / 2) : Math.ceil(15 / 2) }, (_, index) => {
                             if (game && game.players[index]) {
                                 return (
-                                    <div key={index} className="place place-sit seat">
-                                        <span className="individual" onClick={selectPlayer} id={game.players[index].id}>{game.players[index].name}</span>
+                                    <div key={index} className="place place-sit seat" id={game.players[index].id + "-p"}>
+                                        <span className="individual individual-name" onClick={selectPlayer} id={game.players[index].id}>{game.players[index].name}</span>
                                         <span className="individual-tag tag-tou">投</span>
                                         <span className="individual-tag tag-ti">提</span>
                                         <span className="individual-tag tag-bei">被</span>
@@ -232,8 +232,8 @@ function Gaming() {
                             const reversedIndex = game ? game.players.length - 1 - index : 15 - 1 - index
                             if (game && game.players[reversedIndex]) {
                                 return (
-                                    <div key={index} className="place place-sit seat">
-                                        <span className="individual" onClick={selectPlayer} id={game.players[index].id}>{game.players[reversedIndex].name}</span>
+                                    <div key={index} className="place place-sit seat" id={game.players[index].id + "-p"}>
+                                        <span className="individual individual-name" onClick={selectPlayer} id={game.players[index].id}>{game.players[reversedIndex].name}</span>
                                         <span className="individual-tag tag-tou">投</span>
                                         <span className="individual-tag tag-ti">提</span>
                                         <span className="individual-tag tag-bei">被</span>
@@ -284,12 +284,6 @@ function Gaming() {
             resetSelectedPlayers()
             // 阶段+1
             GameState.stage++
-            // 展示当前环节
-            if (GameState.stage % 2 === 1) {
-                setCurrentStep("施放技能")
-            } else {
-                setCurrentStep("自由发言")
-            }
             // 锁定与结算过程
             process()
         } else {
@@ -494,7 +488,7 @@ function Gaming() {
         if (selectedPlayers.length > 1) {
             return "您只能选1人提名"
         }
-        if (me.nominate) {
+        if (me.state.nominate) {
             let content = "你确定要在今天的处决中，提名玩家 "
             for (let j = 0; j < game.players.length; j++) {
                 if (selectedPlayers[0] === game.players[j].id) {
@@ -519,7 +513,7 @@ function Gaming() {
         if (me.character === "管家") {
             return "您只能跟随主人投票"
         }
-        if (me.vote > 0) {
+        if (me.state.vote > 0) {
             let content = "你确定要投票给玩家 "
             for (let j = 0; j < game.players.length; j++) {
                 if (selectedPlayers[0] === game.players[j].id) {
@@ -633,7 +627,21 @@ function Gaming() {
         // TODO 这里检查是进哪个环节
     }
 
-    const [currentStep, setCurrentStep] = useState("未开始")
+    const [currentStep, setCurrentStep] = useState("本局未开始")
+    useEffect(() => {
+        loadCurrentStage()
+    }, [game])
+    const loadCurrentStage = () => {
+        if (GameState.stage % 2 === 1) {
+            setCurrentStep("施放技能")
+        }
+        if (GameState.stage % 2 === 0 && !GameState.votingStep) {
+            setCurrentStep("自由发言")
+        }
+        if (GameState.stage % 2 === 0 && GameState.votingStep) {
+            setCurrentStep("投票处决")
+        }
+    }
 
     return (
         <div id="GAMING" className="GAMING">

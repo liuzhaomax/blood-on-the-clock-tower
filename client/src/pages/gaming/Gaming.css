@@ -68,8 +68,9 @@
     height: fit-content;
 }
 
-#GAMING .place:hover {
+#GAMING .individual-name:hover {
     cursor: pointer;
+    font-weight: bold;
 }
 
 #GAMING .info-wrap {
