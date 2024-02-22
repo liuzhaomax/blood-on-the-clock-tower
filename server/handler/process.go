@@ -68,9 +68,21 @@ func Gaming(w http.ResponseWriter, r *http.Request) {
 			}
 		case "cast":
 			cast(mux, game, playerId, actionReq.Targets)
+		case "nominate":
+			nominate(mux, game, playerId, actionReq.Targets)
+		case "vote":
+			vote(mux, game, playerId, actionReq.Targets)
 		case "checkout_night":
 			if playerId == game.Host {
-				checkoutNight(mux, game, playerId, executed)
+				checkoutNight(mux, game, executed)
+			}
+		case "checkout_day":
+			if playerId == game.Host {
+				checkoutDay(mux, game, executed)
+			}
+		case "end_voting":
+			if playerId == game.Host {
+				executed = endVoting(mux, game)
 			}
 		}
 		time.Sleep(time.Millisecond * 50)
@@ -89,28 +101,36 @@ func toggleNight(mux *sync.Mutex, game *model.Room) {
 	// 日转夜 Day+1
 	if !game.State.Night {
 		game.State.Day = game.State.Day + 1
-		msg = fmt.Sprintf("第%d天，入夜~", game.State.Day)
+		msg = fmt.Sprintf("第%d天，入夜~\n", game.State.Day)
+		// 入夜清除中毒和守护效果
+		for i := range game.Players {
+			game.Players[i].State.Poisoned = false
+			game.Players[i].State.Protected = false
+		}
 	} else {
-		msg = fmt.Sprintf("第%d天，天亮了~", game.State.Day)
+		msg = fmt.Sprintf("第%d天，天亮了~\n", game.State.Day)
 	}
 	// 存入总日志
-	game.Log += msg + "\n"
+	game.Log += msg
 	// 存入个人日志，刷新的时候加载
 	for i := range game.Players {
-		game.Players[i].Log += msg + "\n"
+		game.Players[i].Log += msg
 	}
 	// 日夜切换
 	game.State.Night = !game.State.Night
 
 	for i := range game.Players {
-		// 让所有活人重新可以投票，夜转日结算，没投票还有票，
-		// TODO 日转夜结算，被处决后要将vote赋为true
+		// TODO 日转夜结算，被处决后要将vote赋为true，在checkDay中处理
+		// 活人调整状态
 		if !game.Players[i].State.Dead {
-			game.Players[i].State.Vote = 1
+			// 让所有活人重新可以投票，夜转日结算，没投票还有票
+			game.Players[i].Ready.Nominated = true
+			game.Players[i].Ready.Vote = 1
+			game.Players[i].Ready.VoteCount = 0
 		}
 		// 管家无票
 		if game.Players[i].Character == Butler {
-			game.Players[i].State.Vote = 0
+			game.Players[i].Ready.Vote = 0
 		}
 		// 调整玩家施放技能的准备状态
 		game.Players[i].Ready.Casted = true
@@ -148,8 +168,166 @@ func toggleNight(mux *sync.Mutex, game *model.Room) {
 		// 让所有人的僧侣守护状态消失
 		game.Players[i].State.Protected = false
 	}
+	// TODO 第一夜恶魔爪牙互认身份
 
 	// 将日夜切换日志群发
+	for _, conn := range cfg.ConnPool {
+		if err := conn.WriteMessage(websocket.TextMessage, []byte(msg)); err != nil {
+			log.Println("Write error:", err)
+			return
+		}
+	}
+}
+
+func endVoting(mux *sync.Mutex, game *model.Room) (executed *model.Player) {
+	cfg := model.GetConfig()
+	mux.Lock()
+	defer mux.Unlock()
+
+	var msg string
+
+	var expectantExecuted *model.Player // 被投票者（被提名者）
+	var aliveCount int                  // 活人数量
+	for i, player := range game.Players {
+		if player.Ready.VoteCount > 0 {
+			expectantExecuted = &game.Players[i]
+		}
+		if !player.State.Dead {
+			aliveCount++
+		}
+	}
+	if expectantExecuted.Ready.VoteCount > int(math.Floor(float64(aliveCount/2))) {
+		executed = expectantExecuted
+		executed.State.Dead = true
+		msg += fmt.Sprintf("处决结果：[%s] 被公投处决，死亡", executed.Name)
+	} else {
+		msg += "处决结果：无人被处决"
+	}
+	// 发送日志
+	for _, conn := range cfg.ConnPool {
+		if err := conn.WriteMessage(websocket.TextMessage, []byte(msg)); err != nil {
+			log.Println("Write error:", err)
+			return
+		}
+	}
+	// 判断圣徒 邪恶胜利条件4
+	if executed.Character == Saint {
+		checkout(game, executed)
+	}
+	// 退出投票环节
+	game.State.VotingStep = false
+	return
+}
+
+func nominate(mux *sync.Mutex, game *model.Room, playerId string, targets []string) {
+	cfg := model.GetConfig()
+	mux.Lock()
+	defer mux.Unlock()
+
+	var msg = ""
+	var msgName = ""
+
+	for i, player := range game.Players {
+		if player.Id == playerId && player.Ready.Nominate {
+			msg += fmt.Sprintf("[%s] ", player.Name)
+			msgName = msg
+			game.Players[i].Ready.Nominate = false
+			for i, player := range game.Players {
+				if targets[0] == player.Id && player.Ready.Nominated {
+					game.Players[i].Ready.Nominated = false
+					msg += fmt.Sprintf("提名 [%s] 进行处决公投\n", player.Name)
+					break
+				}
+			}
+			break
+		}
+	}
+	for i := range game.Players {
+		game.Players[i].Log += msg
+	}
+	game.Log += msg
+	// 发送日志
+	for _, conn := range cfg.ConnPool {
+		if err := conn.WriteMessage(websocket.TextMessage, []byte(msg)); err != nil {
+			log.Println("Write error:", err)
+			return
+		}
+	}
+
+	// 判断圣女
+	var canGoToVotingStep = true
+	msg = msgName
+	for i, player := range game.Players {
+		if player.Character == Virgin && player.Id == targets[0] && player.State.Blessed {
+			game.Players[i].State.Blessed = false
+			for i, player := range game.Players {
+				if player.Id == playerId {
+					game.Players[i].State.Dead = true
+					break
+				}
+			}
+			canGoToVotingStep = false
+			msg += "被圣女弹死了"
+			break
+		}
+	}
+	for i := range game.Players {
+		game.Players[i].Log += msg
+	}
+	game.Log += msg
+	// 发送日志
+	for _, conn := range cfg.ConnPool {
+		if err := conn.WriteMessage(websocket.TextMessage, []byte(msg)); err != nil {
+			log.Println("Write error:", err)
+			return
+		}
+	}
+
+	// 进入投票环节 圣女条件成立就不用进投票环节
+	if canGoToVotingStep {
+		game.State.VotingStep = true
+	}
+}
+
+func vote(mux *sync.Mutex, game *model.Room, playerId string, targets []string) {
+	cfg := model.GetConfig()
+	mux.Lock()
+	defer mux.Unlock()
+
+	var msg = ""
+
+	for i, player := range game.Players {
+		if player.Id == playerId && player.Ready.Nominate {
+			var masterFlag bool // 是否是管家的主人
+			if game.Players[i].Ready.Vote == 2 {
+				masterFlag = true
+			}
+			game.Players[i].Ready.Vote = 0
+			msg += fmt.Sprintf("[%s] ", player.Name)
+			for i, player := range game.Players {
+				if targets[0] == player.Id && player.Ready.Nominated {
+					game.Players[i].Ready.VoteCount += 1
+					msg += fmt.Sprintf("决意投票给 [%s] \n", player.Name)
+					if masterFlag {
+						game.Players[i].Ready.VoteCount += 1 // 是管家的主人再加1票
+						for j := range game.Players {
+							if game.Players[j].Character == Butler {
+								msg += fmt.Sprintf("\n[%s] 决意投票给 [%s] \n", game.Players[j].Name, player.Name)
+								break
+							}
+						}
+					}
+					break
+				}
+			}
+			break
+		}
+	}
+	for i := range game.Players {
+		game.Players[i].Log += msg
+	}
+	game.Log += msg
+	// 发送日志
 	for _, conn := range cfg.ConnPool {
 		if err := conn.WriteMessage(websocket.TextMessage, []byte(msg)); err != nil {
 			log.Println("Write error:", err)
@@ -266,7 +444,7 @@ func cast(mux *sync.Mutex, game *model.Room, playerId string, targets []string) 
 	}
 }
 
-func checkoutNight(mux *sync.Mutex, game *model.Room, playerId string, executed *model.Player) {
+func checkoutNight(mux *sync.Mutex, game *model.Room, executed *model.Player) {
 	cfg := model.GetConfig()
 	mux.Lock()
 	defer mux.Unlock()
@@ -292,6 +470,8 @@ func checkoutNight(mux *sync.Mutex, game *model.Room, playerId string, executed 
 			}
 		}
 	}
+
+	// 各身份夜晚技能结算-有顺序
 	// 判断下毒
 	for fromPlayer, toPlayerIndexSlice := range castPoolObj {
 		if fromPlayer.Character == Poisoner {
@@ -313,14 +493,14 @@ func checkoutNight(mux *sync.Mutex, game *model.Room, playerId string, executed 
 					// 生成随机信息
 					for {
 						randInt := rand.Intn(len(game.Players))
-						if game.Players[randInt].CharacterType == Townsfolk && game.Players[randInt].Id != playerId {
+						if game.Players[randInt].CharacterType == Townsfolk && game.Players[randInt].Id != player.Id {
 							realFolk = game.Players[randInt]
 							break
 						}
 					}
 					for {
 						randInt := rand.Intn(len(game.Players))
-						if game.Players[randInt].Id != realFolk.Id && game.Players[randInt].Id != playerId {
+						if game.Players[randInt].Id != realFolk.Id && game.Players[randInt].Id != player.Id {
 							other = game.Players[randInt]
 							break
 						}
@@ -329,14 +509,14 @@ func checkoutNight(mux *sync.Mutex, game *model.Room, playerId string, executed 
 					// 生成伪信息
 					for {
 						randInt := rand.Intn(len(game.Players))
-						if game.Players[randInt].Id != playerId {
+						if game.Players[randInt].Id != player.Id {
 							realFolk = game.Players[randInt]
 							break
 						}
 					}
 					for {
 						randInt := rand.Intn(len(game.Players))
-						if game.Players[randInt].Id != realFolk.Id && game.Players[randInt].Id != playerId {
+						if game.Players[randInt].Id != realFolk.Id && game.Players[randInt].Id != player.Id {
 							other = game.Players[randInt]
 							break
 						}
@@ -347,14 +527,14 @@ func checkoutNight(mux *sync.Mutex, game *model.Room, playerId string, executed 
 				var info string
 				randInt := rand.Intn(2)
 				if randInt == 0 {
-					info = fmt.Sprintf("发现 [%s] 和 [%s] 其中一个是 {%s}", realFolk.Name, other.Name, realFolk.Character)
+					info = fmt.Sprintf("发现 [%s] 和 [%s] 其中一个是 {%s}\n", realFolk.Name, other.Name, realFolk.Character)
 				} else {
-					info = fmt.Sprintf("发现 [%s] 和 [%s] 其中一个是 {%s}", other.Name, realFolk.Name, realFolk.Character)
+					info = fmt.Sprintf("发现 [%s] 和 [%s] 其中一个是 {%s}\n", other.Name, realFolk.Name, realFolk.Character)
 				}
 				msgPlayer += info
 				msgAll += info
-				game.Players[i].Log += msgPlayer + "\n"
-				game.Log += msgAll + "\n"
+				game.Players[i].Log += msgPlayer
+				game.Log += msgAll
 				// 发送日志
 				for id, conn := range cfg.ConnPool {
 					if id == player.Id {
@@ -381,14 +561,14 @@ func checkoutNight(mux *sync.Mutex, game *model.Room, playerId string, executed 
 						// 生成随机信息
 						for {
 							randInt := rand.Intn(len(game.Players))
-							if game.Players[randInt].CharacterType == Outsiders && game.Players[randInt].Id != playerId {
+							if game.Players[randInt].CharacterType == Outsiders && game.Players[randInt].Id != player.Id {
 								realOutsider = game.Players[randInt]
 								break
 							}
 						}
 						for {
 							randInt := rand.Intn(len(game.Players))
-							if game.Players[randInt].Id != realOutsider.Id && game.Players[randInt].Id != playerId {
+							if game.Players[randInt].Id != realOutsider.Id && game.Players[randInt].Id != player.Id {
 								other = game.Players[randInt]
 								break
 							}
@@ -398,14 +578,14 @@ func checkoutNight(mux *sync.Mutex, game *model.Room, playerId string, executed 
 					// 生成伪信息
 					var hasOutsider bool
 					randInt := rand.Intn(len(game.Players))
-					if game.Players[randInt].Id != playerId {
+					if game.Players[randInt].Id != player.Id {
 						realOutsider = game.Players[randInt]
 						hasOutsider = true
 					}
 					if hasOutsider {
 						for {
 							randInt := rand.Intn(len(game.Players))
-							if game.Players[randInt].Id != realOutsider.Id && game.Players[randInt].Id != playerId {
+							if game.Players[randInt].Id != realOutsider.Id && game.Players[randInt].Id != player.Id {
 								other = game.Players[randInt]
 								break
 							}
@@ -420,15 +600,15 @@ func checkoutNight(mux *sync.Mutex, game *model.Room, playerId string, executed 
 				} else {
 					randInt := rand.Intn(2)
 					if randInt == 0 {
-						info = fmt.Sprintf("发现 [%s] 和 [%s] 其中一个是 {%s}", realOutsider.Name, other.Name, realOutsider.Character)
+						info = fmt.Sprintf("发现 [%s] 和 [%s] 其中一个是 {%s}\n", realOutsider.Name, other.Name, realOutsider.Character)
 					} else {
-						info = fmt.Sprintf("发现 [%s] 和 [%s] 其中一个是 {%s}", other.Name, realOutsider.Name, realOutsider.Character)
+						info = fmt.Sprintf("发现 [%s] 和 [%s] 其中一个是 {%s}\n", other.Name, realOutsider.Name, realOutsider.Character)
 					}
 				}
 				msgPlayer += info
 				msgAll += info
-				game.Players[i].Log += msgPlayer + "\n"
-				game.Log += msgAll + "\n"
+				game.Players[i].Log += msgPlayer
+				game.Log += msgAll
 				// 发送日志
 				for id, conn := range cfg.ConnPool {
 					if id == player.Id {
@@ -447,14 +627,14 @@ func checkoutNight(mux *sync.Mutex, game *model.Room, playerId string, executed 
 					// 生成随机信息
 					for {
 						randInt := rand.Intn(len(game.Players))
-						if game.Players[randInt].CharacterType == Minions && game.Players[randInt].Id != playerId {
+						if game.Players[randInt].CharacterType == Minions && game.Players[randInt].Id != player.Id {
 							realMinion = game.Players[randInt]
 							break
 						}
 					}
 					for {
 						randInt := rand.Intn(len(game.Players))
-						if game.Players[randInt].Id != realMinion.Id && game.Players[randInt].Id != playerId {
+						if game.Players[randInt].Id != realMinion.Id && game.Players[randInt].Id != player.Id {
 							other = game.Players[randInt]
 							break
 						}
@@ -463,14 +643,14 @@ func checkoutNight(mux *sync.Mutex, game *model.Room, playerId string, executed 
 					// 生成伪信息
 					for {
 						randInt := rand.Intn(len(game.Players))
-						if game.Players[randInt].Id != playerId {
+						if game.Players[randInt].Id != player.Id {
 							realMinion = game.Players[randInt]
 							break
 						}
 					}
 					for {
 						randInt := rand.Intn(len(game.Players))
-						if game.Players[randInt].Id != realMinion.Id && game.Players[randInt].Id != playerId {
+						if game.Players[randInt].Id != realMinion.Id && game.Players[randInt].Id != player.Id {
 							other = game.Players[randInt]
 							break
 						}
@@ -481,14 +661,14 @@ func checkoutNight(mux *sync.Mutex, game *model.Room, playerId string, executed 
 				var info string
 				randInt := rand.Intn(2)
 				if randInt == 0 {
-					info = fmt.Sprintf("发现 [%s] 和 [%s] 其中一个是 {%s}", realMinion.Name, other.Name, realMinion.Character)
+					info = fmt.Sprintf("发现 [%s] 和 [%s] 其中一个是 {%s}\n", realMinion.Name, other.Name, realMinion.Character)
 				} else {
-					info = fmt.Sprintf("发现 [%s] 和 [%s] 其中一个是 {%s}", other.Name, realMinion.Name, realMinion.Character)
+					info = fmt.Sprintf("发现 [%s] 和 [%s] 其中一个是 {%s}\n", other.Name, realMinion.Name, realMinion.Character)
 				}
 				msgPlayer += info
 				msgAll += info
-				game.Players[i].Log += msgPlayer + "\n"
-				game.Log += msgAll + "\n"
+				game.Players[i].Log += msgPlayer
+				game.Log += msgAll
 				// 发送日志
 				for id, conn := range cfg.ConnPool {
 					if id == player.Id {
@@ -537,11 +717,11 @@ func checkoutNight(mux *sync.Mutex, game *model.Room, playerId string, executed 
 				}
 				// 拼接日志
 				msgAll += fmt.Sprintf("[%s] ", player.Name)
-				info := fmt.Sprintf("发现互为邻座的邪恶玩家有 {%d} 对", connected)
+				info := fmt.Sprintf("发现互为邻座的邪恶玩家有 {%d} 对\n", connected)
 				msgPlayer += info
 				msgAll += info
-				game.Players[i].Log += msgPlayer + "\n"
-				game.Log += msgAll + "\n"
+				game.Players[i].Log += msgPlayer
+				game.Log += msgAll
 				// 发送日志
 				for id, conn := range cfg.ConnPool {
 					if id == player.Id {
@@ -586,11 +766,11 @@ func checkoutNight(mux *sync.Mutex, game *model.Room, playerId string, executed 
 				}
 				// 拼接日志
 				msgAll += fmt.Sprintf("[%s] ", player.Name)
-				info := fmt.Sprintf("发现与您邻座的邪恶玩家有 {%d} 个", evilQuantity)
+				info := fmt.Sprintf("发现与您邻座的邪恶玩家有 {%d} 个\n", evilQuantity)
 				msgPlayer += info
 				msgAll += info
-				game.Players[i].Log += msgPlayer + "\n"
-				game.Log += msgAll + "\n"
+				game.Players[i].Log += msgPlayer
+				game.Log += msgAll
 				// 发送日志
 				for id, conn := range cfg.ConnPool {
 					if id == player.Id {
@@ -604,14 +784,14 @@ func checkoutNight(mux *sync.Mutex, game *model.Room, playerId string, executed 
 			// 给间谍提供信息
 			case Spy:
 				// 拼接日志
-				msgAll += fmt.Sprintf("[%s] 是间谍，知晓所有身份", player.Name)
+				msgAll += fmt.Sprintf("[%s] 是间谍，知晓所有身份\n", player.Name)
 				var info string
 				for _, player := range game.Players {
 					info += fmt.Sprintf("知晓所有身份：\n玩家 [%s] 的身份是 {%s}\n", player.Name, player.Character)
 				}
 				msgPlayer += info
-				game.Players[i].Log += msgPlayer + "\n"
-				game.Log += msgAll + "\n"
+				game.Players[i].Log += msgPlayer
+				game.Log += msgAll
 				// 发送日志
 				for id, conn := range cfg.ConnPool {
 					if id == player.Id {
@@ -634,7 +814,7 @@ func checkoutNight(mux *sync.Mutex, game *model.Room, playerId string, executed 
 		}
 	}
 	// 判断杀害
-	var killed model.Player
+	var killed *model.Player
 	for fromPlayer, toPlayerIndexSlice := range castPoolObj {
 		if fromPlayer.Character == Imp && !fromPlayer.State.Poisoned &&
 			!game.Players[toPlayerIndexSlice[0]].State.Protected &&
@@ -642,17 +822,16 @@ func checkoutNight(mux *sync.Mutex, game *model.Room, playerId string, executed 
 			if game.Players[toPlayerIndexSlice[0]].Character != Mayor {
 				// 死的人
 				game.Players[toPlayerIndexSlice[0]].State.Dead = true
-				killed = game.Players[toPlayerIndexSlice[0]]
+				killed = &game.Players[toPlayerIndexSlice[0]]
 			} else {
 				// 刀市长
 				for {
 					randInt := rand.Intn(len(game.Players))
 					if !game.Players[randInt].State.Dead &&
-						game.Players[randInt].CharacterType != Demons &&
-						game.Players[randInt].Character != Mayor {
-						// 死的是除了市长和恶魔的其他任意一人
+						game.Players[randInt].CharacterType != Demons {
+						// 死的是除了恶魔的其他任意一人
 						game.Players[randInt].State.Dead = true
-						killed = game.Players[randInt]
+						killed = &game.Players[randInt]
 						break
 					}
 				}
@@ -703,18 +882,18 @@ func checkoutNight(mux *sync.Mutex, game *model.Room, playerId string, executed 
 			switch player.Character {
 			// 给守鸦人提供信息
 			case Ravenkeeper:
-				if !reflect.ValueOf(killed).IsZero() &&
+				if killed != nil &&
 					!player.State.Drunk && (!player.State.Poisoned || player.State.Protected) &&
 					player.Id == killed.Id {
 					for fromPlayer, toPlayerIndexSlice := range castPoolObj {
 						if fromPlayer.Id == player.Id {
 							// 拼接日志
 							msgAll += fmt.Sprintf("[%s] ", player.Name)
-							info := fmt.Sprintf("发现 [%s] 的身份是 {%s}", game.Players[toPlayerIndexSlice[0]].Name, game.Players[toPlayerIndexSlice[0]].Character)
+							info := fmt.Sprintf("发现 [%s] 的身份是 {%s}\n", game.Players[toPlayerIndexSlice[0]].Name, game.Players[toPlayerIndexSlice[0]].Character)
 							msgPlayer += info
 							msgAll += info
-							game.Players[fromPlayer.Index].Log += msgPlayer + "\n"
-							game.Log += msgAll + "\n"
+							game.Players[fromPlayer.Index].Log += msgPlayer
+							game.Log += msgAll
 							// 发送日志
 							for id, conn := range cfg.ConnPool {
 								if id == fromPlayer.Id {
@@ -776,11 +955,11 @@ func checkoutNight(mux *sync.Mutex, game *model.Room, playerId string, executed 
 					}
 					// 拼接日志
 					msgAll += fmt.Sprintf("[%s] ", player.Name)
-					info := fmt.Sprintf("发现与您邻座的邪恶玩家有 {%d} 个", evilQuantity)
+					info := fmt.Sprintf("发现与您邻座的邪恶玩家有 {%d} 个\n", evilQuantity)
 					msgPlayer += info
 					msgAll += info
-					game.Players[i].Log += msgPlayer + "\n"
-					game.Log += msgAll + "\n"
+					game.Players[i].Log += msgPlayer
+					game.Log += msgAll
 					// 发送日志
 					for id, conn := range cfg.ConnPool {
 						if id == player.Id {
@@ -798,7 +977,7 @@ func checkoutNight(mux *sync.Mutex, game *model.Room, playerId string, executed 
 					if !reflect.ValueOf(executed).IsZero() {
 						// 无人被处决
 						msgAll += fmt.Sprintf("[%s] ", player.Name)
-						info := "发现今日无人被处决"
+						info := "发现今日无人被处以极刑\n"
 						msgPlayer += info
 						msgAll += info
 					} else {
@@ -818,12 +997,12 @@ func checkoutNight(mux *sync.Mutex, game *model.Room, playerId string, executed 
 						}
 						// 拼接日志
 						msgAll += fmt.Sprintf("[%s] ", player.Name)
-						info := fmt.Sprintf("发现今晚被处决的玩家 [%s] 的身份是 {%s}", executed.Name, executedPlayer.Character)
+						info := fmt.Sprintf("发现今晚被处决的玩家 [%s] 的身份是 {%s}\n", executed.Name, executedPlayer.Character)
 						msgPlayer += info
 						msgAll += info
 					}
-					game.Players[i].Log += msgPlayer + "\n"
-					game.Log += msgAll + "\n"
+					game.Players[i].Log += msgPlayer
+					game.Log += msgAll
 					// 发送日志
 					for id, conn := range cfg.ConnPool {
 						if id == player.Id {
@@ -858,11 +1037,11 @@ func checkoutNight(mux *sync.Mutex, game *model.Room, playerId string, executed 
 			}
 			// 拼接日志
 			msgAll += fmt.Sprintf("[%s] ", fromPlayer.Name)
-			info := fmt.Sprintf("发现 [%s] 和 [%s] 中 {%s} 恶魔", game.Players[toPlayerIndexSlice[0]].Name, game.Players[toPlayerIndexSlice[1]].Name, hasDemon)
+			info := fmt.Sprintf("发现 [%s] 和 [%s] 中 {%s} 恶魔\n", game.Players[toPlayerIndexSlice[0]].Name, game.Players[toPlayerIndexSlice[1]].Name, hasDemon)
 			msgPlayer += info
 			msgAll += info
-			game.Players[fromPlayer.Index].Log += msgPlayer + "\n"
-			game.Log += msgAll + "\n"
+			game.Players[fromPlayer.Index].Log += msgPlayer
+			game.Log += msgAll
 			// 发送日志
 			for id, conn := range cfg.ConnPool {
 				if id == fromPlayer.Id {
@@ -879,16 +1058,16 @@ func checkoutNight(mux *sync.Mutex, game *model.Room, playerId string, executed 
 	// 给管家提供信息
 	for fromPlayer, toPlayerIndexSlice := range castPoolObj {
 		if fromPlayer.Character == Butler && !fromPlayer.State.Poisoned && !fromPlayer.State.Dead {
-			game.Players[toPlayerIndexSlice[0]].State.Vote += 1
+			game.Players[toPlayerIndexSlice[0]].Ready.Vote += 1
 			msgPlayer = "您"
 			msgAll = ""
 			// 拼接日志
 			msgAll += fmt.Sprintf("[%s] ", fromPlayer.Name)
-			info := fmt.Sprintf("认定 [%s] 为主人，他的投票为两票", game.Players[toPlayerIndexSlice[0]].Name)
+			info := fmt.Sprintf("认定 [%s] 为主人，他本轮拥有两票\n", game.Players[toPlayerIndexSlice[0]].Name)
 			msgPlayer += info
 			msgAll += info
-			game.Players[fromPlayer.Index].Log += msgPlayer + "\n"
-			game.Log += msgAll + "\n"
+			game.Players[fromPlayer.Index].Log += msgPlayer
+			game.Log += msgAll
 			// 发送日志
 			for id, conn := range cfg.ConnPool {
 				if id == fromPlayer.Id {
@@ -902,57 +1081,154 @@ func checkoutNight(mux *sync.Mutex, game *model.Room, playerId string, executed 
 			break
 		}
 	}
-	// 判断本局夜晚结算
-	var aliveCount int
-	var realEvilCount int
-	var realDemonCount int
-	msgPlayer = "您"
-	msgAll = ""
+
+	// ------- 结算 -------
+	msg := ""
+	// 结算本阶段
+	if killed == nil {
+		msg += "昨夜是 平安夜\n"
+	} else {
+		msg += fmt.Sprintf("昨夜 [%s] 死亡\n", killed.Name)
+	}
+	// 发送日志
+	for _, conn := range cfg.ConnPool {
+		if err := conn.WriteMessage(websocket.TextMessage, []byte(msg)); err != nil {
+			log.Println("Write error:", err)
+			return
+		}
+	}
+	// 结算本局
+	checkout(game, nil) // 这里不要传入executed，因为晚上不处决人，晚上可能死圣徒
+}
+
+func checkoutDay(mux *sync.Mutex, game *model.Room, executed *model.Player) {
+	cfg := model.GetConfig()
+	mux.Lock()
+	defer mux.Unlock()
+
+	var msgPlayer = "您"
+	var msgAll = ""
+
+	// 承载技能释放者对象的池
+	castPoolObj := map[model.Player][]int{}
+	for fromPlayerId, toPlayerIdSlice := range game.CastPool {
+		for _, player := range game.Players {
+			if player.Id == fromPlayerId {
+				castPoolObj[player] = []int{}
+				break
+			}
+		}
+		for _, toPlayerId := range toPlayerIdSlice {
+			for _, player := range game.Players {
+				if player.Id == toPlayerId {
+					castPoolObj[player] = append(castPoolObj[player], player.Index)
+					break
+				}
+			}
+		}
+	}
+
+	// 判断杀手
+	for fromPlayer, toPlayerIndexSlice := range castPoolObj {
+		if fromPlayer.Character == Slayer && fromPlayer.State.Bullet && len(toPlayerIndexSlice) == 1 {
+			info := ""
+			msgAll += fmt.Sprintf("[%s] ", fromPlayer.Name)
+			game.Players[fromPlayer.Index].State.Bullet = false
+			if game.Players[toPlayerIndexSlice[0]].CharacterType == Demons {
+				game.Players[toPlayerIndexSlice[0]].State.Dead = true
+				// 拼接日志
+				info += fmt.Sprintf("发现 [%s] 被您枪杀了\n", game.Players[toPlayerIndexSlice[0]].Name)
+			} else {
+				// 拼接日志
+				info += "发现没人被您枪杀\n"
+			}
+			msgPlayer += info
+			msgAll += info
+			game.Players[fromPlayer.Index].Log += msgPlayer
+			game.Log += msgAll
+			// 发送日志
+			for id, conn := range cfg.ConnPool {
+				if id == fromPlayer.Id {
+					if err := conn.WriteMessage(websocket.TextMessage, []byte(msgPlayer)); err != nil {
+						log.Println("Write error:", err)
+						return
+					}
+					break
+				}
+			}
+			break
+		}
+	}
+
+	// 结算本局
+	checkout(game, nil)
+}
+
+// checkout 结算本局
+func checkout(game *model.Room, executed *model.Player) {
+	cfg := model.GetConfig()
+	msg := ""
+	var realDemonCount int   // 恶魔数量，被占卜认定的不算
+	var canNominate int      // 可提名人数
+	var hasSlayerBullet bool // 有枪手且枪手有子弹
+	var aliveCount int       // 活人数量
+	var canVote int          // 可投票数量
+	var evilCount int        // 邪恶玩家数量
 	for _, player := range game.Players {
+		// 对应邪恶胜利条件1
+		if player.Character == Slayer && player.State.Bullet {
+			hasSlayerBullet = true
+		}
+		if player.Ready.Nominate {
+			canNominate++
+		}
+		// 对应邪恶胜利条件2
+		if player.Ready.Vote > 0 {
+			canVote += player.Ready.Vote
+		}
+		if player.State.Evil && player.Character != Recluse {
+			evilCount++
+		}
+		// 对应邪恶胜利条件3
 		if !player.State.Dead {
 			aliveCount++
 		}
-		if player.State.Evil && player.Character != Recluse {
-			realEvilCount++
-		}
+		// 对应好人胜利条件
 		if player.CharacterType == Demons {
 			realDemonCount++
 		}
 	}
-	if int(math.Ceil(float64(aliveCount/2))) == realEvilCount && realDemonCount != 0 {
-		// 拼接日志
-		info := "本局结束，邪恶胜利"
-		msgPlayer += info
-		msgAll += info
-		for i := range game.Players {
-			game.Players[i].Log += msgPlayer + "\n"
-		}
-		game.Log += msgAll + "\n"
-		// 发送日志
-		for _, conn := range cfg.ConnPool {
-			if err := conn.WriteMessage(websocket.TextMessage, []byte(msgPlayer)); err != nil {
-				log.Println("Write error:", err)
-				return
-			}
-			break
-		}
+	// 邪恶胜利条件1
+	if !hasSlayerBullet && canNominate == 0 {
+		msg += "本局结束，邪恶胜利\n"
 	}
+	// 邪恶胜利条件2
+	halfAlive := int(math.Floor(float64(aliveCount / 2)))
+	if canVote <= halfAlive && evilCount >= halfAlive {
+		msg += "本局结束，邪恶胜利\n"
+	}
+	// 邪恶胜利条件3
+	if evilCount == aliveCount {
+		msg += "本局结束，邪恶胜利\n"
+	}
+	// 邪恶胜利条件4
+	if executed != nil && executed.Character == Saint {
+		msg += "本局结束，邪恶胜利\n"
+	}
+	// 好人胜利条件（恶魔受不了了自杀情况）
 	if realDemonCount == 0 {
-		// 拼接日志
-		info := "本局结束，好人胜利"
-		msgPlayer += info
-		msgAll += info
-		for i := range game.Players {
-			game.Players[i].Log += msgPlayer + "\n"
-		}
-		game.Log += msgAll + "\n"
-		// 发送日志
-		for _, conn := range cfg.ConnPool {
-			if err := conn.WriteMessage(websocket.TextMessage, []byte(msgPlayer)); err != nil {
-				log.Println("Write error:", err)
-				return
-			}
-			break
+		msg += "本局结束，好人胜利\n"
+	}
+	// 拼接日志
+	for i := range game.Players {
+		game.Players[i].Log += msg
+	}
+	game.Log += msg
+	// 发送日志
+	for _, conn := range cfg.ConnPool {
+		if err := conn.WriteMessage(websocket.TextMessage, []byte(msg)); err != nil {
+			log.Println("Write error:", err)
+			return
 		}
 	}
 }

@@ -57,10 +57,7 @@ type Player struct {
 }
 
 type PlayerState struct {
-	Dead      bool `json:"dead"`
-	Nominate  bool `json:"nominate"`
-	Nominated bool `json:"nominated"`
-	Vote      int  `json:"vote"`
+	Dead      bool `json:"dead"`      // 全体
 	Evil      bool `json:"evil"`      // 隐士
 	Demon     bool `json:"demon"`     // 占卜
 	Drunk     bool `json:"drunk"`     // 酒鬼
@@ -74,7 +71,11 @@ type PlayerReady struct {
 	// 不同于playerState中的技能，这个是每个阶段的是否放技能的情况，
 	// 也就是说只要要进入的阶段是不能发动技能的，那这个属性直接被赋为true，
 	// 下个阶段开始会变为false
-	Casted bool `json:"casted"`
+	Casted    bool `json:"casted"`    // 已施法
+	Nominate  bool `json:"nominate"`  // 可以提名
+	Nominated bool `json:"nominated"` // 可以被提名
+	Vote      int  `json:"vote"`      // 可以投票
+	VoteCount int  `json:"voteCount"` // 得票数
 }
 
 type ActionReq struct {

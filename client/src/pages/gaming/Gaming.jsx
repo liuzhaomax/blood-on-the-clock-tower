@@ -8,6 +8,7 @@ import {sleep} from "../../utils/time"
 
 let socketGaming
 let wolfAudio = new Audio("/audio/wolf.wav")
+let cockAudio = new Audio("/audio/cock.wav")
 let GameState = {
     night: false, // 是否是黑夜
     stage: 0, // 偶数是白天，奇数是黑夜，stage==1是特殊的第一夜
@@ -300,7 +301,7 @@ function Gaming() {
         // 所有有技能的操作完，没技能的点完验证码，时间等待结束，不在投票阶段，则切换日夜，切换后首先结算前一阶段
         return !GameState.votingStep
             && !GameState.castLock
-            // && ready
+            // && ready // TODO 测试用，记得解锁
             || GameState.stage === 0
     }
 
@@ -315,26 +316,41 @@ function Gaming() {
             wolfAudio.play()
             // TODO 语音- 请大家操作或输入验证码
             // TODO 弹出验证码
-            // 等9秒
+            // TODO 等9秒
             await sleep(1000)
             // 给host解锁可以切换日夜
             GameState.castLock = false
             console.log("第一夜进入可日夜切换状态")
         }
         if (GameState.stage !== 1 && GameState.stage % 2 === 0) {
-            // 夜转日，结算前一夜，此时前端stage是2，但是后端stage依然是1，因为emitToggleNight还未运行
+            // 夜转日，结算前一夜，此时前端stage是双数，但是后端stage依然是单数，因为emitToggleNight还未运行
             emitCheckoutNight()
             // 发送日夜切换指令到后端，后端重置状态
             emitToggleNight()
-
+            // 给host锁定不能切换日夜
+            GameState.castLock = true
+            // 鸡叫
+            cockAudio.play()
+            // TODO 等9秒
+            await sleep(2000)
+            // 给host解锁可以切换日夜
+            GameState.castLock = false
             console.log("白天")
         }
         if (GameState.stage !== 1 && GameState.stage % 2 === 1) {
+            // 日转夜，结算前一天，此时前端stage是单数，但是后端stage依然是双数，因为emitToggleNight还未运行
+            emitCheckoutDay()
             // 发送日夜切换指令到后端，后端重置状态
             emitToggleNight()
-            // 结算前一日 socket
+            // 给host锁定不能切换日夜
             GameState.castLock = true
+            // 狼叫
+            wolfAudio.play()
+            // TODO 语音- 请大家操作或输入验证码
+            // TODO 弹出验证码
+            // TODO 等9秒
             await sleep(2000)
+            // 给host解锁可以切换日夜
             GameState.castLock = false
             console.log("夜晚")
         }
@@ -347,11 +363,31 @@ function Gaming() {
         let req = JSON.stringify({action: "checkout_night", targets: []})
         socketGaming.send(req) // 结算本阶段
     }
+    const emitCheckoutDay = () => {
+        let req = JSON.stringify({action: "checkout_day", targets: []})
+        socketGaming.send(req) // 结算本阶段
+    }
     const emitCast = () => {
         let req = JSON.stringify({action: "cast", targets: castToPlayersId})
         socketGaming.send(req) // 会在后端更新stage、night
     }
+    const emitNominate = () => {
+        let req = JSON.stringify({action: "nominate", targets: nominateToPlayersId})
+        socketGaming.send(req) // 会在后端更新stage、night
+    }
+    const emitVote = () => {
+        let req = JSON.stringify({action: "vote", targets: voteToPlayersId})
+        socketGaming.send(req) // 会在后端更新stage、night
+    }
+    const emitEndVoting = () => {
+        let req = JSON.stringify({action: "end_voting", targets: []})
+        socketGaming.send(req) // 会在后端更新stage、night
+    }
 
+    // 提名对象
+    const [nominateToPlayersId, setNominateToPlayersId] = useState([])
+    // 提名对象
+    const [voteToPlayersId, setVoteToPlayersId] = useState([])
     // 技能释放对象
     const [castToPlayersId, setCastToPlayersId] = useState([])
 
@@ -370,17 +406,30 @@ function Gaming() {
                 break
             }
         }
-        if (!me.ready.nominated) {
-            setNominateModalContent(genNominateModalContent(me))
-        }
+        setNominateModalContent(genNominateModalContent(me))
     }
     const handleNominateOk = () => {
         setIsNominateModalOpen(false)
-        // 提名的条件是，提名是true，stage是偶数
-        // 提名成功的条件是，最快
+        // 提名的条件是，提名是true，stage是偶数；提名成功的条件是，最快
+        let me
+        for (let i = 0; i < game.players.length; i++) {
+            if (game.players[i].id === localStorage.getItem("PlayerID")) {
+                me = game.players[i]
+                break
+            }
+        }
+        if (me.ready.nominate) {
+            for (let j = 0; j < game.players.length; j++) {
+                if (selectedPlayers[0] === game.players[j].id && game.players[j].ready.nominated) {
+                    emitNominate()
+                    break
+                }
+            }
+        }
     }
     const handleNominateCancel = () => {
         setIsNominateModalOpen(false)
+        setNominateToPlayersId([])
     }
 
     // 投票玩家
@@ -398,16 +447,30 @@ function Gaming() {
                 break
             }
         }
-        if (GameState.votingStep && !me.ready.voted) {
-            setVoteModalContent(genVoteModalContent(me))
-        }
+        setVoteModalContent(genVoteModalContent(me))
     }
     const handleVoteOk = () => {
         setIsVoteModalOpen(false)
         // 投票的条件是，投票是true，stage是偶数，有人被提名GameState.votingStep
+        let me
+        for (let i = 0; i < game.players.length; i++) {
+            if (game.players[i].id === localStorage.getItem("PlayerID")) {
+                me = game.players[i]
+                break
+            }
+        }
+        if (me.ready.vote) {
+            for (let j = 0; j < game.players.length; j++) {
+                if (selectedPlayers[0] === game.players[j].id) {
+                    emitVote()
+                    break
+                }
+            }
+        }
     }
     const handleVoteCancel = () => {
         setIsVoteModalOpen(false)
+        setVoteToPlayersId([])
     }
 
     // 发动技能
@@ -488,11 +551,15 @@ function Gaming() {
         if (selectedPlayers.length > 1) {
             return "您只能选1人提名"
         }
-        if (me.state.nominate) {
+        if (me.ready.nominate && !GameState.night && !GameState.votingStep) {
             let content = "你确定要在今天的处决中，提名玩家 "
             for (let j = 0; j < game.players.length; j++) {
                 if (selectedPlayers[0] === game.players[j].id) {
+                    if (game.players[j].ready.nominated) {
+                        return "您选择的玩家 " + "<" + game.players[j].name + "> " + "今日已被提名"
+                    }
                     content += "<" + game.players[j].name + "> "
+                    setNominateToPlayersId(game.players[j].id)
                     break
                 }
             }
@@ -513,11 +580,12 @@ function Gaming() {
         if (me.character === "管家") {
             return "您只能跟随主人投票"
         }
-        if (me.state.vote > 0) {
+        if (me.ready.vote > 0 && !GameState.night && GameState.votingStep) {
             let content = "你确定要投票给玩家 "
             for (let j = 0; j < game.players.length; j++) {
                 if (selectedPlayers[0] === game.players[j].id) {
                     content += "<" + game.players[j].name + "> "
+                    setVoteToPlayersId(game.players[j].id)
                     break
                 }
             }
@@ -624,6 +692,7 @@ function Gaming() {
 
     const endVotingStep = () => {
         GameState.votingStep = false
+        emitEndVoting()
         // TODO 这里检查是进哪个环节
     }
 
