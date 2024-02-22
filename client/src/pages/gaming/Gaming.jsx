@@ -116,6 +116,7 @@ function Gaming() {
         socketGaming = new WebSocket(`ws://192.168.1.14:8080/gaming/${roomId}/${localStorage.getItem("PlayerID")}`)
         socketGaming.onmessage = function(event) {
             // console.log("Received log from server:", event.data)
+            // TODO 如果收到的是本局结束，就再发一个socket是跳转到结算页面，可以接动画跳转
             addLog(event.data, ...wordClassPairs)
             loadGame()
         }
@@ -327,8 +328,8 @@ function Gaming() {
             console.log("第一夜进入可日夜切换状态")
         }
         if (GameState.stage !== 1 && GameState.stage % 2 === 0) {
-            // 结算前一夜，此时前端stage是2，但是后端stage依然是1，因为emitToggleNight还未运行
-            emitCheckout()
+            // 夜转日，结算前一夜，此时前端stage是2，但是后端stage依然是1，因为emitToggleNight还未运行
+            emitCheckoutNight()
             // 发送日夜切换指令到后端，后端重置状态
             emitToggleNight()
 
@@ -348,9 +349,13 @@ function Gaming() {
         let req = JSON.stringify({action: "toggle_night", targets: []})
         socketGaming.send(req) // 会在后端更新stage、night
     }
-    const emitCheckout = () => {
-        let req = JSON.stringify({action: "checkout", targets: []})
+    const emitCheckoutNight = () => {
+        let req = JSON.stringify({action: "checkout_night", targets: []})
         socketGaming.send(req) // 结算本阶段
+    }
+    const emitCast = () => {
+        let req = JSON.stringify({action: "cast", targets: castToPlayersId})
+        socketGaming.send(req) // 会在后端更新stage、night
     }
 
     // 技能释放对象
@@ -438,6 +443,7 @@ function Gaming() {
                 (me.character === "下毒者" ||
                     me.character === "僧侣" ||
                     me.character === "小恶魔" ||
+                    me.character === "守鸦人" ||
                     me.character === "占卜师" ||
                     me.character === "管家")) {
                 setCastModalContent(genCastModalContent(me))
@@ -466,13 +472,13 @@ function Gaming() {
                 me.character === "管家" ||
                 me.character === "僧侣" ||
                 me.character === "小恶魔" ||
+                me.character === "守鸦人" ||
                 me.character === "杀手")
                 ||
                 (castToPlayersId.length === 2 &&
                 me.character === "占卜师")
             )) {
-            let req = JSON.stringify({action: "cast", targets: castToPlayersId})
-            socketGaming.send(req) // 会在后端更新stage、night
+            emitCast()
         }
     }
     const handleCastCancel = () => {
@@ -597,6 +603,12 @@ function Gaming() {
                 break
             }
             return "您只能选1个人杀害"
+        case "守鸦人":
+            if (selectedPlayers.length === 1) {
+                content += "进行反向通灵吗？"
+                break
+            }
+            return "您只能选1个人反向通灵"
         case "杀手":
             for (let i = 0; i < selectedPlayersObj.length; i++) {
                 if (selectedPlayersObj[i].state.dead) {
@@ -618,7 +630,7 @@ function Gaming() {
 
     const endVotingStep = () => {
         GameState.votingStep = false
-        // 这里检查是进哪个环节
+        // TODO 这里检查是进哪个环节
     }
 
     const [currentStep, setCurrentStep] = useState("未开始")

@@ -57,17 +57,17 @@ type Player struct {
 }
 
 type PlayerState struct {
-	Dead      bool   `json:"dead"`
-	Nominate  bool   `json:"nominate"`
-	Nominated bool   `json:"nominated"`
-	Vote      int    `json:"vote"`
-	Evil      bool   `json:"evil"`     // 隐士
-	Demon     bool   `json:"demon"`    // 占卜
-	Drunk     bool   `json:"drunk"`    // 酒鬼
-	Poisoned  bool   `json:"poisoned"` // 下毒
-	Master    string `json:"master"`   // 管家
-	Bullet    bool   `json:"bullet"`   // 杀手
-	Blessed   bool   `json:"blessed"`  // 圣女
+	Dead      bool `json:"dead"`
+	Nominate  bool `json:"nominate"`
+	Nominated bool `json:"nominated"`
+	Vote      int  `json:"vote"`
+	Evil      bool `json:"evil"`      // 隐士
+	Demon     bool `json:"demon"`     // 占卜
+	Drunk     bool `json:"drunk"`     // 酒鬼
+	Poisoned  bool `json:"poisoned"`  // 下毒
+	Protected bool `json:"protected"` // 僧侣
+	Bullet    bool `json:"bullet"`    // 杀手
+	Blessed   bool `json:"blessed"`   // 圣女
 }
 
 type PlayerReady struct {

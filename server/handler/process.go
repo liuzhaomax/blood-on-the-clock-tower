@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"reflect"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -38,6 +39,8 @@ func Gaming(w http.ResponseWriter, r *http.Request) {
 	// 技能施放池，存储所有施放技能人，当前阶段施放的技能作用目标
 	game.CastPool = map[string][]string{}
 
+	var mux *sync.Mutex
+
 	for {
 		_, p, err := conn.ReadMessage()
 		if err != nil {
@@ -54,26 +57,29 @@ func Gaming(w http.ResponseWriter, r *http.Request) {
 			log.Println("JSON unmarshal error:", err)
 		}
 
+		// 被处决者
+		executed := &model.Player{}
+
 		switch actionReq.Action {
 		case "toggle_night":
 			if playerId == game.Host {
-				toggleNight(game)
+				toggleNight(mux, game)
 			}
 		case "cast":
-			cast(game, playerId, actionReq.Targets)
-		case "checkout":
+			cast(mux, game, playerId, actionReq.Targets)
+		case "checkout_night":
 			if playerId == game.Host {
-				checkout(game, playerId)
+				checkoutNight(mux, game, playerId, executed)
 			}
 		}
 		time.Sleep(time.Millisecond * 50)
 	}
 }
 
-func toggleNight(game *model.Room) {
+func toggleNight(mux *sync.Mutex, game *model.Room) {
 	cfg := model.GetConfig()
-	cfgMutex.Lock()
-	defer cfgMutex.Unlock()
+	mux.Lock()
+	defer mux.Unlock()
 
 	var msg string
 
@@ -96,7 +102,8 @@ func toggleNight(game *model.Room) {
 	game.State.Night = !game.State.Night
 
 	for i := range game.Players {
-		// 让所有活人重新可以投票
+		// 让所有活人重新可以投票，夜转日结算，没投票还有票，
+		// TODO 日转夜结算，被处决后要将vote赋为true
 		if !game.Players[i].State.Dead {
 			game.Players[i].State.Vote = 1
 		}
@@ -106,6 +113,7 @@ func toggleNight(game *model.Room) {
 		}
 		// 调整玩家施放技能的准备状态
 		game.Players[i].Ready.Casted = true
+		game.CastPool = map[string][]string{}
 		if !game.Players[i].State.Dead {
 			switch game.Players[i].Character {
 			case Poisoner:
@@ -136,6 +144,8 @@ func toggleNight(game *model.Room) {
 				game.Players[i].Ready.Casted = true
 			}
 		}
+		// 让所有人的僧侣守护状态消失
+		game.Players[i].State.Protected = false
 	}
 
 	// 将日夜切换日志群发
@@ -147,10 +157,10 @@ func toggleNight(game *model.Room) {
 	}
 }
 
-func cast(game *model.Room, playerId string, targets []string) {
+func cast(mux *sync.Mutex, game *model.Room, playerId string, targets []string) {
 	cfg := model.GetConfig()
-	cfgMutex.Lock()
-	defer cfgMutex.Unlock()
+	mux.Lock()
+	defer mux.Unlock()
 
 	var msgPlayer = "您"
 	var msgAll = ""
@@ -220,6 +230,15 @@ func cast(game *model.Room, playerId string, targets []string) {
 						break
 					}
 				}
+			case Ravenkeeper:
+				for _, player := range game.Players {
+					if targets[0] == player.Id {
+						info := fmt.Sprintf(" 对 [%s] 进行了反向通灵！", player.Name)
+						msgPlayer += info
+						msgAll += info
+						break
+					}
+				}
 			}
 			game.Players[i].Ready.Casted = true
 			break
@@ -246,10 +265,10 @@ func cast(game *model.Room, playerId string, targets []string) {
 	}
 }
 
-func checkout(game *model.Room, playerId string) {
+func checkoutNight(mux *sync.Mutex, game *model.Room, playerId string, executed *model.Player) {
 	cfg := model.GetConfig()
-	cfgMutex.Lock()
-	defer cfgMutex.Unlock()
+	mux.Lock()
+	defer mux.Unlock()
 
 	var msgPlayer = "您"
 	var msgAll = ""
@@ -279,8 +298,7 @@ func checkout(game *model.Room, playerId string) {
 		}
 	}
 	// 结算第一夜信息
-	if game.State.Stage%2 == 1 {
-		// if game.State.Stage == 1 {
+	if game.State.Stage == 1 {
 		for i, player := range game.Players {
 			msgPlayer = "您"
 			msgAll = ""
@@ -517,9 +535,79 @@ func checkout(game *model.Room, playerId string) {
 				}
 				// 拼接日志
 				msgAll += fmt.Sprintf("[%s] ", player.Name)
-				info := fmt.Sprintf("互为邻座的邪恶玩家有 {%d} 对", connected)
+				info := fmt.Sprintf("发现互为邻座的邪恶玩家有 {%d} 对", connected)
 				msgPlayer += info
 				msgAll += info
+				game.Players[i].Log += msgPlayer + "\n"
+				game.Log += msgAll + "\n"
+				// 发送日志
+				for id, conn := range cfg.ConnPool {
+					if id == player.Id {
+						if err := conn.WriteMessage(websocket.TextMessage, []byte(msgPlayer)); err != nil {
+							log.Println("Write error:", err)
+							return
+						}
+						break
+					}
+				}
+			// 给共情者提供信息
+			case Empath:
+				evilQuantity := 0 // 记录左右邪恶玩家数量
+				if !player.State.Drunk && !player.State.Poisoned {
+					// 生成连座信息
+					if player.Index == 0 {
+						if game.Players[len(game.Players)-1].State.Evil {
+							evilQuantity += 1
+						}
+						if game.Players[player.Index+1].State.Evil {
+							evilQuantity += 1
+						}
+					} else if player.Index == len(game.Players)-1 {
+						if game.Players[player.Index-1].State.Evil {
+							evilQuantity += 1
+						}
+						if game.Players[0].State.Evil {
+							evilQuantity += 1
+						}
+					} else {
+						if game.Players[player.Index-1].State.Evil {
+							evilQuantity += 1
+						}
+						if game.Players[player.Index+1].State.Evil {
+							evilQuantity += 1
+						}
+					}
+				} else {
+					// 生成伪信息
+					randInt := rand.Intn(3)
+					evilQuantity = randInt
+				}
+				// 拼接日志
+				msgAll += fmt.Sprintf("[%s] ", player.Name)
+				info := fmt.Sprintf("发现与您邻座的邪恶玩家有 {%d} 个", evilQuantity)
+				msgPlayer += info
+				msgAll += info
+				game.Players[i].Log += msgPlayer + "\n"
+				game.Log += msgAll + "\n"
+				// 发送日志
+				for id, conn := range cfg.ConnPool {
+					if id == player.Id {
+						if err := conn.WriteMessage(websocket.TextMessage, []byte(msgPlayer)); err != nil {
+							log.Println("Write error:", err)
+							return
+						}
+						break
+					}
+				}
+			// 给间谍提供信息
+			case Spy:
+				// 拼接日志
+				msgAll += fmt.Sprintf("[%s] 是间谍，知晓所有身份", player.Name)
+				var info string
+				for _, player := range game.Players {
+					info += fmt.Sprintf("知晓所有身份：\n玩家 [%s] 的身份是 {%s}\n", player.Name, player.Character)
+				}
+				msgPlayer += info
 				game.Players[i].Log += msgPlayer + "\n"
 				game.Log += msgAll + "\n"
 				// 发送日志
@@ -535,5 +623,283 @@ func checkout(game *model.Room, playerId string) {
 			}
 		}
 	}
-	// 判断占卜师
+	// 判断守护
+	for fromPlayer, toPlayerIndexSlice := range castPoolObj {
+		if fromPlayer.Character == Monk && !fromPlayer.State.Poisoned && !fromPlayer.State.Dead && !fromPlayer.State.Drunk {
+			game.Players[toPlayerIndexSlice[0]].State.Protected = true
+			fromPlayer.State.Protected = false // 防bug，不能守自己
+			break
+		}
+	}
+	// 判断杀害
+	var killed model.Player
+	for fromPlayer, toPlayerIndexSlice := range castPoolObj {
+		if fromPlayer.Character == Imp && !fromPlayer.State.Poisoned &&
+			!game.Players[toPlayerIndexSlice[0]].State.Protected &&
+			game.Players[toPlayerIndexSlice[0]].Character != Soldier {
+			if game.Players[toPlayerIndexSlice[0]].Character != Mayor {
+				// 死的人
+				game.Players[toPlayerIndexSlice[0]].State.Dead = true
+				killed = game.Players[toPlayerIndexSlice[0]]
+			} else {
+				// 刀市长
+				for {
+					randInt := rand.Intn(len(game.Players))
+					if !game.Players[randInt].State.Dead &&
+						game.Players[randInt].CharacterType != Demons &&
+						game.Players[randInt].Character != Mayor {
+						// 死的是除了市长和恶魔的其他任意一人
+						game.Players[randInt].State.Dead = true
+						killed = game.Players[randInt]
+						break
+					}
+				}
+			}
+			// 自刀
+			if game.Players[toPlayerIndexSlice[0]].Character == Imp {
+				var scarletWoman *model.Player
+				var minionsAlive []*model.Player
+				var aliveQuantity int
+				for i, player := range game.Players {
+					if !player.State.Dead {
+						aliveQuantity += 1
+					}
+					if player.Character == ScarletWoman && !player.State.Dead {
+						scarletWoman = &game.Players[i]
+					} else {
+						if player.CharacterType == Minions && !player.State.Dead {
+							minionsAlive = append(minionsAlive, &game.Players[i])
+						}
+					}
+				}
+				// 有魅魔且没死
+				if !reflect.ValueOf(scarletWoman).IsZero() {
+					scarletWoman.CharacterType = Demons
+					scarletWoman.Character = Imp
+					scarletWoman.State.Evil = true
+					scarletWoman.State.Demon = true
+					break
+				}
+				// 如果没有魅魔或魅魔死了
+				if reflect.ValueOf(scarletWoman).IsZero() && len(minionsAlive) != 0 {
+					randInt := rand.Intn(len(minionsAlive))
+					minionsAlive[randInt].CharacterType = Demons
+					minionsAlive[randInt].Character = Imp
+					minionsAlive[randInt].State.Evil = true
+					minionsAlive[randInt].State.Demon = true
+					break
+				}
+			}
+			break
+		}
+	}
+	// 结算其他夜晚得知的消息
+	if game.State.Stage != 1 && game.State.Stage%2 == 1 {
+		for i, player := range game.Players {
+			msgPlayer = "您"
+			msgAll = ""
+			switch player.Character {
+			// 给守鸦人提供信息
+			case Ravenkeeper:
+				if !reflect.ValueOf(killed).IsZero() &&
+					!player.State.Drunk && (!player.State.Poisoned || player.State.Protected) &&
+					player.Id == killed.Id {
+					for fromPlayer, toPlayerIndexSlice := range castPoolObj {
+						if fromPlayer.Id == player.Id {
+							// 拼接日志
+							msgAll += fmt.Sprintf("[%s] ", player.Name)
+							info := fmt.Sprintf("发现 [%s] 的身份是 {%s}", game.Players[toPlayerIndexSlice[0]].Name, game.Players[toPlayerIndexSlice[0]].Character)
+							msgPlayer += info
+							msgAll += info
+							game.Players[fromPlayer.Index].Log += msgPlayer + "\n"
+							game.Log += msgAll + "\n"
+							// 发送日志
+							for id, conn := range cfg.ConnPool {
+								if id == fromPlayer.Id {
+									if err := conn.WriteMessage(websocket.TextMessage, []byte(msgPlayer)); err != nil {
+										log.Println("Write error:", err)
+										return
+									}
+									break
+								}
+							}
+							break
+						}
+					}
+				}
+			// 给共情者提供信息
+			case Empath:
+				if !player.State.Dead { // 当晚死亡得不到信息
+					evilQuantity := 0 // 记录左右邪恶玩家数量
+					if !player.State.Drunk && (!player.State.Poisoned || player.State.Protected) && !player.State.Dead {
+						// 生成连座信息
+						var left int
+						var right int
+						if player.Index == 0 {
+							left = len(game.Players) - 1
+							right = player.Index + 1
+						} else if player.Index == len(game.Players)-1 {
+							left = player.Index - 1
+							right = 0
+						} else {
+							left = player.Index - 1
+							right = player.Index + 1
+						}
+						for {
+							if !game.Players[left].State.Dead && game.Players[left].State.Evil {
+								evilQuantity += 1
+							}
+							if !game.Players[right].State.Dead && game.Players[right].State.Evil {
+								evilQuantity += 1
+							}
+							left--
+							if left < 0 {
+								left = len(game.Players) - 1
+							}
+							if left == right {
+								break
+							}
+							right++
+							if right > len(game.Players)-1 {
+								right = 0
+							}
+							if left == right {
+								break
+							}
+						}
+					} else {
+						// 生成伪信息
+						randInt := rand.Intn(3)
+						evilQuantity = randInt
+					}
+					// 拼接日志
+					msgAll += fmt.Sprintf("[%s] ", player.Name)
+					info := fmt.Sprintf("发现与您邻座的邪恶玩家有 {%d} 个", evilQuantity)
+					msgPlayer += info
+					msgAll += info
+					game.Players[i].Log += msgPlayer + "\n"
+					game.Log += msgAll + "\n"
+					// 发送日志
+					for id, conn := range cfg.ConnPool {
+						if id == player.Id {
+							if err := conn.WriteMessage(websocket.TextMessage, []byte(msgPlayer)); err != nil {
+								log.Println("Write error:", err)
+								return
+							}
+							break
+						}
+					}
+				}
+			// 给掘墓人提供信息
+			case Undertaker:
+				if !player.State.Dead {
+					if !reflect.ValueOf(executed).IsZero() {
+						// 无人被处决
+						msgAll += fmt.Sprintf("[%s] ", player.Name)
+						info := "发现今日无人被处决"
+						msgPlayer += info
+						msgAll += info
+					} else {
+						var executedPlayer *model.Player
+						if !player.State.Drunk && (!player.State.Poisoned || player.State.Protected) {
+							// 生成死亡玩家身份信息
+							executedPlayer = executed
+						} else {
+							// 生成伪信息
+							for {
+								randInt := rand.Intn(len(game.Players))
+								if randInt != player.Index && randInt != executed.Index {
+									executedPlayer = &game.Players[randInt]
+									break
+								}
+							}
+						}
+						// 拼接日志
+						msgAll += fmt.Sprintf("[%s] ", player.Name)
+						info := fmt.Sprintf("发现今晚被处决的玩家 [%s] 的身份是 {%s}", executed.Name, executedPlayer.Character)
+						msgPlayer += info
+						msgAll += info
+					}
+					game.Players[i].Log += msgPlayer + "\n"
+					game.Log += msgAll + "\n"
+					// 发送日志
+					for id, conn := range cfg.ConnPool {
+						if id == player.Id {
+							if err := conn.WriteMessage(websocket.TextMessage, []byte(msgPlayer)); err != nil {
+								log.Println("Write error:", err)
+								return
+							}
+							break
+						}
+					}
+				}
+			}
+		}
+	}
+	// 判断占卜
+	for fromPlayer, toPlayerIndexSlice := range castPoolObj {
+		if fromPlayer.Character == FortuneTeller && !fromPlayer.State.Dead {
+			msgPlayer = "您"
+			msgAll = ""
+			var hasDemon = "无"
+			if !fromPlayer.State.Drunk && !fromPlayer.State.Poisoned {
+				if game.Players[toPlayerIndexSlice[0]].State.Demon || game.Players[toPlayerIndexSlice[1]].State.Demon {
+					hasDemon = "有"
+				}
+			} else {
+				randInt := rand.Intn(2)
+				if randInt == 0 {
+					hasDemon = "无"
+				} else {
+					hasDemon = "有"
+				}
+			}
+			// 拼接日志
+			msgAll += fmt.Sprintf("[%s] ", fromPlayer.Name)
+			info := fmt.Sprintf("发现 [%s] 和 [%s] 中 {%s} 恶魔", game.Players[toPlayerIndexSlice[0]].Name, game.Players[toPlayerIndexSlice[1]].Name, hasDemon)
+			msgPlayer += info
+			msgAll += info
+			game.Players[fromPlayer.Index].Log += msgPlayer + "\n"
+			game.Log += msgAll + "\n"
+			// 发送日志
+			for id, conn := range cfg.ConnPool {
+				if id == fromPlayer.Id {
+					if err := conn.WriteMessage(websocket.TextMessage, []byte(msgPlayer)); err != nil {
+						log.Println("Write error:", err)
+						return
+					}
+					break
+				}
+			}
+			break
+		}
+	}
+	// 给管家提供信息
+	for fromPlayer, toPlayerIndexSlice := range castPoolObj {
+		if fromPlayer.Character == Butler && !fromPlayer.State.Poisoned && !fromPlayer.State.Dead {
+			game.Players[toPlayerIndexSlice[0]].State.Vote += 1
+			msgPlayer = "您"
+			msgAll = ""
+			// 拼接日志
+			msgAll += fmt.Sprintf("[%s] ", fromPlayer.Name)
+			info := fmt.Sprintf("认定 [%s] 为主人，他的投票为两票", game.Players[toPlayerIndexSlice[0]].Name)
+			msgPlayer += info
+			msgAll += info
+			game.Players[fromPlayer.Index].Log += msgPlayer + "\n"
+			game.Log += msgAll + "\n"
+			// 发送日志
+			for id, conn := range cfg.ConnPool {
+				if id == fromPlayer.Id {
+					if err := conn.WriteMessage(websocket.TextMessage, []byte(msgPlayer)); err != nil {
+						log.Println("Write error:", err)
+						return
+					}
+					break
+				}
+			}
+			break
+		}
+	}
+	// 判断本局夜晚结算
+
 }
