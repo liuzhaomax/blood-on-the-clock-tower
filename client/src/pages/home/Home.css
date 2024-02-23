@@ -3,7 +3,7 @@
     background-color: #357e5b;
     color: white;
     width: 100vw;
-    max-width: 1200px;
+    /*max-width: 1200px;*/
     min-width: 375px;
     height: fit-content;
     min-height: 100vh;
@@ -12,6 +12,10 @@
     flex-direction: column;
     justify-content: space-evenly;
     align-items: center;
+
+    background-image: url('../../assets/images/bg/cover.jpg'); /* 替换 'image.jpg' 为你的背景图片的路径 */
+    background-size: cover; /* 控制背景图片的尺寸，cover 表示图片会被拉伸或压缩以填充整个元素 */
+    background-position: center; /* 控制背景图片的位置，center 表示图片会在元素的中心位置 */
 }
 
 #HOME .layout {

@@ -21,7 +21,7 @@ func GetConfig() *Config {
 
 type Config struct {
 	Rooms    []Room
-	ConnPool map[string]*websocket.Conn
+	ConnPool map[string]*websocket.Conn // 游戏中玩家的长连接
 }
 
 type Room struct {

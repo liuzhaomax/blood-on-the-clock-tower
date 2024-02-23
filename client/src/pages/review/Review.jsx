@@ -43,43 +43,43 @@ function Review() {
     }
 
     // 加载总日志
-    // useEffect(() => {
-    //     loadPersonalLog()
-    // }, [game])
-    // const loadPersonalLog = () => {
-    //     if (game) {
-    //         replaceLog(game.log, ...wordClassPairs)
-    //     }
-    // }
-    // let wordClassPairs = [
-    //     [/(?<=第).*?(?=天)/g, "highlight highlight-number"], // 数字
-    //     [/\[([^\]]+)]/g, "highlight highlight-player"], // 玩家名字
-    //     [/\{[^}]+}/g, "highlight highlight-skill-result"], // 技能结果关键字
-    //     [/(下毒|占卜|认主|守护|杀害|枪毙|弹)/g, "highlight highlight-skill"], // 技能关键字
-    //     [/(死亡|处决结果|提名|投票|平安夜)/g, "highlight highlight-severe"], // 重大事件关键字
-    // ]
-    // const updateText = (text, word, className) => {
-    //     if (typeof word === "string") {
-    //         let regex = new RegExp(word, "g")
-    //         return text.replace(regex, `<span class="${className}">${word}</span>`)
-    //     }
-    //     return text.replace(word, match => `<span class="${className}">${match}</span>`)
-    // }
-    // const replaceLog = (text, ...wordClassPairs) => {
-    //     let replacedText = updateText(text, ...wordClassPairs[0])
-    //     if (wordClassPairs.length > 1) {
-    //         for (let i = 1; i < wordClassPairs.length; i++) {
-    //             replacedText = updateText(replacedText, ...wordClassPairs[i])
-    //         }
-    //     }
-    //     let removedNTextArr = replacedText.split("\n").map(item => {
-    //         return `<span>${item}</span>`
-    //     })
-    //     let resultText = removedNTextArr.join("")
-    //     if (document.getElementById("LOG")) {
-    //         document.getElementById("LOG").innerHTML = `${resultText}`
-    //     }
-    // }
+    useEffect(() => {
+        loadPersonalLog()
+    }, [game])
+    const loadPersonalLog = () => {
+        if (game) {
+            replaceLog(game.log, ...wordClassPairs)
+        }
+    }
+    let wordClassPairs = [
+        [/(?<=第).*?(?=天)/g, "highlight highlight-number"], // 数字
+        [/\[([^\]]+)]/g, "highlight highlight-player"], // 玩家名字
+        [/\{[^}]+}/g, "highlight highlight-skill-result"], // 技能结果关键字
+        [/(下毒|占卜|认主|守护|杀害|枪毙|弹)/g, "highlight highlight-skill"], // 技能关键字
+        [/(死亡|处决结果|提名|投票|平安夜)/g, "highlight highlight-severe"], // 重大事件关键字
+    ]
+    const updateText = (text, word, className) => {
+        if (typeof word === "string") {
+            let regex = new RegExp(word, "g")
+            return text.replace(regex, `<span class="${className}">${word}</span>`)
+        }
+        return text.replace(word, match => `<span class="${className}">${match}</span>`)
+    }
+    const replaceLog = (text, ...wordClassPairs) => {
+        let replacedText = updateText(text, ...wordClassPairs[0])
+        if (wordClassPairs.length > 1) {
+            for (let i = 1; i < wordClassPairs.length; i++) {
+                replacedText = updateText(replacedText, ...wordClassPairs[i])
+            }
+        }
+        let removedNTextArr = replacedText.split("\n").map(item => {
+            return `<span>${item}</span>`
+        })
+        let resultText = removedNTextArr.join("")
+        if (document.getElementById("LOG")) {
+            document.getElementById("LOG").innerHTML = `${resultText}`
+        }
+    }
 
     return (
         <div id="REVIEW" className="REVIEW">
@@ -98,11 +98,6 @@ function Review() {
             </div>
             <div className="layout south" id="LOG">
                 {game ? game.log : "总日志为空"}
-                <span className="highlight">总日志</span>
-                <span>总日志</span>
-                <span>总日志</span>
-                <span>总日志</span>
-                <span>总日志</span>
             </div>
         </div>
     )

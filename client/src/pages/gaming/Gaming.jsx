@@ -5,6 +5,8 @@ import React, {useEffect, useState} from "react"
 import "./Gaming.css"
 import {remove} from "../../utils/array"
 import {sleep} from "../../utils/time"
+import dayImg from "../../assets/images/bg/day.png"
+import nightImg from "../../assets/images/bg/night.png"
 
 let socketGaming
 let wolfAudio = new Audio("/audio/wolf.wav")
@@ -281,7 +283,7 @@ function Gaming() {
                         })
                     }
                 </div>
-                <Button className="mini-btn skill-btn" onClick={cast}><FireOutlined /></Button>
+                <Button className="btn mini-btn skill-btn" onClick={cast}><FireOutlined /></Button>
                 <div>
                     {
                         Array.from({ length: game ? game.players.length / 2 : 15 / 2 }, (_, index) => {
@@ -303,6 +305,7 @@ function Gaming() {
         )
     }
 
+    // 跳转复盘页面
     const jumpToReview = () => {
         if (game && game.status === "复盘中") {
             navigate(`/review/${roomId}`, {
@@ -778,8 +781,17 @@ function Gaming() {
         }
     }
 
+    // 更换背景图片
+    useEffect(() => {
+        updateBgImg()
+    }, [game])
+    const [bgImg, setBgImg] = useState(dayImg)
+    const updateBgImg = () => {
+        setBgImg(GameState.stage % 2 === 1 ? nightImg : dayImg)
+    }
+
     return (
-        <div id="GAMING" className="GAMING">
+        <div id="GAMING" className="GAMING" style={{backgroundImage: `url(${bgImg})`}}>
             <div className="layout west">
                 <div className="layout north">
                     <Button className="btn small-btn" onClick={returnRoom}><RollbackOutlined /></Button>
@@ -799,8 +811,8 @@ function Gaming() {
                         <span>我的名字：<span>{game === null ? "" : findPlayer().name}</span></span>
                         <span>我的身份：<span className="keyword">{game === null ? "" : findPlayer().character}</span></span>
                         <span>身份类型：<span className="keyword">{game === null ? "" : findPlayer().characterType}</span></span>
-                        <Button className="mini-btn" onClick={nominate}>提名</Button>
-                        <Button className="mini-btn" onClick={vote}>投票</Button>
+                        <Button className="btn mini-btn" onClick={nominate}>提名</Button>
+                        <Button className="btn mini-btn" onClick={vote}>投票</Button>
                     </div>
                     <span className="layout title">当前环节：{currentStep}</span>
                     {sit()}

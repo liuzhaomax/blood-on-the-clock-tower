@@ -40,3 +40,20 @@
     height: 100px;
     text-align: center;
 }
+
+.btn {
+    background-image: linear-gradient(81.02deg, #fa5560 -53.47%, #b14bf4 25.52%, #4d91ff 64.8%)!important;
+    transition: all .3s ease-in-out!important;
+    border: 0;
+    color: white;
+}
+
+.btn:hover {
+    color: #357e5b;
+}
+
+.btn:active,
+.btn:focus,
+.btn:visited {
+    color: white;
+}

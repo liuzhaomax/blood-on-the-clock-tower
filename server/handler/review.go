@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"github.com/liuzhaomax/blood-on-the-clock-tower/server/model"
 	"log"
 	"net/http"
 	"strings"
@@ -47,10 +48,24 @@ func ReturnRoom(w http.ResponseWriter, r *http.Request) {
 	}
 	roomId := parts[2]
 
+	cfg := model.GetConfig()
 	cfgMutex.Lock()
 	defer cfgMutex.Unlock()
 	room, _ := findRoom(roomId)
 
 	room.Status = "等待开始"
 	room.Init = false
+
+	// 关闭房间内所有玩家的gaming长连接
+	for id := range cfg.ConnPool {
+		for _, player := range room.Players {
+			if id == player.Id {
+				err := cfg.ConnPool[id].Close()
+				if err != nil {
+					log.Println(err)
+					return
+				}
+			}
+		}
+	}
 }
