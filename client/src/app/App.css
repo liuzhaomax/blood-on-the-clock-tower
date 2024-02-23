@@ -55,5 +55,5 @@
 .btn:active,
 .btn:focus,
 .btn:visited {
-    color: white;
+    color: white !important;
 }
