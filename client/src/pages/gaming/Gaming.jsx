@@ -117,8 +117,8 @@ function Gaming() {
             // console.log("Received log from server:", event.data)
             addLog(event.data, ...wordClassPairs)
             loadGame()
-            // TODO 如果收到的是本局结束，就再发一个socket是跳转到结算页面，可以来个动画跳转
             if (event.data.result) {
+                // TODO 来个动画跳转
                 let socket = new WebSocket(`ws://192.168.1.14:8080/review/${roomId}`)
                 socket.send("review")
             }
@@ -325,9 +325,7 @@ function Gaming() {
 
     // 日夜切换
     useEffect(() => {
-        setTimeout(() => {
-            toggleSunMoon()
-        }, 50)
+        toggleSunMoon()
     }, [game])
     const [iconSunMoon, setIconSunMoon] = useState(true)
     const toggleSunMoon = () => {
@@ -357,12 +355,14 @@ function Gaming() {
         }),
         [],
     )
+
+    // 日夜切换按钮
     const toggleNight = () => {
         if (checkReadyToToggleNight()) {
             // 重置选择的玩家
             resetSelectedPlayers()
             // 锁定与结算过程
-            process()
+            process(game.state.stage+1)
         } else {
             openNotification("topRight")
         }
@@ -381,8 +381,11 @@ function Gaming() {
     }
 
     // 游戏过程
-    const process = async () => {
-        if (game.state.stage === 1) {
+    const process = async (stage) => {
+        console.log("--------------")
+        console.log(stage)
+        console.log("--------------")
+        if (stage === 1) {
             // 发送日夜切换指令到后端，后端重置状态
             emitToggleNight()
             // 给host锁定不能切换日夜
@@ -396,7 +399,7 @@ function Gaming() {
             // 给host解锁可以切换日夜
             castLock = false
         }
-        if (game.state.stage !== 1 && game.state.stage % 2 === 0) {
+        if (stage !== 1 && stage % 2 === 0) {
             // 夜转日，结算前一夜，此时前端stage是双数，但是后端stage依然是单数，因为emitToggleNight还未运行
             emitCheckoutNight()
             // 发送日夜切换指令到后端，后端重置状态
@@ -410,7 +413,7 @@ function Gaming() {
             // 给host解锁可以切换日夜
             castLock = false
         }
-        if (game.state.stage !== 1 && game.state.stage % 2 === 1) {
+        if (stage !== 1 && stage % 2 === 1) {
             // 日转夜，结算前一天，此时前端stage是单数，但是后端stage依然是双数，因为emitToggleNight还未运行
             emitCheckoutDay()
             // 发送日夜切换指令到后端，后端重置状态

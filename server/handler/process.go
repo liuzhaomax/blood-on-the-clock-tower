@@ -60,7 +60,7 @@ func Gaming(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// 被处决者
-		executed := &model.Player{}
+		var executed *model.Player
 
 		switch actionReq.Action {
 		case "toggle_night":
@@ -1032,7 +1032,7 @@ func checkoutNight(mux *sync.Mutex, game *model.Room, executed *model.Player) {
 						}
 						// 拼接日志
 						msgAll += fmt.Sprintf("[%s] ", player.Name)
-						info := fmt.Sprintf("发现今晚被处决的玩家 [%s] 的身份是 {%s}\n", executed.Name, executedPlayer.Character)
+						info := fmt.Sprintf("发现今晚被处决的玩家 [%s] 的身份是 {%s}\n", executedPlayer.Name, executedPlayer.Character)
 						msgPlayer += info
 						msgAll += info
 					}
