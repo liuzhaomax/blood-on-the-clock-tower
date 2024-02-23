@@ -7,6 +7,8 @@ import {remove} from "../../utils/array"
 import {sleep} from "../../utils/time"
 import dayImg from "../../assets/images/bg/day.png"
 import nightImg from "../../assets/images/bg/night.png"
+import "../../utils/captcha/captcha.css"
+import {startCaptcha} from "../../utils/captcha/captcha.js"
 
 const Context = React.createContext({
     name: "Default",
@@ -382,9 +384,6 @@ function Gaming() {
 
     // 游戏过程
     const process = async (stage) => {
-        console.log("--------------")
-        console.log(stage)
-        console.log("--------------")
         if (stage === 1) {
             // 发送日夜切换指令到后端，后端重置状态
             emitToggleNight()
@@ -392,8 +391,9 @@ function Gaming() {
             castLock = true
             // 狼叫
             wolfAudio.play()
-            // 语音- 请大家操作或输入验证码
-            // TODO 弹出验证码
+            // TODO 语音- 请大家操作或输入验证码
+            // 弹出验证码
+            showCaptchaModal(true)
             // 防抖等2秒
             await sleep(2000)
             // 给host解锁可以切换日夜
@@ -422,8 +422,9 @@ function Gaming() {
             castLock = true
             // 狼叫
             wolfAudio.play()
-            // 语音- 请大家操作或输入验证码
-            // TODO 弹出验证码
+            // TODO 语音- 请大家操作或输入验证码
+            // 弹出验证码
+            showCaptchaModal(false)
             // 防抖等2秒
             await sleep(2000)
             // 给host解锁可以切换日夜
@@ -801,6 +802,50 @@ function Gaming() {
         }
     }
 
+    // 验证码
+    const [isCaptchaModalOpen, setIsCaptchaModalOpen] = useState(false)
+    useEffect(() => {
+        let container = document.getElementById("CaptchaModal")
+        if (container) {
+            let box = document.querySelector(".box")
+            let titbox = document.querySelector(".tit-box")
+            let fls = document.querySelectorAll(".fl")
+            let radios = document.querySelectorAll(".radio")
+            startCaptcha(box, titbox, fls, radios, container, (success) => {
+                setIsCaptchaModalOpen(!success)
+            })
+        }
+    }, [isCaptchaModalOpen])
+    const showCaptchaModal = firstNight => {
+        if (game) {
+            for (let i = 0; i < game.players.length; i++) {
+                let open = false
+                if (game.players[i].id === localStorage.getItem("PlayerID")) {
+                    if (game.players[i].character !== "下毒者"
+                        && game.players[i].character !== "占卜师"
+                        && game.players[i].character !== "管家") {
+                        open = true
+                    }
+                    if ((game.players[i].character === "小恶魔" || game.players[i].character === "僧侣") && firstNight) {
+                        open = true
+                    }
+                    if ((game.players[i].character === "小恶魔" || game.players[i].character === "僧侣") && !firstNight) {
+                        open = false
+                    }
+                    if (open) {
+                        setIsCaptchaModalOpen(true)
+                        break
+                    }
+                }
+            }
+        }
+    }
+    // TODO 测试代码 开始
+    const handleCaptchaCancel = () => {
+        setIsCaptchaModalOpen(false)
+    }
+    // TODO 测试代码 结束
+
     return (
         <div id="GAMING" className="GAMING" style={{backgroundImage: `url(${bgImg})`}}>
             <div className="layout west">
@@ -847,6 +892,20 @@ function Gaming() {
             <Context.Provider value={contextValue}>
                 {contextHolder}
             </Context.Provider>
+            <Modal title="验证码" open={isCaptchaModalOpen} onCancel={handleCaptchaCancel} footer={null}>
+                <div id="CaptchaModal">
+                    {isCaptchaModalOpen ?
+                        <div className="verify-box">
+                            <div className="box">
+                                <div className="bg-blur"></div>
+                            </div>
+                            <div className="tit-box"></div>
+                        </div>
+                        :
+                        <></>
+                    }
+                </div>
+            </Modal>
         </div>
     )
 }

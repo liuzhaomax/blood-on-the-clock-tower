@@ -81,7 +81,7 @@ function Home() {
     }
     
     const [roomId, setRoomId] = useState(genShortUUID())
-    const [roomName, setRoomName] = useState("房间-" + genShortUUID())
+    const [roomName, setRoomName] = useState("房间-" + genShortUUID().slice(-6))
     const [roomPassword, setRoomPassword] = useState("")
     const [playerName, setPlayerName] = useState("好人1号")
 
