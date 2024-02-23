@@ -1,22 +1,20 @@
 import {useNavigate, useParams} from "react-router-dom"
-import {Button, Modal, Switch} from "antd"
+import {Button, Modal, Switch, notification} from "antd"
 import {FireOutlined, RollbackOutlined, SmileFilled, SmileOutlined, StopOutlined} from "@ant-design/icons"
-import React, {useEffect, useState} from "react"
+import React, {useEffect, useState, useMemo} from "react"
 import "./Gaming.css"
 import {remove} from "../../utils/array"
 import {sleep} from "../../utils/time"
 import dayImg from "../../assets/images/bg/day.png"
 import nightImg from "../../assets/images/bg/night.png"
 
+const Context = React.createContext({
+    name: "Default",
+})
 let socketGaming
 let wolfAudio = new Audio("/audio/wolf.wav")
 let cockAudio = new Audio("/audio/cock.wav")
-let GameState = {
-    night: false, // 是否是黑夜
-    stage: 0, // 偶数是白天，奇数是黑夜，stage==1是特殊的第一夜
-    votingStep: false, // 是否有人被提名，也就是是否进入投票环节
-    castLock: false, // 入夜后给施放技能的时间，后端没有，只在前端限制，因为只限制主机
-}
+let castLock = false // 入夜后给施放技能的时间，后端没有，只在前端限制，因为只限制主机
 
 function Gaming() {
     const navigate = useNavigate()
@@ -60,12 +58,7 @@ function Gaming() {
         setIsReturnRoomModalOpen(true)
     }
     const handleReturnRoomOk = () => {
-        GameState = {
-            night: false,
-            stage: 0,
-            votingStep: false,
-            castLock: false,
-        }
+        castLock = false
         setIsReturnRoomModalOpen(false)
         navigate("/home", {
             replace: true,
@@ -334,12 +327,11 @@ function Gaming() {
     useEffect(() => {
         setTimeout(() => {
             toggleSunMoon()
-            updateGameState()
         }, 50)
     }, [game])
     const [iconSunMoon, setIconSunMoon] = useState(true)
     const toggleSunMoon = () => {
-        if (game && game.state.night !== GameState.night) {
+        if (game && game.state.night === true) {
             if (iconSunMoon) {
                 setIconSunMoon(false)
                 document.getElementById("GAMING").style.backgroundColor = "#35557EFF"
@@ -347,31 +339,32 @@ function Gaming() {
                 setIconSunMoon(true)
                 document.getElementById("GAMING").style.backgroundColor = "#357e5b"
             }
-            GameState.night = game.state.night
         }
+        // 修改背景图片
+        updateBgImg()
     }
-    const updateGameState = () => {
-        if (game && game.state.night !== GameState.night) {
-            GameState.night = game.state.night
-        }
-        if (game && game.state.stage !== GameState.stage) {
-            GameState.stage = game.state.stage
-        }
-        if (game && game.state.votingStep !== GameState.votingStep) {
-            GameState.votingStep = game.state.votingStep
-        }
+    const [api, contextHolder] = notification.useNotification()
+    const openNotification = (placement) => {
+        api.info({
+            message: "防连击保护机制",
+            description: <Context.Consumer>{({ name }) => `不好意思, ${name}!`}</Context.Consumer>,
+            placement,
+        })
     }
+    const contextValue = useMemo(
+        () => ({
+            name: "现在还不能点击，请等待所有技能施放完毕，或等待投票结束",
+        }),
+        [],
+    )
     const toggleNight = () => {
         if (checkReadyToToggleNight()) {
             // 重置选择的玩家
             resetSelectedPlayers()
-            // 阶段+1
-            GameState.stage++
             // 锁定与结算过程
             process()
         } else {
-            console.log("不是当前stage的结算环节")
-            // TODO 弹出notification
+            openNotification("topRight")
         }
     }
     const checkReadyToToggleNight = () => {
@@ -381,57 +374,57 @@ function Gaming() {
             ready = ready && (game.players[i].ready.casted || game.players[i].state.dead)
         }
         // 所有有技能的操作完，没技能的点完验证码，时间等待结束，不在投票阶段，则切换日夜，切换后首先结算前一阶段
-        return !GameState.votingStep
-            && !GameState.castLock
+        return !game.state.votingStep
+            && !castLock
             // && ready // TODO 测试用，记得解锁
-            || GameState.stage === 0
+            || game.state.stage === 0
     }
 
     // 游戏过程
     const process = async () => {
-        if (GameState.stage === 1) {
+        if (game.state.stage === 1) {
             // 发送日夜切换指令到后端，后端重置状态
             emitToggleNight()
             // 给host锁定不能切换日夜
-            GameState.castLock = true
+            castLock = true
             // 狼叫
             wolfAudio.play()
-            // TODO 语音- 请大家操作或输入验证码
+            // 语音- 请大家操作或输入验证码
             // TODO 弹出验证码
             // 防抖等2秒
             await sleep(2000)
             // 给host解锁可以切换日夜
-            GameState.castLock = false
+            castLock = false
         }
-        if (GameState.stage !== 1 && GameState.stage % 2 === 0) {
+        if (game.state.stage !== 1 && game.state.stage % 2 === 0) {
             // 夜转日，结算前一夜，此时前端stage是双数，但是后端stage依然是单数，因为emitToggleNight还未运行
             emitCheckoutNight()
             // 发送日夜切换指令到后端，后端重置状态
             emitToggleNight()
             // 给host锁定不能切换日夜
-            GameState.castLock = true
+            castLock = true
             // 鸡叫
             cockAudio.play()
             // 防抖等2秒
             await sleep(2000)
             // 给host解锁可以切换日夜
-            GameState.castLock = false
+            castLock = false
         }
-        if (GameState.stage !== 1 && GameState.stage % 2 === 1) {
+        if (game.state.stage !== 1 && game.state.stage % 2 === 1) {
             // 日转夜，结算前一天，此时前端stage是单数，但是后端stage依然是双数，因为emitToggleNight还未运行
             emitCheckoutDay()
             // 发送日夜切换指令到后端，后端重置状态
             emitToggleNight()
             // 给host锁定不能切换日夜
-            GameState.castLock = true
+            castLock = true
             // 狼叫
             wolfAudio.play()
-            // TODO 语音- 请大家操作或输入验证码
+            // 语音- 请大家操作或输入验证码
             // TODO 弹出验证码
             // 防抖等2秒
             await sleep(2000)
             // 给host解锁可以切换日夜
-            GameState.castLock = false
+            castLock = false
         }
     }
     const emitToggleNight = () => {
@@ -530,7 +523,7 @@ function Gaming() {
     }
     const handleVoteOk = () => {
         setIsVoteModalOpen(false)
-        // 投票的条件是，投票是true，stage是偶数，有人被提名GameState.votingStep
+        // 投票的条件是，投票是true，stage是偶数，有人被提名game.state.votingStep
         let me
         for (let i = 0; i < game.players.length; i++) {
             if (game.players[i].id === localStorage.getItem("PlayerID")) {
@@ -568,14 +561,14 @@ function Gaming() {
             }
         }
         if (!me.ready.casted) {
-            if (GameState.stage === 1 &&
+            if (game.state.stage === 1 &&
                 (me.character === "下毒者" ||
                 me.character === "占卜师" ||
                 me.character === "管家")) {
                 setCastModalContent(genCastModalContent(me))
                 return
             }
-            if (GameState.stage % 2 === 1 && GameState.stage !== 1 &&
+            if (game.state.stage % 2 === 1 && game.state.stage !== 1 &&
                 (me.character === "下毒者" ||
                     me.character === "僧侣" ||
                     me.character === "小恶魔" ||
@@ -585,7 +578,7 @@ function Gaming() {
                 setCastModalContent(genCastModalContent(me))
                 return
             }
-            if (GameState.stage % 2 === 0 && me.character === "杀手") {
+            if (game.state.stage % 2 === 0 && me.character === "杀手") {
                 setCastModalContent(genCastModalContent(me))
             }
         } else {
@@ -630,7 +623,7 @@ function Gaming() {
         if (selectedPlayers.length > 1) {
             return "您只能选1人提名"
         }
-        if (me.ready.nominate && !GameState.night && !GameState.votingStep) {
+        if (me.ready.nominate && !game.state.night && !game.state.votingStep) {
             let content = "你确定要在今天的处决中，提名玩家 "
             for (let j = 0; j < game.players.length; j++) {
                 if (selectedPlayers[0] === game.players[j].id) {
@@ -659,7 +652,7 @@ function Gaming() {
         if (me.character === "管家") {
             return "您只能跟随主人投票"
         }
-        if (me.ready.vote > 0 && !GameState.night && GameState.votingStep) {
+        if (me.ready.vote > 0 && !game.state.night && game.state.votingStep) {
             let content = "你确定要投票给玩家 "
             for (let j = 0; j < game.players.length; j++) {
                 if (selectedPlayers[0] === game.players[j].id) {
@@ -770,7 +763,6 @@ function Gaming() {
     }
 
     const endVotingStep = () => {
-        GameState.votingStep = false
         emitEndVoting()
     }
 
@@ -779,30 +771,31 @@ function Gaming() {
         loadCurrentStage()
     }, [game])
     const loadCurrentStage = () => {
-        if (GameState.stage === 0) {
-            setCurrentStep("本局未开始")
-            return
-        }
-        if (GameState.stage % 2 === 1) {
-            setCurrentStep("技能施放")
-            return
-        }
-        if (GameState.stage % 2 === 0 && !GameState.votingStep) {
-            setCurrentStep("自由发言")
-            return
-        }
-        if (GameState.stage % 2 === 0 && GameState.votingStep) {
-            setCurrentStep("投票处决")
+        if (game) {
+            if (game.state.stage === 0) {
+                setCurrentStep("本局未开始")
+                return
+            }
+            if (game.state.stage % 2 === 1) {
+                setCurrentStep("技能施放")
+                return
+            }
+            if (game.state.stage % 2 === 0 && !game.state.votingStep) {
+                setCurrentStep("自由发言")
+                return
+            }
+            if (game.state.stage % 2 === 0 && game.state.votingStep) {
+                setCurrentStep("投票处决")
+            }
         }
     }
 
-    // 更换背景图片
-    useEffect(() => {
-        updateBgImg()
-    }, [game])
+    // 更换背景图片 在toggleSunMoon调用
     const [bgImg, setBgImg] = useState(dayImg)
     const updateBgImg = () => {
-        setBgImg(GameState.stage % 2 === 1 ? nightImg : dayImg)
+        if (game) {
+            setBgImg(game.state.stage % 2 === 1 ? nightImg : dayImg)
+        }
     }
 
     return (
@@ -848,6 +841,9 @@ function Gaming() {
             <Modal id="CastModal" title="发动技能" open={isCastModalOpen} onOk={handleCastOk} onCancel={handleCastCancel}>
                 <p>{castModalContent}</p>
             </Modal>
+            <Context.Provider value={contextValue}>
+                {contextHolder}
+            </Context.Provider>
         </div>
     )
 }
