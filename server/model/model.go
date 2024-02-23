@@ -66,6 +66,7 @@ type PlayerState struct {
 	Protected bool `json:"protected"` // 僧侣
 	Bullet    bool `json:"bullet"`    // 杀手
 	Blessed   bool `json:"blessed"`   // 圣女
+	Master    bool `json:"master"`    // 管家
 }
 
 type PlayerReady struct {

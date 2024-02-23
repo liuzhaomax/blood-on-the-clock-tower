@@ -103,10 +103,11 @@ func toggleNight(mux *sync.Mutex, game *model.Room) {
 	if !game.State.Night {
 		game.State.Day = game.State.Day + 1
 		msg = fmt.Sprintf("第%d天，入夜~\n", game.State.Day)
-		// 入夜清除中毒和守护效果
+		// 入夜清除中毒、守护、主人效果
 		for i := range game.Players {
 			game.Players[i].State.Poisoned = false
 			game.Players[i].State.Protected = false
+			game.Players[i].State.Master = false
 		}
 	} else {
 		msg = fmt.Sprintf("第%d天，天亮了~\n", game.State.Day)
@@ -1092,6 +1093,7 @@ func checkoutNight(mux *sync.Mutex, game *model.Room, executed *model.Player) {
 	// 给管家提供信息
 	for fromPlayer, toPlayerIndexSlice := range castPoolObj {
 		if fromPlayer.Character == Butler && !fromPlayer.State.Poisoned && !fromPlayer.State.Dead {
+			game.Players[toPlayerIndexSlice[0]].State.Master = true
 			game.Players[toPlayerIndexSlice[0]].Ready.Vote += 1
 			msgPlayer = "您"
 			msgAll = ""

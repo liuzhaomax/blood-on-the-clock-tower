@@ -236,6 +236,7 @@ function Gaming() {
     // 更新seat后面的标签
     const updateSeatTag = () => {
         if (game) {
+            let butlerTou
             let tagTou, tagTi, tagBei
             for (let i = 0; i < game.players.length; i++) {
                 // 投票标签
@@ -244,6 +245,12 @@ function Gaming() {
                     tagTou.classList.remove("tag-hidden")
                 } else if (game.players[i].ready.vote === 0 && !tagTou.classList.contains("tag-hidden")) {
                     tagTou.classList.add("tag-hidden")
+                    if (game.players[i].state.master) {
+                        butlerTou = true
+                    }
+                    if (game.players[i].character === "管家") {
+                        tagTou.classList.remove("tag-hidden")
+                    }
                 }
                 // 提名标签
                 tagTi = document.getElementById(game.players[i].id + "-ti")
@@ -258,6 +265,14 @@ function Gaming() {
                     tagBei.classList.remove("tag-hidden")
                 } else if (game.players[i].ready.nominated === 0 && !tagBei.classList.contains("tag-hidden")) {
                     tagBei.classList.add("tag-hidden")
+                }
+            }
+            if (butlerTou) {
+                for (let i = 0; i < game.players.length; i++) {
+                    if (game.players[i].character === "管家") {
+                        tagTou.classList.add("tag-hidden")
+                        break
+                    }
                 }
             }
         }
