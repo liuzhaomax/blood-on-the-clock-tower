@@ -120,9 +120,13 @@ function Gaming() {
         socketGaming = new WebSocket(`ws://192.168.1.14:8080/gaming/${roomId}/${localStorage.getItem("PlayerID")}`)
         socketGaming.onmessage = function(event) {
             // console.log("Received log from server:", event.data)
-            // TODO 如果收到的是本局结束，就再发一个socket是跳转到结算页面，可以接动画跳转
             addLog(event.data, ...wordClassPairs)
             loadGame()
+            // TODO 如果收到的是本局结束，就再发一个socket是跳转到结算页面，可以来个动画跳转
+            if (event.data.result) {
+                let socket = new WebSocket(`ws://192.168.1.14:8080/review/${roomId}`)
+                socket.send("review")
+            }
         }
         socketGaming.onerror = function(error) {
             console.error("WebSocket error:", error)
@@ -177,6 +181,7 @@ function Gaming() {
         loadPersonalLog()
         updateSeatTag()
         updateSeatDead()
+        jumpToReview()
     }, [game])
     const loadPersonalLog = () => {
         if (game) {
@@ -296,6 +301,15 @@ function Gaming() {
                 </div>
             </div>
         )
+    }
+
+    const jumpToReview = () => {
+        if (game && game.status === "复盘中") {
+            navigate(`/review/${roomId}`, {
+                replace: true,
+                state: `/review/${roomId}`,
+            })
+        }
     }
 
     // 日夜切换

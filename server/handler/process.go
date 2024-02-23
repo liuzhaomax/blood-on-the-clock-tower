@@ -1227,7 +1227,7 @@ func checkout(game *model.Room, executed *model.Player) {
 		if !player.State.Dead {
 			aliveCount++
 		}
-		// 对应好人胜利条件
+		// 对应平民胜利条件
 		if player.CharacterType == Demons {
 			realDemonCount++
 		}
@@ -1235,23 +1235,28 @@ func checkout(game *model.Room, executed *model.Player) {
 	// 邪恶胜利条件1
 	if !hasSlayerBullet && canNominate == 0 {
 		msg += "本局结束，邪恶胜利\n"
+		game.Result = "邪恶阵营胜利"
 	}
 	// 邪恶胜利条件2
 	halfAlive := int(math.Floor(float64(aliveCount / 2)))
 	if canVote <= halfAlive && evilCount >= halfAlive {
 		msg += "本局结束，邪恶胜利\n"
+		game.Result = "邪恶阵营胜利"
 	}
 	// 邪恶胜利条件3
 	if evilCount == aliveCount {
 		msg += "本局结束，邪恶胜利\n"
+		game.Result = "邪恶阵营胜利"
 	}
 	// 邪恶胜利条件4
 	if executed != nil && executed.Character == Saint {
 		msg += "本局结束，邪恶胜利\n"
+		game.Result = "邪恶阵营胜利"
 	}
-	// 好人胜利条件（恶魔受不了了自杀情况）
+	// 平民胜利条件（恶魔受不了了自杀情况）
 	if realDemonCount == 0 {
-		msg += "本局结束，好人胜利\n"
+		msg += "本局结束，平民胜利\n"
+		game.Result = "平民阵营胜利"
 	}
 	// 拼接日志
 	for i := range game.Players {

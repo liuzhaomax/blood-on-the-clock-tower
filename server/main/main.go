@@ -20,8 +20,8 @@ func main() {
 	http.HandleFunc("/game/", handler.LoadGame)
 	http.HandleFunc("/gaming/", handler.Gaming)
 	// 游戏结算页
-	// http.HandleFunc("/checkout/", handler.LoadCheckout)
-	// http.HandleFunc("/return/", handler.ReturnRoom)
+	http.HandleFunc("/review/", handler.LoadReview)
+	http.HandleFunc("/returnRoom/", handler.ReturnRoom)
 
 	err := http.ListenAndServe(":8080", nil)
 	if err != nil {

@@ -52,6 +52,8 @@ func LoadGame(w http.ResponseWriter, r *http.Request) {
 		cfg.Rooms[roomIndex].Players = initStatus(cfg.Rooms[roomIndex].Players, replaceDrunk)
 		// 初始化完成
 		cfg.Rooms[roomIndex].Init = true
+		// 如果是游戏结束返回房间要将结果清除
+		cfg.Rooms[roomIndex].Result = ""
 	}
 
 	marshaledRoom, err := json.Marshal(cfg.Rooms[roomIndex])

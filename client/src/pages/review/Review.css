@@ -1,0 +1,97 @@
+#REVIEW {
+    position: relative;
+    background-color: #357e5b;
+    color: white;
+    width: 100vw;
+    max-width: 1200px;
+    min-width: 375px;
+    min-height: 100vh;
+
+    display: flex;
+    flex-direction: column;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    align-items: center;
+}
+
+#REVIEW .layout {
+    width: 90%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-evenly;
+    align-items: center;
+    margin: 5px;
+}
+
+#REVIEW .north .btn {
+    margin: 10px;
+}
+
+#REVIEW .small-btn {
+    font-size: 20px;
+    width: fit-content;
+    height: fit-content;
+}
+
+#REVIEW .central,
+#REVIEW .south {
+    background-color: rgba(255,255,255,0.1);
+    border-radius: 15px;
+}
+
+#REVIEW .south {
+    padding: 5px 0;
+}
+
+/*胜利提示*/
+#REVIEW .central div {
+    font-size: 50px;
+    font-family: STHupo, "Cooper Black", -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+    height: 80px;
+    line-height: 80px;
+}
+
+#REVIEW .win-evil {
+    background: linear-gradient(to bottom right, #e31212, #feb47b); /* 定义渐变色，方向为左上到右下 */
+    -webkit-background-clip: text; /* 设置背景裁剪为文字 */
+    color: transparent; /* 将文字颜色设置为透明 */
+}
+
+#REVIEW .win-civil {
+    background: linear-gradient(to bottom right, #3fe312, #7baffe); /* 定义渐变色，方向为左上到右下 */
+    -webkit-background-clip: text; /* 设置背景裁剪为文字 */
+    color: transparent; /* 将文字颜色设置为透明 */
+}
+
+/*总日志*/
+#REVIEW .south span {
+    font-size: 16px;
+}
+
+#REVIEW .highlight {
+    padding: 0 5px;
+}
+
+#REVIEW .highlight-number {
+    color: orchid;
+}
+
+#REVIEW .highlight-player {
+    color: black;
+    background-color: yellow;
+}
+
+#REVIEW .highlight-skill {
+    color: deepskyblue;
+}
+
+#REVIEW .highlight-skill-result {
+    color: black;
+    background-color: greenyellow;
+}
+
+#REVIEW .highlight-severe {
+    color: red;
+}

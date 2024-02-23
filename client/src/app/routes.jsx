@@ -8,6 +8,7 @@ import HomeLayout from "../layouts/HomeLayout"
 import { HOME } from "../config/cstModule"
 import Room from "../pages/room/Room"
 import Gaming from "../pages/gaming/Gaming"
+import Review from "../pages/review/Review"
 
 // const lazyLoad = path => {
 //     const Comp = React.lazy(() => import(`../${path}`))
@@ -25,6 +26,7 @@ export default (
             <Route path={HOME.PATH} element={<Home/>}/>
             <Route path="/room/:roomId" element={<Room/>}/>
             <Route path="/game/:roomId" element={<Gaming/>}/>
+            <Route path="/review/:roomId" element={<Review/>}/>
         </Route>
         <Route path="*" element={<NotFound/>}/>
     </Routes>
