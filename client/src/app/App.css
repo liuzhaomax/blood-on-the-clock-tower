@@ -48,12 +48,18 @@
     color: white;
 }
 
-.btn:hover {
-    color: #357e5b;
+.btn:link {
+    color: white !important;
 }
 
-.btn:active,
-.btn:focus,
 .btn:visited {
+    color: white !important;
+}
+
+.btn:hover {
+    color: black !important;
+}
+
+.btn:active {
     color: white !important;
 }

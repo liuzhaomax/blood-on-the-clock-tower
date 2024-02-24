@@ -86,6 +86,11 @@ func Gaming(w http.ResponseWriter, r *http.Request) {
 				executed = endVoting(mux, game)
 			}
 		}
+
+		if game.Result != "" {
+			break
+		}
+
 		time.Sleep(time.Millisecond * 50)
 	}
 }
