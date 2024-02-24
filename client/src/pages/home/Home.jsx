@@ -14,10 +14,8 @@ function Home() {
     const [roomList, setRoomList] = useState(null)
 
     useEffect(() => {
-        setTimeout(() => {
-            loadRoomList()
-        }, 100)
-    })
+        loadRoomList()
+    }, [roomList])
     const navigate = useNavigate()
     const jump = roomId => {
         navigate(`/room/${roomId}`, {

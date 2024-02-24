@@ -136,7 +136,7 @@ function Gaming() {
         [/(?<=第).*?(?=天)/g, "highlight highlight-number"], // 数字
         [/\[([^\]]+)]/g, "highlight highlight-player"], // 玩家名字
         [/\{[^}]+}/g, "highlight highlight-skill-result"], // 技能结果关键字
-        [/(下毒|占卜|认主|守护|杀害|枪毙|弹)/g, "highlight highlight-skill"], // 技能关键字
+        [/(投毒|卜算|认主|守护|杀害|枪毙|弹)/g, "highlight highlight-skill"], // 技能关键字
         [/(死亡|处决结果|提名|投票|平安夜)/g, "highlight highlight-severe"], // 重大事件关键字
     ]
     const addLog = (text, ...wordClassPairs) => {
@@ -547,7 +547,7 @@ function Gaming() {
         showCastModal()
     }
     const [isCastModalOpen, setIsCastModalOpen] = useState(false)
-    const [castModalContent, setCastModalContent] = useState("抱歉，您此刻无法发动技能或没有主动技能")
+    const [castModalContent, setCastModalContent] = useState("抱歉，您无法发动技能")
     const showCastModal = () => {
         setIsCastModalOpen(true)
         let me
@@ -557,29 +557,25 @@ function Gaming() {
                 break
             }
         }
-        if (!me.ready.casted) {
-            if (game.state.stage === 1 &&
-                (me.character === "下毒者" ||
+        if (game.state.stage === 1 &&
+            (me.character === "下毒者" ||
+            me.character === "占卜师" ||
+            me.character === "管家")) {
+            setCastModalContent(genCastModalContent(me))
+            return
+        }
+        if (game.state.stage % 2 === 1 && game.state.stage !== 1 &&
+            (me.character === "下毒者" ||
+                me.character === "僧侣" ||
+                me.character === "小恶魔" ||
+                me.character === "守鸦人" ||
                 me.character === "占卜师" ||
                 me.character === "管家")) {
-                setCastModalContent(genCastModalContent(me))
-                return
-            }
-            if (game.state.stage % 2 === 1 && game.state.stage !== 1 &&
-                (me.character === "下毒者" ||
-                    me.character === "僧侣" ||
-                    me.character === "小恶魔" ||
-                    me.character === "守鸦人" ||
-                    me.character === "占卜师" ||
-                    me.character === "管家")) {
-                setCastModalContent(genCastModalContent(me))
-                return
-            }
-            if (game.state.stage % 2 === 0 && me.character === "杀手") {
-                setCastModalContent(genCastModalContent(me))
-            }
-        } else {
-            setCastModalContent("抱歉，您本阶段或本局已发动过技能或没有技能")
+            setCastModalContent(genCastModalContent(me))
+            return
+        }
+        if (game.state.stage % 2 === 0 && me.character === "杀手") {
+            setCastModalContent(genCastModalContent(me))
         }
     }
     const handleCastOk = () => {
@@ -617,17 +613,26 @@ function Gaming() {
         if (game.state.stage === 0) {
             return "本局未开始，不能提名"
         }
+        if (me.state.dead) {
+            return "您已死亡"
+        }
         if (game.state.night) {
             return "夜晚不能提名"
         }
         if (game.state.votingStep) {
             return "投票处决环节不能提名"
         }
+        if (!me.ready.nominate) {
+            return "您本阶段已发起过提名"
+        }
         if (selectedPlayers.length === 0) {
             return "您想提名不能不选人"
         }
         if (selectedPlayers.length > 1) {
             return "您只能选1人提名"
+        }
+        if (selectedPlayers.length === 1 && game.players[selectedPlayers[0]].ready.nominated) {
+            return "您选择的人本阶段已被提名"
         }
         if (me.ready.nominate && !game.state.night && !game.state.votingStep) {
             let content = "你确定要在今天的处决中，提名玩家 "
@@ -644,13 +649,19 @@ function Gaming() {
             content += "吗？"
             return content
         }
-        return "抱歉，您此刻无法提名"
+        return "您此刻无法提名"
     }
 
     // 产生投票Modal的内容
     const genVoteModalContent = (me) => {
         if (game.state.stage === 0) {
             return "本局未开始，不能投票"
+        }
+        if (me.state.dead) {
+            return "您已死亡"
+        }
+        if (!me.ready.vote) {
+            return "您本阶段已投过票"
         }
         if (!game.state.votingStep) {
             return "不在投票处决环节不能投票"
@@ -669,7 +680,7 @@ function Gaming() {
             content += "吗？"
             return content
         }
-        return "抱歉，您此刻无法投票"
+        return "您此刻无法投票"
     }
 
     // 产生技能施放Modal的内容
@@ -677,8 +688,11 @@ function Gaming() {
         if (game.state.stage === 0) {
             return "本局未开始，不能发动技能"
         }
+        if (me.state.dead) {
+            return "您已死亡"
+        }
         if (game.state.votingStep) {
-            return "抱歉，投票阶段不能发动技能"
+            return "投票阶段不能发动技能"
         }
         let selectedPlayersObj = []
         let content = "是否要对玩家 "

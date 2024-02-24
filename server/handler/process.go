@@ -97,85 +97,89 @@ func toggleNight(mux *sync.Mutex, game *model.Room) {
 
 	var msg string
 
-	// Stage + 1
-	game.State.Stage += 1
-	// 日转夜 Day+1
-	if !game.State.Night {
-		game.State.Day = game.State.Day + 1
-		msg = fmt.Sprintf("第%d天，入夜~\n", game.State.Day)
-		// 入夜清除中毒、守护、主人效果
-		for i := range game.Players {
-			game.Players[i].State.Poisoned = false
-			game.Players[i].State.Protected = false
-			game.Players[i].State.Master = false
-		}
-	} else {
-		msg = fmt.Sprintf("第%d天，天亮了~\n", game.State.Day)
-	}
-	// 存入总日志
-	game.Log += msg
-	// 存入个人日志，刷新的时候加载
-	for i := range game.Players {
-		game.Players[i].Log += msg
-	}
-	// 日夜切换
-	game.State.Night = !game.State.Night
-
-	for i := range game.Players {
-		// 活人调整状态
-		if !game.Players[i].State.Dead {
-			// 让所有活人重新可以投票，夜转日结算，没投票还有票
-			game.Players[i].Ready.Nominated = true
-			game.Players[i].Ready.Nominate = true
-			game.Players[i].State.Nominated = false
-			game.Players[i].Ready.Vote = 1
-			game.Players[i].Ready.VoteCount = 0
-		}
-		// 管家无票
-		if game.Players[i].Character == Butler {
-			game.Players[i].Ready.Vote = 0
-		}
-		// 调整玩家施放技能的准备状态
-		game.Players[i].Ready.Casted = true
-		game.CastPool = map[string][]string{}
-		if !game.Players[i].State.Dead {
-			switch game.Players[i].Character {
-			case Poisoner:
-				if game.State.Stage%2 == 1 {
-					game.Players[i].Ready.Casted = false
-				}
-			case FortuneTeller:
-				if game.State.Stage%2 == 1 {
-					game.Players[i].Ready.Casted = false
-				}
-			case Butler:
-				if game.State.Stage%2 == 1 {
-					game.Players[i].Ready.Casted = false
-				}
-			case Monk:
-				if game.State.Stage%2 == 1 && game.State.Stage != 1 {
-					game.Players[i].Ready.Casted = false
-				}
-			case Imp:
-				if game.State.Stage%2 == 1 && game.State.Stage != 1 {
-					game.Players[i].Ready.Casted = false
-				}
-			case Slayer:
-				if game.State.Stage%2 == 0 && game.Players[i].State.Bullet {
-					game.Players[i].Ready.Casted = false
-				}
-			default:
-				game.Players[i].Ready.Casted = true
+	if game.Result == "" {
+		// Stage + 1
+		game.State.Stage += 1
+		// 日转夜 Day+1
+		if !game.State.Night {
+			game.State.Day = game.State.Day + 1
+			msg = fmt.Sprintf("第%d天，入夜~\n", game.State.Day)
+			// 入夜清除中毒、守护、主人效果
+			for i := range game.Players {
+				game.Players[i].State.Poisoned = false
+				game.Players[i].State.Protected = false
+				game.Players[i].State.Master = false
 			}
+		} else {
+			msg = fmt.Sprintf("第%d天，天亮了~\n", game.State.Day)
 		}
-		// 让所有人的僧侣守护状态消失
-		game.Players[i].State.Protected = false
-	}
-	// 将日夜切换日志群发
-	for _, conn := range cfg.ConnPool {
-		if err := conn.WriteMessage(websocket.TextMessage, []byte(msg)); err != nil {
-			log.Println("Write error:", err)
-			return
+		// 存入总日志
+		game.Log += msg
+		// 存入个人日志，刷新的时候加载
+		for i := range game.Players {
+			game.Players[i].Log += msg
+		}
+		// 日夜切换
+		game.State.Night = !game.State.Night
+
+		for i := range game.Players {
+			// 活人调整状态
+			if !game.Players[i].State.Dead {
+				// 让所有活人重新可以投票，夜转日结算，没投票还有票
+				game.Players[i].State.Nominated = false
+				game.Players[i].Ready.Vote = 1
+				game.Players[i].Ready.VoteCount = 0
+				if !game.Players[i].State.Dead {
+					game.Players[i].Ready.Nominated = true
+					game.Players[i].Ready.Nominate = true
+				}
+			}
+			// 管家无票
+			if game.Players[i].Character == Butler {
+				game.Players[i].Ready.Vote = 0
+			}
+			// 调整玩家施放技能的准备状态
+			game.Players[i].Ready.Casted = true
+			game.CastPool = map[string][]string{}
+			if !game.Players[i].State.Dead {
+				switch game.Players[i].Character {
+				case Poisoner:
+					if game.State.Stage%2 == 1 {
+						game.Players[i].Ready.Casted = false
+					}
+				case FortuneTeller:
+					if game.State.Stage%2 == 1 {
+						game.Players[i].Ready.Casted = false
+					}
+				case Butler:
+					if game.State.Stage%2 == 1 {
+						game.Players[i].Ready.Casted = false
+					}
+				case Monk:
+					if game.State.Stage%2 == 1 && game.State.Stage != 1 {
+						game.Players[i].Ready.Casted = false
+					}
+				case Imp:
+					if game.State.Stage%2 == 1 && game.State.Stage != 1 {
+						game.Players[i].Ready.Casted = false
+					}
+				case Slayer:
+					if game.State.Stage%2 == 0 && game.Players[i].State.Bullet {
+						game.Players[i].Ready.Casted = false
+					}
+				default:
+					game.Players[i].Ready.Casted = true
+				}
+			}
+			// 让所有人的僧侣守护状态消失
+			game.Players[i].State.Protected = false
+		}
+		// 将日夜切换日志群发
+		for _, conn := range cfg.ConnPool {
+			if err := conn.WriteMessage(websocket.TextMessage, []byte(msg)); err != nil {
+				log.Println("Write error:", err)
+				return
+			}
 		}
 	}
 	// 第一夜恶魔爪牙互认身份
@@ -204,7 +208,7 @@ func toggleNight(mux *sync.Mutex, game *model.Room) {
 		// 发送恶魔身份给爪牙
 		msg = ""
 		for name, character := range minions {
-			msg += fmt.Sprintf("本局爪牙 [%s] 的身份是 [%s]\n", name, character)
+			msg += fmt.Sprintf("本局爪牙 [%s] 的身份是 {%s}\n", name, character)
 		}
 		for i, player := range game.Players {
 			if player.CharacterType == Demons {
@@ -404,7 +408,7 @@ func cast(mux *sync.Mutex, game *model.Room, playerId string, targets []string) 
 			case Poisoner:
 				for _, player := range game.Players {
 					if targets[0] == player.Id {
-						info := fmt.Sprintf("对 [%s] 进行了下毒！", player.Name)
+						info := fmt.Sprintf("对 [%s] 进行了投毒！", player.Name)
 						msgPlayer += info
 						msgAll += info
 						break
@@ -421,7 +425,7 @@ func cast(mux *sync.Mutex, game *model.Room, playerId string, targets []string) 
 				}
 				for _, player := range game.Players {
 					if targets[1] == player.Id {
-						info := player.Name + "] 进行了占卜！"
+						info := player.Name + "] 进行了卜算！"
 						msgPlayer += info
 						msgAll += info
 						break
@@ -507,20 +511,20 @@ func checkoutNight(mux *sync.Mutex, game *model.Room, executed *model.Player) {
 	var msgAll = ""
 
 	// 承载技能释放者对象的池
-	castPoolObj := map[model.Player][]int{}
+	castPoolObj := map[*model.Player][]int{}
 	for fromPlayerId, toPlayerIdSlice := range game.CastPool {
-		for _, player := range game.Players {
+		for i, player := range game.Players {
 			if player.Id == fromPlayerId {
-				castPoolObj[player] = []int{}
-				break
-			}
-		}
-		for _, toPlayerId := range toPlayerIdSlice {
-			for _, player := range game.Players {
-				if player.Id == toPlayerId {
-					castPoolObj[player] = append(castPoolObj[player], player.Index)
-					break
+				castPoolObj[&game.Players[i]] = []int{}
+				for _, toPlayerId := range toPlayerIdSlice {
+					for _, player := range game.Players {
+						if player.Id == toPlayerId {
+							castPoolObj[&game.Players[i]] = append(castPoolObj[&game.Players[i]], player.Index)
+							break
+						}
+					}
 				}
+				break
 			}
 		}
 	}
@@ -876,6 +880,8 @@ func checkoutNight(mux *sync.Mutex, game *model.Room, executed *model.Player) {
 			if game.Players[toPlayerIndexSlice[0]].Character != Mayor {
 				// 死的人
 				game.Players[toPlayerIndexSlice[0]].State.Dead = true
+				game.Players[toPlayerIndexSlice[0]].Ready.Nominate = false
+				game.Players[toPlayerIndexSlice[0]].Ready.Nominated = false
 				killed = &game.Players[toPlayerIndexSlice[0]]
 			} else {
 				// 刀市长
