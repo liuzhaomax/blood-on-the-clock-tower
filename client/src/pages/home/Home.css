@@ -1,6 +1,7 @@
 #HOME {
     position: relative;
-    background-color: #357e5b;
+    /*background-color: #357e5b;*/
+    background-color: black;
     color: white;
     width: 100vw;
     /*max-width: 1200px;*/
