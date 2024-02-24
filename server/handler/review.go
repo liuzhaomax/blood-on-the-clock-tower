@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"encoding/json"
+	"github.com/gorilla/websocket"
 	"github.com/liuzhaomax/blood-on-the-clock-tower/server/model"
 	"log"
 	"net/http"
@@ -51,21 +53,21 @@ func ReturnRoom(w http.ResponseWriter, r *http.Request) {
 	cfg := model.GetConfig()
 	cfgMutex.Lock()
 	defer cfgMutex.Unlock()
-	room, _ := findRoom(roomId)
+	room, roomIndex := findRoom(roomId)
 
 	room.Status = "等待开始"
 	room.Init = false
 
-	// 关闭房间内所有玩家的gaming长连接
-	for id := range cfg.ConnPool {
-		for _, player := range room.Players {
-			if id == player.Id {
-				err := cfg.ConnPool[id].Close()
-				if err != nil {
-					log.Println(err)
-					return
-				}
-			}
+	marshaledRoom, err := json.Marshal(cfg.Rooms[roomIndex])
+	if err != nil {
+		log.Println("JSON marshal error:", err)
+		return
+	}
+
+	for _, conn := range cfg.ConnPool {
+		if err := conn.WriteMessage(websocket.TextMessage, marshaledRoom); err != nil {
+			log.Println("Write error:", err)
+			return
 		}
 	}
 }

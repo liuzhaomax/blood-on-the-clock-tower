@@ -12,9 +12,9 @@ function Review() {
         loadGame()
     }, [])
     const loadGame = () => {
-        const socket = new WebSocket(`ws://192.168.1.14:8080/game/${roomId}`)
+        const socket = new WebSocket(`ws://192.168.1.14:8080/review/${roomId}`)
         socket.onopen = function() {
-            socket.send("load_game")
+            socket.send("review")
         }
         socket.onmessage = function(event) {
             console.log("Received message from server:", JSON.parse(event.data))

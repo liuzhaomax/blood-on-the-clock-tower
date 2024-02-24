@@ -1302,4 +1302,14 @@ func checkout(game *model.Room, executed *model.Player) {
 			return
 		}
 	}
+	// 关闭房间内所有玩家的gaming长连接
+	if game.Result != "" {
+		for _, player := range game.Players {
+			err := cfg.ConnPool[player.Id].Close()
+			if err != nil {
+				log.Println(err)
+				return
+			}
+		}
+	}
 }

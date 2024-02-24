@@ -119,11 +119,6 @@ function Gaming() {
             // console.log("Received log from server:", event.data)
             addLog(event.data, ...wordClassPairs)
             loadGame()
-            if (event.data.result) {
-                // TODO 来个动画跳转
-                let socket = new WebSocket(`ws://192.168.1.14:8080/review/${roomId}`)
-                socket.send("review")
-            }
         }
         socketGaming.onerror = function(error) {
             console.error("WebSocket error:", error)
@@ -178,7 +173,6 @@ function Gaming() {
         loadPersonalLog()
         updateSeatTag()
         updateSeatDead()
-        jumpToReview()
     }, [game])
     const loadPersonalLog = () => {
         if (game) {
@@ -187,6 +181,10 @@ function Gaming() {
                     replaceLog(game.players[i].log, ...wordClassPairs)
                     break
                 }
+            }
+            if (game.result) {
+                // TODO 来个动画跳转
+                jumpToReview()
             }
         }
     }
@@ -317,12 +315,10 @@ function Gaming() {
 
     // 跳转复盘页面
     const jumpToReview = () => {
-        if (game && game.status === "复盘中") {
-            navigate(`/review/${roomId}`, {
-                replace: true,
-                state: `/review/${roomId}`,
-            })
-        }
+        navigate(`/review/${roomId}`, {
+            replace: true,
+            state: `/review/${roomId}`,
+        })
     }
 
     // 日夜切换
@@ -844,33 +840,42 @@ function Gaming() {
         showCaptchaModal()
     }, [game && game.state.night])
     const showCaptchaModal = () => {
-        if (game && game.state.night) {
-            let firstNight = false
-            if (game.state.stage ===1 ) {
-                firstNight = true
-            }
+        if (game) {
+            let me
             for (let i = 0; i < game.players.length; i++) {
-                let open = false
                 if (game.players[i].id === localStorage.getItem("PlayerID")) {
-                    if (game.players[i].character !== "下毒者"
-                        && game.players[i].character !== "占卜师"
-                        && game.players[i].character !== "管家") {
-                        open = true
-                    }
-                    if ((game.players[i].character === "小恶魔" || game.players[i].character === "僧侣") && firstNight) {
-                        open = true
-                    }
-                    if ((game.players[i].character === "小恶魔" || game.players[i].character === "僧侣") && !firstNight) {
-                        open = false
-                    }
-                    if (open) {
-                        setIsCaptchaModalOpen(true)
-                        break
-                    }
+                    me = game.players[i]
+                    break
                 }
             }
-        } else {
-            setIsCaptchaModalOpen(false)
+            if (game.state.night && !me.state.dead) {
+                let firstNight = false
+                if (game.state.stage ===1 ) {
+                    firstNight = true
+                }
+                for (let i = 0; i < game.players.length; i++) {
+                    let open = false
+                    if (game.players[i].id === localStorage.getItem("PlayerID")) {
+                        if (game.players[i].character !== "下毒者"
+                            && game.players[i].character !== "占卜师"
+                            && game.players[i].character !== "管家") {
+                            open = true
+                        }
+                        if ((game.players[i].character === "小恶魔" || game.players[i].character === "僧侣") && firstNight) {
+                            open = true
+                        }
+                        if ((game.players[i].character === "小恶魔" || game.players[i].character === "僧侣") && !firstNight) {
+                            open = false
+                        }
+                        if (open) {
+                            setIsCaptchaModalOpen(true)
+                            break
+                        }
+                    }
+                }
+            } else {
+                setIsCaptchaModalOpen(false)
+            }
         }
     }
     // TODO 测试代码 开始
