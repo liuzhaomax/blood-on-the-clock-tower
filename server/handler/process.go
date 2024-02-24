@@ -72,7 +72,7 @@ func Gaming(w http.ResponseWriter, r *http.Request) {
 		case "nominate":
 			nominate(mux, game, playerId, actionReq.Targets)
 		case "vote":
-			vote(mux, game, playerId, actionReq.Targets)
+			vote(mux, game, playerId)
 		case "checkout_night":
 			if playerId == game.Host {
 				checkoutNight(mux, game, executed)
@@ -126,6 +126,8 @@ func toggleNight(mux *sync.Mutex, game *model.Room) {
 		if !game.Players[i].State.Dead {
 			// 让所有活人重新可以投票，夜转日结算，没投票还有票
 			game.Players[i].Ready.Nominated = true
+			game.Players[i].Ready.Nominate = true
+			game.Players[i].State.Nominated = false
 			game.Players[i].Ready.Vote = 1
 			game.Players[i].Ready.VoteCount = 0
 		}
@@ -217,18 +219,18 @@ func endVoting(mux *sync.Mutex, game *model.Room) (executed *model.Player) {
 
 	var msg string
 
-	var expectantExecuted *model.Player // 被投票者（被提名者）
-	var aliveCount int                  // 活人数量
+	var nominated *model.Player // 被投票者（被提名者）
+	var aliveCount int          // 活人数量
 	for i, player := range game.Players {
-		if player.Ready.VoteCount > 0 {
-			expectantExecuted = &game.Players[i]
+		if player.State.Nominated {
+			nominated = &game.Players[i]
 		}
 		if !player.State.Dead {
 			aliveCount++
 		}
 	}
-	if expectantExecuted != nil && expectantExecuted.Ready.VoteCount > int(math.Floor(float64(aliveCount/2))) {
-		executed = expectantExecuted
+	if nominated != nil && nominated.Ready.VoteCount > int(math.Floor(float64(aliveCount/2))) {
+		executed = nominated
 		executed.State.Dead = true
 		executed.Ready.Vote = 1 // 死人还有一票
 		executed.Ready.Nominate = false
@@ -236,6 +238,9 @@ func endVoting(mux *sync.Mutex, game *model.Room) (executed *model.Player) {
 		executed.Ready.VoteCount = 0
 		msg += fmt.Sprintf("处决结果：[%s] 被公投处决，死亡\n", executed.Name)
 	} else {
+		if nominated != nil {
+			nominated.State.Nominated = false
+		}
 		msg += "处决结果：无人被处决\n"
 	}
 	// 发送日志
@@ -263,13 +268,14 @@ func nominate(mux *sync.Mutex, game *model.Room, playerId string, targets []stri
 	var msgName = ""
 
 	for i, player := range game.Players {
-		if player.Id == playerId && player.Ready.Nominate && !player.State.Dead {
+		if player.Id == playerId && player.Ready.Nominate && !player.State.Dead && !game.State.VotingStep {
 			msg += fmt.Sprintf("[%s] ", player.Name)
 			msgName = msg
 			for j, player := range game.Players {
 				if targets[0] == player.Id && player.Ready.Nominated && !player.State.Dead {
-					game.Players[i].Ready.Nominate = false
-					game.Players[j].Ready.Nominated = false
+					game.Players[i].Ready.Nominate = false  // 发动提名者不能再提名
+					game.Players[j].Ready.Nominated = false // 被提名者不能再被提名
+					game.Players[j].State.Nominated = true  // 被提名者已被提名
 					msg += fmt.Sprintf("提名 [%s] 进行处决公投\n", player.Name)
 					break
 				}
@@ -324,7 +330,7 @@ func nominate(mux *sync.Mutex, game *model.Room, playerId string, targets []stri
 	}
 }
 
-func vote(mux *sync.Mutex, game *model.Room, playerId string, targets []string) {
+func vote(mux *sync.Mutex, game *model.Room, playerId string) {
 	cfg := model.GetConfig()
 	mux.Lock()
 	defer mux.Unlock()
@@ -332,27 +338,31 @@ func vote(mux *sync.Mutex, game *model.Room, playerId string, targets []string) 
 	var msg = ""
 
 	for i, player := range game.Players {
-		if player.Id == playerId && player.Ready.Vote > 0 {
+		if player.Id == playerId && player.Ready.Vote > 0 && game.State.VotingStep {
 			var masterFlag bool // 是否是管家的主人
 			if game.Players[i].Ready.Vote == 2 {
 				masterFlag = true
 			}
 			msg += fmt.Sprintf("[%s] ", player.Name)
-			for k, player := range game.Players {
-				if targets[0] == player.Id && !player.State.Dead {
-					game.Players[i].Ready.Vote = 0
-					game.Players[k].Ready.VoteCount += 1
-					msg += fmt.Sprintf("决意投票给 [%s] \n", player.Name)
-					if masterFlag {
-						game.Players[k].Ready.VoteCount += 1 // 是管家的主人再加1票
-						for j := range game.Players {
-							if game.Players[j].Character == Butler {
-								msg += fmt.Sprintf("\n[%s] 决意投票给 [%s] \n", game.Players[j].Name, player.Name)
-								break
-							}
+			var nominated *model.Player
+			for j, player := range game.Players {
+				if player.State.Nominated {
+					nominated = &game.Players[j]
+					break
+				}
+			}
+			if nominated != nil && !nominated.State.Dead {
+				game.Players[i].Ready.Vote = 0
+				nominated.Ready.VoteCount += 1
+				msg += fmt.Sprintf("决意投票给 [%s] \n", nominated.Name)
+				if masterFlag {
+					nominated.Ready.VoteCount += 1 // 是管家的主人再加1票
+					for j := range game.Players {
+						if game.Players[j].Character == Butler {
+							msg += fmt.Sprintf("\n[%s] 决意投票给 [%s] \n", game.Players[j].Name, nominated.Name)
+							break
 						}
 					}
-					break
 				}
 			}
 			break
@@ -752,7 +762,7 @@ func checkoutNight(mux *sync.Mutex, game *model.Room, executed *model.Player) {
 				}
 				// 拼接日志
 				msgAll += fmt.Sprintf("[%s] ", player.Name)
-				info := fmt.Sprintf("发现互为邻座的邪恶玩家有 {%d} 对\n", connected)
+				info := fmt.Sprintf("发现互为邻座的邪恶玩家有 { %d } 对\n", connected)
 				msgPlayer += info
 				msgAll += info
 				game.Players[i].Log += msgPlayer
@@ -801,7 +811,7 @@ func checkoutNight(mux *sync.Mutex, game *model.Room, executed *model.Player) {
 				}
 				// 拼接日志
 				msgAll += fmt.Sprintf("[%s] ", player.Name)
-				info := fmt.Sprintf("发现与您邻座的邪恶玩家有 {%d} 个\n", evilQuantity)
+				info := fmt.Sprintf("发现与您邻座的邪恶玩家有 { %d } 个\n", evilQuantity)
 				msgPlayer += info
 				msgAll += info
 				game.Players[i].Log += msgPlayer
@@ -990,7 +1000,7 @@ func checkoutNight(mux *sync.Mutex, game *model.Room, executed *model.Player) {
 					}
 					// 拼接日志
 					msgAll += fmt.Sprintf("[%s] ", player.Name)
-					info := fmt.Sprintf("发现与您邻座的邪恶玩家有 {%d} 个\n", evilQuantity)
+					info := fmt.Sprintf("发现与您邻座的邪恶玩家有 { %d } 个\n", evilQuantity)
 					msgPlayer += info
 					msgAll += info
 					game.Players[i].Log += msgPlayer

@@ -452,7 +452,7 @@ function Gaming() {
         socketGaming.send(req) // 会在后端更新stage、night
     }
     const emitVote = () => {
-        let req = JSON.stringify({action: "vote", targets: voteToPlayersId})
+        let req = JSON.stringify({action: "vote", targets: []})
         socketGaming.send(req) // 会在后端更新stage、night
     }
     const emitEndVoting = () => {
@@ -462,8 +462,6 @@ function Gaming() {
 
     // 提名对象
     const [nominateToPlayersId, setNominateToPlayersId] = useState([])
-    // 提名对象
-    const [voteToPlayersId, setVoteToPlayersId] = useState([])
     // 技能释放对象
     const [castToPlayersId, setCastToPlayersId] = useState([])
 
@@ -494,7 +492,7 @@ function Gaming() {
                 break
             }
         }
-        if (me.ready.nominate) {
+        if (me.ready.nominate && !game.state.night && !game.state.votingStep) {
             for (let j = 0; j < game.players.length; j++) {
                 if (selectedPlayers[0] === game.players[j].id && game.players[j].ready.nominated) {
                     emitNominate()
@@ -535,9 +533,9 @@ function Gaming() {
                 break
             }
         }
-        if (me.ready.vote) {
+        if (me.ready.vote && game.state.votingStep) {
             for (let j = 0; j < game.players.length; j++) {
-                if (selectedPlayers[0] === game.players[j].id) {
+                if (game.players[j].state.nominated) {
                     emitVote()
                     break
                 }
@@ -546,7 +544,6 @@ function Gaming() {
     }
     const handleVoteCancel = () => {
         setIsVoteModalOpen(false)
-        setVoteToPlayersId([])
     }
 
     // 发动技能
@@ -563,6 +560,10 @@ function Gaming() {
                 me = game.players[i]
                 break
             }
+        }
+        if (game.state.votingStep) {
+            setCastModalContent("抱歉，投票阶段不能发动技能")
+            return
         }
         if (!me.ready.casted) {
             if (game.state.stage === 1 &&
@@ -599,7 +600,7 @@ function Gaming() {
                 break
             }
         }
-        if (!me.ready.casted &&
+        if (!me.ready.casted && !game.state.votingStep &&
             (castToPlayersId.length === 1 &&
                 (me.character === "下毒者" ||
                 me.character === "管家" ||
@@ -621,6 +622,9 @@ function Gaming() {
 
     // 产生提名Modal的内容
     const genNominateModalContent = (me) => {
+        if (game.state.votingStep) {
+            return "投票处决环节不能提名"
+        }
         if (selectedPlayers.length === 0) {
             return "您想提名不能不选人"
         }
@@ -631,7 +635,7 @@ function Gaming() {
             let content = "你确定要在今天的处决中，提名玩家 "
             for (let j = 0; j < game.players.length; j++) {
                 if (selectedPlayers[0] === game.players[j].id) {
-                    if (game.players[j].ready.nominated) {
+                    if (!game.players[j].ready.nominated) {
                         return "您选择的玩家 " + "<" + game.players[j].name + "> " + "今日已被提名"
                     }
                     content += "<" + game.players[j].name + "> "
@@ -647,21 +651,17 @@ function Gaming() {
 
     // 产生投票Modal的内容
     const genVoteModalContent = (me) => {
-        if (selectedPlayers.length === 0) {
-            return "您想投票不能不选人"
-        }
-        if (selectedPlayers.length > 1) {
-            return "您只能选1人投票"
+        if (!game.state.votingStep) {
+            return "不在投票处决环节不能投票"
         }
         if (me.character === "管家") {
             return "您只能跟随主人投票"
         }
-        if (me.ready.vote > 0 && !game.state.night && game.state.votingStep) {
+        if (me.ready.vote > 0 && game.state.votingStep) {
             let content = "你确定要投票给玩家 "
             for (let j = 0; j < game.players.length; j++) {
-                if (selectedPlayers[0] === game.players[j].id) {
+                if (game.players[j].state.nominated) {
                     content += "<" + game.players[j].name + "> "
-                    setVoteToPlayersId(game.players[j].id)
                     break
                 }
             }
@@ -767,7 +767,9 @@ function Gaming() {
     }
 
     const endVotingStep = () => {
-        emitEndVoting()
+        if (game && game.state.votingstep) {
+            emitEndVoting()
+        }
     }
 
     const [currentStep, setCurrentStep] = useState("本局未开始")
