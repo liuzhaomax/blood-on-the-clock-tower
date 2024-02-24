@@ -190,10 +190,11 @@ func toggleNight(mux *sync.Mutex, game *model.Room) {
 		}
 		// 发送爪牙身份给恶魔
 		minions := map[string]string{}
-		for _, player := range game.Players {
+		for i, player := range game.Players {
 			if player.CharacterType == Minions {
 				minions[player.Name] = player.Character
 				msg += fmt.Sprintf("本局小恶魔是 [%s]\n", demon.Name)
+				game.Players[i].Log += msg
 				if err := cfg.ConnPool[player.Id].WriteMessage(websocket.TextMessage, []byte(msg)); err != nil {
 					log.Println("Write error:", err)
 					return
@@ -205,10 +206,18 @@ func toggleNight(mux *sync.Mutex, game *model.Room) {
 		for name, character := range minions {
 			msg += fmt.Sprintf("本局爪牙 [%s] 的身份是 [%s]\n", name, character)
 		}
+		for i, player := range game.Players {
+			if player.CharacterType == Demons {
+				game.Players[i].Log += msg
+				break
+			}
+		}
 		if err := cfg.ConnPool[demon.Id].WriteMessage(websocket.TextMessage, []byte(msg)); err != nil {
 			log.Println("Write error:", err)
 			return
 		}
+		// 保存到总日志
+		game.Log += "恶魔爪牙已互认身份\n"
 	}
 }
 
@@ -1136,6 +1145,11 @@ func checkoutNight(mux *sync.Mutex, game *model.Room, executed *model.Player) {
 	} else {
 		msg += fmt.Sprintf("昨夜 [%s] 死亡\n", killed.Name)
 	}
+	// 拼接日志
+	for i := range game.Players {
+		game.Players[i].Log += msg
+	}
+	game.Log += msg
 	// 发送日志
 	for _, conn := range cfg.ConnPool {
 		if err := conn.WriteMessage(websocket.TextMessage, []byte(msg)); err != nil {

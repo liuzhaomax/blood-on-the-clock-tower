@@ -392,8 +392,6 @@ function Gaming() {
             // 狼叫
             wolfAudio.play()
             // TODO 语音- 请大家操作或输入验证码
-            // 弹出验证码
-            showCaptchaModal(true)
             // 防抖等2秒
             await sleep(2000)
             // 给host解锁可以切换日夜
@@ -423,8 +421,6 @@ function Gaming() {
             // 狼叫
             wolfAudio.play()
             // TODO 语音- 请大家操作或输入验证码
-            // 弹出验证码
-            showCaptchaModal(false)
             // 防抖等2秒
             await sleep(2000)
             // 给host解锁可以切换日夜
@@ -829,8 +825,16 @@ function Gaming() {
             })
         }
     }, [isCaptchaModalOpen])
-    const showCaptchaModal = firstNight => {
-        if (game) {
+    useEffect(() => {
+        // 弹出验证码
+        showCaptchaModal()
+    }, [game && game.state.night])
+    const showCaptchaModal = () => {
+        if (game && game.state.night) {
+            let firstNight = false
+            if (game.state.stage ===1 ) {
+                firstNight = true
+            }
             for (let i = 0; i < game.players.length; i++) {
                 let open = false
                 if (game.players[i].id === localStorage.getItem("PlayerID")) {
@@ -851,6 +855,8 @@ function Gaming() {
                     }
                 }
             }
+        } else {
+            setIsCaptchaModalOpen(false)
         }
     }
     // TODO 测试代码 开始
