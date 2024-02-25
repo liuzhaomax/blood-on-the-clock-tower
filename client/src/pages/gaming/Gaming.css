@@ -222,7 +222,8 @@
 }
 
 #GAMING .highlight-number {
-    color: lawngreen;
+    color: limegreen;
+    font-weight: bold;
     /*color: hotpink;*/
     /*color: purple;*/
 }
