@@ -330,6 +330,8 @@ func nominate(mux *sync.Mutex, game *model.Room, playerId string, targets []stri
 			for i, player := range game.Players {
 				if player.Id == playerId {
 					game.Players[i].State.Dead = true
+					game.Players[i].Ready.Nominate = false
+					game.Players[i].Ready.Nominated = false
 					break
 				}
 			}
@@ -1051,7 +1053,7 @@ func checkoutNight(mux *sync.Mutex, game *model.Room, executed *model.Player) {
 					if executed == nil {
 						// 无人被处决
 						msgAll += fmt.Sprintf("[%s] ", player.Name)
-						info := "发现今日无人被处决\n"
+						info := "发现昨日无人被处决\n"
 						msgPlayer += info
 						msgAll += info
 					} else {

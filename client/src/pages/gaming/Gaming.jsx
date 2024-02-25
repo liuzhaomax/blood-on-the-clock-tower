@@ -128,11 +128,13 @@ function Gaming() {
 
     // 增加一条log 并上色  addLog(event.data, [/[0-9]/g, "highlight"], ["天", "highlight"])
     let wordClassPairs = [
-        [/(?<=第).*?(?=天)/g, "highlight highlight-number"], // 数字
+        [/(?<=第).*?(?=天)|平安夜/g, "highlight highlight-number"], // 数字
         [/\[([^\]]+)]/g, "highlight highlight-player"], // 玩家名字
         [/\{[^}]+}/g, "highlight highlight-skill-result"], // 技能结果关键字
         [/(投毒|卜算|认主|守护|杀害|枪毙|弹)/g, "highlight highlight-skill"], // 技能关键字
-        [/(死亡|处决结果|提名|投票|平安夜)/g, "highlight highlight-severe"], // 重大事件关键字
+        [/(死亡|处决结果)/g, "highlight highlight-severe"], // 重大事件关键字
+        [/(提名)/g, "highlight highlight-nominate"], // 提名
+        [/(投票)/g, "highlight highlight-vote"], // 投票
     ]
     const addLog = (text, ...wordClassPairs) => {
         let replacedText = updateText(text, ...wordClassPairs[0])
@@ -174,7 +176,7 @@ function Gaming() {
         updateSeatTag()
         updateSeatDead()
     }, [game])
-    const loadPersonalLog = () => {
+    const loadPersonalLog = async () => {
         if (game) {
             for (let i = 0; i < game.players.length; i++) {
                 if (game.players[i].id === localStorage.getItem("PlayerID")) {
@@ -184,6 +186,7 @@ function Gaming() {
             }
             if (game.result) {
                 // TODO 来个动画跳转
+                await sleep(5000)
                 jumpToReview()
             }
         }
@@ -251,14 +254,14 @@ function Gaming() {
                 tagTi = document.getElementById(game.players[i].id + "-ti")
                 if (game.players[i].ready.nominate && tagTi.classList.contains("tag-hidden")) {
                     tagTi.classList.remove("tag-hidden")
-                } else if (game.players[i].ready.nominate === 0 && !tagTi.classList.contains("tag-hidden")) {
-                    tagTi.classList.remove("tag-visible")
+                } else if (!game.players[i].ready.nominate && !tagTi.classList.contains("tag-hidden")) {
+                    tagTi.classList.add("tag-hidden")
                 }
                 // 被提名标签
                 tagBei = document.getElementById(game.players[i].id + "-bei")
                 if (game.players[i].ready.nominated && tagBei.classList.contains("tag-hidden")) {
                     tagBei.classList.remove("tag-hidden")
-                } else if (game.players[i].ready.nominated === 0 && !tagBei.classList.contains("tag-hidden")) {
+                } else if (!game.players[i].ready.nominated && !tagBei.classList.contains("tag-hidden")) {
                     tagBei.classList.add("tag-hidden")
                 }
             }
@@ -382,6 +385,10 @@ function Gaming() {
 
     // 游戏过程
     const process = async (stage) => {
+        // 游戏结束则返回
+        if (game.result !== "") {
+            return
+        }
         if (stage === 1) {
             // 发送日夜切换指令到后端，后端重置状态
             emitToggleNight()
@@ -652,9 +659,6 @@ function Gaming() {
         if (game.state.stage === 0) {
             return "本局未开始，不能投票"
         }
-        if (me.state.dead) {
-            return "您已死亡"
-        }
         if (!me.ready.vote) {
             return "您本阶段已投过票"
         }
@@ -785,7 +789,16 @@ function Gaming() {
     const endVotingStep = () => {
         if (game && game.state.votingStep) {
             emitEndVoting()
+        } else {
+            openEndVotingNotification("topRight")
         }
+    }
+    const openEndVotingNotification = (placement) => {
+        api.info({
+            message: "非法点击",
+            description: <Context.Consumer>{() => "不好意思, 当前不在投票环节，无法结束投票环节!"}</Context.Consumer>,
+            placement,
+        })
     }
 
     const [currentStep, setCurrentStep] = useState("本局未开始")

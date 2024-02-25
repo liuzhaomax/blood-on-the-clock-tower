@@ -27,19 +27,20 @@ function Review() {
 
     // 返回房间
     const returnRoom = () => {
-        let socket = new WebSocket(`ws://192.168.1.14:8080/returnRoom/${roomId}`)
-        socket.send("return_room")
-    }
-    useEffect(() => {
-        jumpToRoom()
-    }, [game])
-    const jumpToRoom = () => {
-        if (game && game.status === "等待开始") {
-            navigate(`/room/${roomId}`, {
-                replace: true,
-                state: `/room/${roomId}`,
-            })
+        const socket = new WebSocket(`ws://192.168.1.14:8080/returnRoom/${roomId}`)
+        socket.onopen = function() {
+            socket.send("return_room")
+            jumpToRoom()
         }
+        socket.onerror = function(error) {
+            console.error("WebSocket error:", error)
+        }
+    }
+    const jumpToRoom = () => {
+        navigate(`/room/${roomId}`, {
+            replace: true,
+            state: `/room/${roomId}`,
+        })
     }
 
     // 加载总日志
@@ -52,11 +53,13 @@ function Review() {
         }
     }
     let wordClassPairs = [
-        [/(?<=第).*?(?=天)/g, "highlight highlight-number"], // 数字
+        [/(?<=第).*?(?=天)|平安夜/g, "highlight highlight-number"], // 数字
         [/\[([^\]]+)]/g, "highlight highlight-player"], // 玩家名字
         [/\{[^}]+}/g, "highlight highlight-skill-result"], // 技能结果关键字
         [/(下毒|占卜|认主|守护|杀害|枪毙|弹)/g, "highlight highlight-skill"], // 技能关键字
-        [/(死亡|处决结果|提名|投票|平安夜)/g, "highlight highlight-severe"], // 重大事件关键字
+        [/(死亡|处决结果)/g, "highlight highlight-severe"], // 重大事件关键字
+        [/(提名)/g, "highlight highlight-nominate"], // 提名
+        [/(投票)/g, "highlight highlight-vote"], // 投票
     ]
     const updateText = (text, word, className) => {
         if (typeof word === "string") {

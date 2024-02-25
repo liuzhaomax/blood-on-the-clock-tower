@@ -101,3 +101,11 @@
 #REVIEW .highlight-severe {
     color: red;
 }
+
+#REVIEW .highlight-nominate {
+    color: orange;
+}
+
+#REVIEW .highlight-vote {
+    color: orchid;
+}

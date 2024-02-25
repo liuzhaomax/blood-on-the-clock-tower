@@ -85,7 +85,7 @@
 
 #GAMING .individual-name:hover {
     cursor: pointer;
-    color: blue;
+    color: white;
 }
 
 #GAMING .info-wrap {
@@ -193,7 +193,7 @@
 }
 
 #GAMING .tag-tou {
-    background-color: chocolate;
+    background-color: forestgreen;
 }
 
 #GAMING .tag-ti {
@@ -205,7 +205,7 @@
 }
 
 #GAMING .seat-selected {
-    background-color: brown;
+    background-color: chocolate;
 }
 
 #GAMING .east {
@@ -246,6 +246,14 @@
     color: red;
 }
 
+#GAMING .highlight-nominate {
+    color: chocolate;
+}
+
+#GAMING .highlight-vote {
+    color: orchid;
+}
+
 #GAMING .highlight-dead {
     text-decoration: line-through;
     background-color: gray;
@@ -259,5 +267,6 @@
 
 /*tag显示*/
 #GAMING .tag-hidden {
-    visibility: hidden;
+    /*visibility: hidden;*/
+    display: none;
 }

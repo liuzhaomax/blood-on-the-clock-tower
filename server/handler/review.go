@@ -39,11 +39,9 @@ func LoadReview(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	for _, conn := range cfg.ConnPool {
-		if err := conn.WriteMessage(websocket.TextMessage, marshaledRoom); err != nil {
-			log.Println("Write error:", err)
-			return
-		}
+	if err = conn.WriteMessage(websocket.TextMessage, marshaledRoom); err != nil {
+		log.Println("Write error:", err)
+		return
 	}
 }
 
@@ -70,4 +68,13 @@ func ReturnRoom(w http.ResponseWriter, r *http.Request) {
 
 	room.Status = "等待开始"
 	room.Init = false
+	room.Result = ""
+	room.Log = ""
+	for i, player := range room.Players {
+		newPlayer := model.Player{}
+		newPlayer.Id = player.Id
+		newPlayer.Name = player.Name
+		newPlayer.Index = player.Index
+		room.Players[i] = newPlayer
+	}
 }
