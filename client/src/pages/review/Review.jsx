@@ -10,20 +10,22 @@ function Review() {
     const [game, setGame] = useState(null)
     useEffect(() => {
         loadGame()
-        if (game && game.status === "等待开始") {
-            navigate(`/room/${roomId}`, {
-                replace: true,
-                state: `/room/${roomId}`,
-            })
-        }
-    }, [game])
+        setTimeout(() => {
+            if (game && game.status === "等待开始") {
+                navigate(`/room/${roomId}`, {
+                    replace: true,
+                    state: `/room/${roomId}`,
+                })
+            }
+        }, 100)
+    }, [])
     const loadGame = () => {
         const socket = new WebSocket(`ws://192.168.1.14:8080/review/${roomId}`)
         socket.onopen = function() {
             socket.send("review")
         }
         socket.onmessage = function(event) {
-            console.log("Received message from server:", JSON.parse(event.data))
+            // console.log("Received message from server:", JSON.parse(event.data))
             setGame(JSON.parse(event.data))
         }
         socket.onerror = function(error) {

@@ -29,9 +29,7 @@ func LoadReview(w http.ResponseWriter, r *http.Request) {
 	cfg := model.GetConfig()
 	cfgMutex.Lock()
 	defer cfgMutex.Unlock()
-	room, roomIndex := findRoom(roomId)
-
-	room.Status = "复盘中"
+	_, roomIndex := findRoom(roomId)
 
 	marshaledRoom, err := json.Marshal(cfg.Rooms[roomIndex])
 	if err != nil {

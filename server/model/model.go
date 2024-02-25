@@ -31,10 +31,10 @@ type Room struct {
 	Host     string    `json:"host"`
 	Status   string    `json:"status"` // 等待开始，游戏中，复盘中
 	Init     bool      `json:"init"`   // 房间是否已初始化身份
-	Players  []Player  `json:"players"`
-	Log      string    `json:"log"`    // 总日志
 	Result   string    `json:"result"` // 游戏结果
-	State    GameState `json:"state"`  // 游戏中各身份状态
+	Log      string    `json:"log"`    // 总日志
+	Players  []Player  `json:"players"`
+	State    GameState `json:"state"` // 游戏中各身份状态
 	// 技能施放池，存储所有施放技能人，当前阶段施放的技能作用目标
 	CastPool map[string][]string `json:"castPool"`
 }

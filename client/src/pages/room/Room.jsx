@@ -10,20 +10,22 @@ function Room() {
 
     useEffect(() => {
         loadRoom()
-        if (room && room.status === "游戏中") {
-            navigate(`/game/${roomId}`, {
-                replace: true,
-                state: `/game/${roomId}`,
-            })
-        }
-    }, [room])
+        setTimeout(() => {
+            if (room && room.status === "游戏中") {
+                navigate(`/game/${roomId}`, {
+                    replace: true,
+                    state: `/game/${roomId}`,
+                })
+            }
+        }, 100)
+    }, [])
     const loadRoom = () => {
         const socket = new WebSocket(`ws://192.168.1.14:8080/room/${roomId}`)
         socket.onopen = function() {
             socket.send("load_room")
         }
         socket.onmessage = function(event) {
-            console.log("Received message from server:", JSON.parse(event.data))
+            // console.log("Received message from server:", JSON.parse(event.data))
             setRoom(JSON.parse(event.data))
         }
         socket.onerror = function(error) {

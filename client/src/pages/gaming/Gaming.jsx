@@ -184,11 +184,6 @@ function Gaming() {
                     break
                 }
             }
-            if (game.result) {
-                // TODO 来个动画跳转
-                await sleep(5000)
-                jumpToReview()
-            }
         }
     }
 
@@ -385,18 +380,17 @@ function Gaming() {
 
     // 游戏过程
     const process = async (stage) => {
-        // 游戏结束则返回
-        if (game.result !== "") {
-            return
+        // TODO 语音- 请大家操作或输入验证码
+        if (stage % 2 === 1) {
+            wolfAudio.play() // 狼叫
+        } else {
+            cockAudio.play() // 鸡叫
         }
         if (stage === 1) {
             // 发送日夜切换指令到后端，后端重置状态
             emitToggleNight()
             // 给host锁定不能切换日夜
             castLock = true
-            // 狼叫
-            wolfAudio.play()
-            // TODO 语音- 请大家操作或输入验证码
             // 防抖等2秒
             await sleep(2000)
             // 给host解锁可以切换日夜
@@ -409,8 +403,6 @@ function Gaming() {
             emitToggleNight()
             // 给host锁定不能切换日夜
             castLock = true
-            // 鸡叫
-            cockAudio.play()
             // 防抖等2秒
             await sleep(2000)
             // 给host解锁可以切换日夜
@@ -423,9 +415,6 @@ function Gaming() {
             emitToggleNight()
             // 给host锁定不能切换日夜
             castLock = true
-            // 狼叫
-            wolfAudio.play()
-            // TODO 语音- 请大家操作或输入验证码
             // 防抖等2秒
             await sleep(2000)
             // 给host解锁可以切换日夜
@@ -459,6 +448,20 @@ function Gaming() {
     const emitEndVoting = () => {
         let req = JSON.stringify({action: "end_voting", targets: []})
         socketGaming.send(req) // 会在后端更新stage、night
+    }
+
+    // 跳转review页面
+    useEffect(() => {
+        loadAnimation()
+    }, [game])
+    const loadAnimation = async () => {
+        if (game) {
+            if (game.result) {
+                // TODO 来个动画跳转
+                await sleep(5000)
+                jumpToReview()
+            }
+        }
     }
 
     // 提名对象

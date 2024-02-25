@@ -1405,5 +1405,6 @@ func checkout(game *model.Room, executed *model.Player) {
 				return
 			}
 		}
+		game.Status = "复盘中"
 	}
 }
