@@ -132,11 +132,11 @@ func toggleNight(mux *sync.Mutex, game *model.Room) {
 			if !game.Players[i].State.Dead {
 				// 让所有活人重新可以投票，夜转日结算，没投票还有票
 				game.Players[i].State.Nominated = false
-				game.Players[i].Ready.Vote = 1
 				game.Players[i].Ready.VoteCount = 0
 				if !game.Players[i].State.Dead {
-					game.Players[i].Ready.Nominated = true
 					game.Players[i].Ready.Nominate = true
+					game.Players[i].Ready.Nominated = true
+					game.Players[i].Ready.Vote = 1
 				}
 			}
 			// 管家无票
@@ -234,6 +234,10 @@ func endVoting(mux *sync.Mutex, game *model.Room) (executed *model.Player) {
 	cfg := model.GetConfig()
 	mux.Lock()
 	defer mux.Unlock()
+
+	if !game.State.VotingStep {
+		return executed
+	}
 
 	var msg string
 
@@ -1255,7 +1259,7 @@ func checkout(game *model.Room, executed *model.Player) {
 		if player.Character == Slayer && player.State.Bullet {
 			hasSlayerBullet = true
 		}
-		if player.Ready.Nominate {
+		if !player.State.Dead {
 			canNominate++
 		}
 		// 对应邪恶胜利条件2

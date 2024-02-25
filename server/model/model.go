@@ -67,7 +67,7 @@ type PlayerState struct {
 	Bullet    bool `json:"bullet"`    // 杀手
 	Blessed   bool `json:"blessed"`   // 圣女
 	Master    bool `json:"master"`    // 管家
-	Nominated bool `json:"nominated"` // 已被提名
+	Nominated bool `json:"nominated"` // 是否已被提名
 }
 
 type PlayerReady struct {
