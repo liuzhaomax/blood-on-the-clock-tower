@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/gorilla/websocket"
 	"github.com/liuzhaomax/blood-on-the-clock-tower/server/model"
 	"log"
@@ -43,6 +44,10 @@ func LoadGame(w http.ResponseWriter, r *http.Request) {
 	room, roomIndex := findRoom(roomId)
 
 	if !room.Init {
+		// 初始化
+		cfg.Rooms[roomIndex].Init = true
+		cfg.Rooms[roomIndex].Result = ""
+		cfg.Rooms[roomIndex].Log = ""
 		// 分配身份
 		var replaceDrunk string
 		if cfg.Rooms[roomIndex].Players[0].Character == "" {
@@ -58,10 +63,11 @@ func LoadGame(w http.ResponseWriter, r *http.Request) {
 		}
 		// 初始化玩家状态 依赖身份
 		cfg.Rooms[roomIndex].Players = initStatus(cfg.Rooms[roomIndex].Players, replaceDrunk)
-		// 初始化完成
-		cfg.Rooms[roomIndex].Init = true
-		cfg.Rooms[roomIndex].Result = ""
-		cfg.Rooms[roomIndex].Log = ""
+		// 保存玩家身份到总日志
+		cfg.Rooms[roomIndex].Log = "本局配置：\n"
+		for _, player := range cfg.Rooms[roomIndex].Players {
+			cfg.Rooms[roomIndex].Log += fmt.Sprintf("玩家 [%s] 的身份是 {%s} ~\n", player.Name, player.Character)
+		}
 	}
 
 	marshaledRoom, err := json.Marshal(cfg.Rooms[roomIndex])

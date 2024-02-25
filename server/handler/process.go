@@ -243,12 +243,16 @@ func endVoting(mux *sync.Mutex, game *model.Room) (executed *model.Player) {
 
 	var nominated *model.Player // 被投票者（被提名者）
 	var aliveCount int          // 活人数量
+	var scarletWomanIndex = -1
 	for i, player := range game.Players {
 		if player.State.Nominated {
 			nominated = &game.Players[i]
 		}
 		if !player.State.Dead {
 			aliveCount++
+		}
+		if player.Character == ScarletWoman && !player.State.Dead {
+			scarletWomanIndex = player.Index
 		}
 	}
 	if nominated != nil && nominated.Ready.VoteCount > int(math.Floor(float64(aliveCount/2))) {
@@ -279,6 +283,28 @@ func endVoting(mux *sync.Mutex, game *model.Room) (executed *model.Player) {
 	// 判断圣徒 邪恶胜利条件4
 	if executed != nil && executed.Character == Saint {
 		checkout(game, executed)
+	}
+	// 判断魅魔 - 有人被处决，处决的人是小恶魔，活人大于等于5个，有魅魔且没死
+	if executed != nil && executed.Character == Imp && aliveCount-1 >= 5 && scarletWomanIndex > 0 {
+		scarletWoman := &game.Players[scarletWomanIndex]
+		// 拼接日志
+		msgPlayer := "您"
+		msgAll := ""
+		info := fmt.Sprintf("已变为小恶魔\n")
+		msgPlayer += info
+		msgAll += fmt.Sprintf("[%s] ", scarletWoman.Name) + info
+		scarletWoman.Log += msgPlayer
+		game.Log += msgAll
+		// 发送日志
+		for id, conn := range cfg.ConnPool {
+			if id == scarletWoman.Id {
+				if err := conn.WriteMessage(websocket.TextMessage, []byte(msgPlayer)); err != nil {
+					log.Println("Write error:", err)
+					return
+				}
+				break
+			}
+		}
 	}
 	// 退出投票环节
 	game.State.VotingStep = false
@@ -418,7 +444,7 @@ func cast(mux *sync.Mutex, game *model.Room, playerId string, targets []string) 
 	var msgAll = ""
 	for i, player := range game.Players {
 		if player.Id == playerId && !player.State.Dead {
-			msgAll += fmt.Sprintf("[%s] ", player.Name)
+			msgAll += fmt.Sprintf("[%s] {%s} ", player.Name, player.Character)
 			switch player.Character {
 			case Poisoner:
 				for _, player := range game.Players {
@@ -482,15 +508,15 @@ func cast(mux *sync.Mutex, game *model.Room, playerId string, targets []string) 
 						break
 					}
 				}
-			case Ravenkeeper:
-				for _, player := range game.Players {
-					if targets[0] == player.Id {
-						info := fmt.Sprintf(" 对 [%s] 进行了反向通灵！", player.Name)
-						msgPlayer += info
-						msgAll += info
-						break
-					}
-				}
+				// case Ravenkeeper:
+				// 	for _, player := range game.Players {
+				// 		if targets[0] == player.Id {
+				// 			info := fmt.Sprintf(" 对 [%s] 进行了反向通灵！", player.Name)
+				// 			msgPlayer += info
+				// 			msgAll += info
+				// 			break
+				// 		}
+				// 	}
 			}
 			game.Players[i].Ready.Casted = true
 			break
@@ -917,6 +943,8 @@ func checkoutNight(mux *sync.Mutex, game *model.Room, executed *model.Player) {
 				var scarletWoman *model.Player
 				var minionsAlive []*model.Player
 				var aliveQuantity int
+				msgPlayer = "您"
+				msgAll = ""
 				for i, player := range game.Players {
 					if !player.State.Dead {
 						aliveQuantity += 1
@@ -924,7 +952,7 @@ func checkoutNight(mux *sync.Mutex, game *model.Room, executed *model.Player) {
 					if player.Character == ScarletWoman && !player.State.Dead {
 						scarletWoman = &game.Players[i]
 					} else {
-						if player.CharacterType == Minions && !player.State.Dead {
+						if player.CharacterType == Minions && !player.State.Dead && player.Character != ScarletWoman {
 							minionsAlive = append(minionsAlive, &game.Players[i])
 						}
 					}
@@ -935,7 +963,22 @@ func checkoutNight(mux *sync.Mutex, game *model.Room, executed *model.Player) {
 					scarletWoman.Character = Imp
 					scarletWoman.State.Evil = true
 					scarletWoman.State.Demon = true
-					break
+					// 拼接日志
+					info := fmt.Sprintf("已变为小恶魔\n")
+					msgPlayer += info
+					msgAll += fmt.Sprintf("[%s] ", scarletWoman.Name) + info
+					scarletWoman.Log += msgPlayer
+					game.Log += msgAll
+					// 发送日志
+					for id, conn := range cfg.ConnPool {
+						if id == scarletWoman.Id {
+							if err := conn.WriteMessage(websocket.TextMessage, []byte(msgPlayer)); err != nil {
+								log.Println("Write error:", err)
+								return
+							}
+							break
+						}
+					}
 				}
 				// 如果没有魅魔或魅魔死了
 				if reflect.ValueOf(scarletWoman).IsZero() && len(minionsAlive) != 0 {
@@ -944,7 +987,22 @@ func checkoutNight(mux *sync.Mutex, game *model.Room, executed *model.Player) {
 					minionsAlive[randInt].Character = Imp
 					minionsAlive[randInt].State.Evil = true
 					minionsAlive[randInt].State.Demon = true
-					break
+					// 拼接日志
+					info := fmt.Sprintf("已变为小恶魔\n")
+					msgPlayer += info
+					msgAll += fmt.Sprintf("[%s] ", minionsAlive[randInt].Name) + info
+					minionsAlive[randInt].Log += msgPlayer
+					game.Log += msgAll
+					// 发送日志
+					for id, conn := range cfg.ConnPool {
+						if id == minionsAlive[randInt].Id {
+							if err := conn.WriteMessage(websocket.TextMessage, []byte(msgPlayer)); err != nil {
+								log.Println("Write error:", err)
+								return
+							}
+							break
+						}
+					}
 				}
 			}
 			break
