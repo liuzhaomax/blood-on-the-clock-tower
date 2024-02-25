@@ -26,11 +26,25 @@ func LoadReview(w http.ResponseWriter, r *http.Request) {
 	}
 	roomId := parts[2]
 
+	cfg := model.GetConfig()
 	cfgMutex.Lock()
 	defer cfgMutex.Unlock()
-	room, _ := findRoom(roomId)
+	room, roomIndex := findRoom(roomId)
 
 	room.Status = "复盘中"
+
+	marshaledRoom, err := json.Marshal(cfg.Rooms[roomIndex])
+	if err != nil {
+		log.Println("JSON marshal error:", err)
+		return
+	}
+
+	for _, conn := range cfg.ConnPool {
+		if err := conn.WriteMessage(websocket.TextMessage, marshaledRoom); err != nil {
+			log.Println("Write error:", err)
+			return
+		}
+	}
 }
 
 func ReturnRoom(w http.ResponseWriter, r *http.Request) {
@@ -50,24 +64,10 @@ func ReturnRoom(w http.ResponseWriter, r *http.Request) {
 	}
 	roomId := parts[2]
 
-	cfg := model.GetConfig()
 	cfgMutex.Lock()
 	defer cfgMutex.Unlock()
-	room, roomIndex := findRoom(roomId)
+	room, _ := findRoom(roomId)
 
 	room.Status = "等待开始"
 	room.Init = false
-
-	marshaledRoom, err := json.Marshal(cfg.Rooms[roomIndex])
-	if err != nil {
-		log.Println("JSON marshal error:", err)
-		return
-	}
-
-	for _, conn := range cfg.ConnPool {
-		if err := conn.WriteMessage(websocket.TextMessage, marshaledRoom); err != nil {
-			log.Println("Write error:", err)
-			return
-		}
-	}
 }
