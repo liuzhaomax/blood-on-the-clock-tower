@@ -1374,7 +1374,7 @@ func checkout(game *model.Room, executed *model.Player) {
 	}
 	// 平民胜利条件1（恶魔受不了了自杀情况）
 	if realDemonCount == 0 {
-		msg += "达成平民胜利条件一：恶魔死亡\n"
+		msg += "达成平民胜利条件一：恶魔被铲除\n"
 		msg += "本局结束，平民胜利\n"
 		game.Result = "平民阵营胜利"
 	}

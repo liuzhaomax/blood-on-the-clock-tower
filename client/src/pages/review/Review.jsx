@@ -63,7 +63,7 @@ function Review() {
         [/(?<=第).*?(?=天)|平安夜|\(.*?\)/g, "highlight highlight-number"], // 数字
         [/\[([^\]]+)]/g, "highlight highlight-player"], // 玩家名字
         [/\{[^}]+}/g, "highlight highlight-skill-result"], // 技能结果关键字
-        [/(投毒|卜算|认主|守护|杀害|枪毙|弹)/g, "highlight highlight-skill"], // 技能关键字
+        [/(投毒|卜算|认主|守护|杀害|枪毙|弹|反向通灵)/g, "highlight highlight-skill"], // 技能关键字
         [/(死亡|处决结果)/g, "highlight highlight-severe"], // 重大事件关键字
         [/(提名)/g, "highlight highlight-nominate"], // 提名
         [/(投票)/g, "highlight highlight-vote"], // 投票
