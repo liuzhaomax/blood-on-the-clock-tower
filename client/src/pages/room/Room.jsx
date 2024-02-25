@@ -16,8 +16,7 @@ function Room() {
                 state: `/game/${roomId}`,
             })
         }
-    }, [])
-
+    }, [room])
     const loadRoom = () => {
         const socket = new WebSocket(`ws://192.168.1.14:8080/room/${roomId}`)
         socket.onopen = function() {
