@@ -106,7 +106,9 @@ function Room() {
             <p>我的名字：<span>{room === null ? "" : findPlayerName()}</span></p>
             <p>↓ 场上玩家 ↓</p>
             <div className="layout seat-wrap" align="center">
-                {sit()}
+                <div className="layout seat-wrap-wrap">
+                    {sit()}
+                </div>
             </div>
         </div>
     )

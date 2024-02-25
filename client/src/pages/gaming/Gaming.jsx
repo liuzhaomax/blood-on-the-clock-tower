@@ -627,9 +627,6 @@ function Gaming() {
         if (selectedPlayers.length > 1) {
             return "您只能选1人提名"
         }
-        if (selectedPlayers.length === 1 && game.players[selectedPlayers[0]].ready.nominated) {
-            return "您选择的人本阶段已被提名"
-        }
         if (me.ready.nominate && !game.state.night && !game.state.votingStep) {
             let content = "你确定要在今天的处决中，提名玩家 "
             for (let j = 0; j < game.players.length; j++) {
@@ -638,7 +635,7 @@ function Gaming() {
                         return "您选择的玩家 " + "<" + game.players[j].name + "> " + "今日已被提名"
                     }
                     content += "<" + game.players[j].name + "> "
-                    setNominateToPlayersId(game.players[j].id)
+                    setNominateToPlayersId([game.players[j].id])
                     break
                 }
             }

@@ -202,7 +202,7 @@ func toggleNight(mux *sync.Mutex, game *model.Room) {
 		for i, player := range game.Players {
 			if player.CharacterType == Minions {
 				minions[player.Name] = player.Character
-				msg += fmt.Sprintf("本局小恶魔是 [%s]\n", demon.Name)
+				msg += fmt.Sprintf("本局恶魔 [%s] 的身份是 {%s}\n", demon.Name, demon.Character)
 				game.Players[i].Log += msg
 				if err := cfg.ConnPool[player.Id].WriteMessage(websocket.TextMessage, []byte(msg)); err != nil {
 					log.Println("Write error:", err)
@@ -1152,9 +1152,9 @@ func checkoutNight(mux *sync.Mutex, game *model.Room, executed *model.Player) {
 	msg := ""
 	// 结算本阶段
 	if killed == nil {
-		msg += "昨夜是 平安夜\n"
+		msg += "今夜是 平安夜\n"
 	} else {
-		msg += fmt.Sprintf("昨夜 [%s] 死亡\n", killed.Name)
+		msg += fmt.Sprintf("今夜 [%s] 死亡\n", killed.Name)
 	}
 	// 拼接日志
 	for i := range game.Players {
