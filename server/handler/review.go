@@ -61,6 +61,7 @@ func ReturnRoom(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	roomId := parts[2]
+	playerId := parts[3]
 
 	cfgMutex.Lock()
 	defer cfgMutex.Unlock()
@@ -69,12 +70,14 @@ func ReturnRoom(w http.ResponseWriter, r *http.Request) {
 	room.Status = "等待开始"
 	room.Init = false
 	room.Result = ""
-	room.Log = ""
 	for i, player := range room.Players {
-		newPlayer := model.Player{}
-		newPlayer.Id = player.Id
-		newPlayer.Name = player.Name
-		newPlayer.Index = player.Index
-		room.Players[i] = newPlayer
+		if player.Id == playerId {
+			newPlayer := model.Player{}
+			newPlayer.Id = player.Id
+			newPlayer.Name = player.Name
+			newPlayer.Index = player.Index
+			room.Players[i] = newPlayer
+			break
+		}
 	}
 }

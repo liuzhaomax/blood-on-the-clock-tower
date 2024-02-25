@@ -27,7 +27,8 @@ function Review() {
 
     // 返回房间
     const returnRoom = () => {
-        const socket = new WebSocket(`ws://192.168.1.14:8080/returnRoom/${roomId}`)
+        let meId = localStorage.getItem("PlayerID")
+        const socket = new WebSocket(`ws://192.168.1.14:8080/returnRoom/${roomId}/${meId}`)
         socket.onopen = function() {
             socket.send("return_room")
             jumpToRoom()

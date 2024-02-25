@@ -48,12 +48,20 @@ func LoadGame(w http.ResponseWriter, r *http.Request) {
 		if cfg.Rooms[roomIndex].Players[0].Character == "" {
 			cfg.Rooms[roomIndex].Players, replaceDrunk = allocateCharacter(cfg.Rooms[roomIndex].Players)
 		}
+		// 初始化玩家状态 防止非法返回房间引起bug
+		for i, player := range room.Players {
+			newPlayer := model.Player{}
+			newPlayer.Id = player.Id
+			newPlayer.Name = player.Name
+			newPlayer.Index = player.Index
+			room.Players[i] = newPlayer
+		}
 		// 初始化玩家状态 依赖身份
 		cfg.Rooms[roomIndex].Players = initStatus(cfg.Rooms[roomIndex].Players, replaceDrunk)
 		// 初始化完成
 		cfg.Rooms[roomIndex].Init = true
-		// 如果是游戏结束返回房间要将结果清除
 		cfg.Rooms[roomIndex].Result = ""
+		cfg.Rooms[roomIndex].Log = ""
 	}
 
 	marshaledRoom, err := json.Marshal(cfg.Rooms[roomIndex])
