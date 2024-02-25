@@ -261,6 +261,10 @@ func endVoting(mux *sync.Mutex, game *model.Room) (executed *model.Player) {
 		}
 		msg += "处决结果：无人被处决\n"
 	}
+	for i := range game.Players {
+		game.Players[i].Log += msg
+	}
+	game.Log += msg
 	// 发送日志
 	for _, conn := range cfg.ConnPool {
 		if err := conn.WriteMessage(websocket.TextMessage, []byte(msg)); err != nil {
@@ -315,9 +319,9 @@ func nominate(mux *sync.Mutex, game *model.Room, playerId string, targets []stri
 
 	// 判断圣女
 	var canGoToVotingStep = true
-	msg = msgName
 	for i, player := range game.Players {
 		if player.Character == Virgin && player.Id == targets[0] && player.State.Blessed {
+			msg = msgName
 			game.Players[i].State.Blessed = false
 			for i, player := range game.Players {
 				if player.Id == playerId {
@@ -327,13 +331,13 @@ func nominate(mux *sync.Mutex, game *model.Room, playerId string, targets []stri
 			}
 			canGoToVotingStep = false
 			msg += "被圣女弹死了\n"
+			for i := range game.Players {
+				game.Players[i].Log += msg
+			}
+			game.Log += msg
 			break
 		}
 	}
-	for i := range game.Players {
-		game.Players[i].Log += msg
-	}
-	game.Log += msg
 	// 发送日志
 	for _, conn := range cfg.ConnPool {
 		if err := conn.WriteMessage(websocket.TextMessage, []byte(msg)); err != nil {
@@ -849,8 +853,9 @@ func checkoutNight(mux *sync.Mutex, game *model.Room, executed *model.Player) {
 				// 拼接日志
 				msgAll += fmt.Sprintf("[%s] 是间谍，知晓所有身份\n", player.Name)
 				var info string
+				info += "知晓所有身份：\n"
 				for _, player := range game.Players {
-					info += fmt.Sprintf("知晓所有身份：\n玩家 [%s] 的身份是 {%s}\n", player.Name, player.Character)
+					info += fmt.Sprintf("玩家 [%s] 的身份是 {%s}\n", player.Name, player.Character)
 				}
 				msgPlayer += info
 				game.Players[i].Log += msgPlayer
@@ -1265,7 +1270,7 @@ func checkout(game *model.Room, executed *model.Player) {
 			aliveCount++
 		}
 		// 对应平民胜利条件
-		if player.CharacterType == Demons {
+		if player.CharacterType == Demons && !player.State.Dead {
 			realDemonCount++
 		}
 	}

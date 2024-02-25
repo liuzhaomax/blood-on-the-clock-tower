@@ -248,6 +248,13 @@
 
 #GAMING .highlight-dead {
     text-decoration: line-through;
+    background-color: gray;
+    color: black;
+}
+
+#GAMING .highlight-dead:hover {
+    color: black !important;
+    cursor: default;
 }
 
 /*tag显示*/

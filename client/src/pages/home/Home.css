@@ -39,6 +39,10 @@
     margin: 0 auto;
 }
 
+#HOME .list-item:hover {
+    cursor: pointer;
+}
+
 #HOME .ant-list-item-meta-avatar, .ant-list-item-meta-avatar img, .ant-list-item-meta-avatar span {
     width: 50px !important;
     height: 50px !important;

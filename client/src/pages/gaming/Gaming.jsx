@@ -193,15 +193,17 @@ function Gaming() {
     const [selectedPlayers, setSelectedPlayers] = useState([])
     const selectPlayer = (event) => {
         event.preventDefault()
-        let selectedPlayersCopy = selectedPlayers.slice()
-        if (event.target.classList.contains("seat-selected")) {
-            event.target.classList.remove("seat-selected")
-            remove(selectedPlayersCopy, event.target.id)
-            setSelectedPlayers(selectedPlayersCopy)
-        } else {
-            event.target.classList.add("seat-selected")
-            selectedPlayersCopy.push(event.target.id)
-            setSelectedPlayers(selectedPlayersCopy)
+        if (!event.target.classList.contains("highlight-dead")) {
+            let selectedPlayersCopy = selectedPlayers.slice()
+            if (event.target.classList.contains("seat-selected")) {
+                event.target.classList.remove("seat-selected")
+                remove(selectedPlayersCopy, event.target.id)
+                setSelectedPlayers(selectedPlayersCopy)
+            } else {
+                event.target.classList.add("seat-selected")
+                selectedPlayersCopy.push(event.target.id)
+                setSelectedPlayers(selectedPlayersCopy)
+            }
         }
     }
     const resetSelectedPlayers = () => {
@@ -781,7 +783,7 @@ function Gaming() {
     }
 
     const endVotingStep = () => {
-        if (game && game.state.votingstep) {
+        if (game && game.state.votingStep) {
             emitEndVoting()
         }
     }
