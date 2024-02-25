@@ -128,52 +128,50 @@ func toggleNight(mux *sync.Mutex, game *model.Room) {
 		game.State.Night = !game.State.Night
 
 		for i := range game.Players {
-			// 活人调整状态
+			// 活人调整状态 - 让所有活人重新可以投票，夜转日结算，没投票还有票
 			if !game.Players[i].State.Dead {
-				// 让所有活人重新可以投票，夜转日结算，没投票还有票
-				game.Players[i].State.Nominated = false
-				game.Players[i].Ready.VoteCount = 0
-				if !game.Players[i].State.Dead {
-					game.Players[i].Ready.Nominate = true
-					game.Players[i].Ready.Nominated = true
-					game.Players[i].Ready.Vote = 1
-				}
+				game.Players[i].Ready.Nominate = true
+				game.Players[i].Ready.Nominated = true
+				game.Players[i].Ready.Vote = 1
 			}
-			// 管家无票
-			if game.Players[i].Character == Butler {
-				game.Players[i].Ready.Vote = 0
-			}
+			game.Players[i].State.Nominated = false
+			game.Players[i].State.Voted = false
+			game.Players[i].State.VoteCount = 0
 			// 调整玩家施放技能的准备状态
-			game.Players[i].Ready.Casted = true
+			game.Players[i].State.Casted = true
 			game.CastPool = map[string][]string{}
 			if !game.Players[i].State.Dead {
 				switch game.Players[i].Character {
 				case Poisoner:
 					if game.State.Stage%2 == 1 {
-						game.Players[i].Ready.Casted = false
+						game.Players[i].State.Casted = false
 					}
 				case FortuneTeller:
 					if game.State.Stage%2 == 1 {
-						game.Players[i].Ready.Casted = false
+						game.Players[i].State.Casted = false
 					}
 				case Butler:
 					if game.State.Stage%2 == 1 {
-						game.Players[i].Ready.Casted = false
+						game.Players[i].State.Casted = false
 					}
 				case Monk:
 					if game.State.Stage%2 == 1 && game.State.Stage != 1 {
-						game.Players[i].Ready.Casted = false
+						game.Players[i].State.Casted = false
 					}
 				case Imp:
 					if game.State.Stage%2 == 1 && game.State.Stage != 1 {
-						game.Players[i].Ready.Casted = false
+						game.Players[i].State.Casted = false
 					}
 				case Slayer:
 					if game.State.Stage%2 == 0 && game.Players[i].State.Bullet {
-						game.Players[i].Ready.Casted = false
+						game.Players[i].State.Casted = false
+					}
+				case Ravenkeeper:
+					if game.State.Stage%2 == 1 && game.State.Stage != 1 {
+						game.Players[i].State.Casted = false
 					}
 				default:
-					game.Players[i].Ready.Casted = true
+					game.Players[i].State.Casted = true
 				}
 			}
 			// 让所有人的僧侣守护状态消失
@@ -239,6 +237,18 @@ func endVoting(mux *sync.Mutex, game *model.Room) (executed *model.Player) {
 		return executed
 	}
 
+	// 判断管家 - 看管家的票是否算数
+	var hasMasterVoted bool // 主人是否投了票
+	var hasButlerVoted bool // 管家是否投了票
+	for _, player := range game.Players {
+		if player.State.Master && player.State.Voted {
+			hasMasterVoted = true
+		}
+		if player.Character == Butler && player.State.Voted {
+			hasButlerVoted = true
+		}
+	}
+
 	var msg string
 
 	var nominated *model.Player // 被投票者（被提名者）
@@ -255,13 +265,17 @@ func endVoting(mux *sync.Mutex, game *model.Room) (executed *model.Player) {
 			scarletWomanIndex = player.Index
 		}
 	}
-	if nominated != nil && nominated.Ready.VoteCount > int(math.Floor(float64(aliveCount/2))) {
+	// 主人没投，管家投了，票数减一，因为如果主人不投票，则管家不能跟票
+	if !hasMasterVoted && hasButlerVoted {
+		nominated.State.VoteCount -= 1
+	}
+	if nominated != nil && nominated.State.VoteCount > int(math.Floor(float64(aliveCount/2))) {
 		executed = nominated
 		executed.State.Dead = true
 		executed.Ready.Vote = 1 // 死人还有一票
 		executed.Ready.Nominate = false
 		executed.Ready.Nominated = false
-		executed.Ready.VoteCount = 0
+		executed.State.VoteCount = 0
 		msg += fmt.Sprintf("处决结果：[%s] 被公投处决，死亡\n", executed.Name)
 	} else {
 		if nominated != nil {
@@ -393,10 +407,6 @@ func vote(mux *sync.Mutex, game *model.Room, playerId string) {
 
 	for i, player := range game.Players {
 		if player.Id == playerId && player.Ready.Vote > 0 && game.State.VotingStep {
-			var masterFlag bool // 是否是管家的主人
-			if game.Players[i].Ready.Vote == 2 {
-				masterFlag = true
-			}
 			msg += fmt.Sprintf("[%s] ", player.Name)
 			var nominated *model.Player
 			for j, player := range game.Players {
@@ -407,17 +417,9 @@ func vote(mux *sync.Mutex, game *model.Room, playerId string) {
 			}
 			if nominated != nil && !nominated.State.Dead {
 				game.Players[i].Ready.Vote = 0
-				nominated.Ready.VoteCount += 1
+				game.Players[i].State.Voted = true
+				nominated.State.VoteCount += 1
 				msg += fmt.Sprintf("决意投票给 [%s] \n", nominated.Name)
-				if masterFlag {
-					nominated.Ready.VoteCount += 1 // 是管家的主人再加1票
-					for j := range game.Players {
-						if game.Players[j].Character == Butler {
-							msg += fmt.Sprintf("\n[%s] 决意投票给 [%s] \n", game.Players[j].Name, nominated.Name)
-							break
-						}
-					}
-				}
 			}
 			break
 		}
@@ -508,17 +510,17 @@ func cast(mux *sync.Mutex, game *model.Room, playerId string, targets []string) 
 						break
 					}
 				}
-				// case Ravenkeeper:
-				// 	for _, player := range game.Players {
-				// 		if targets[0] == player.Id {
-				// 			info := fmt.Sprintf(" 对 [%s] 进行了反向通灵！", player.Name)
-				// 			msgPlayer += info
-				// 			msgAll += info
-				// 			break
-				// 		}
-				// 	}
+			case Ravenkeeper:
+				for _, player := range game.Players {
+					if targets[0] == player.Id {
+						info := fmt.Sprintf(" 对 [%s] 进行了反向通灵，如果你没死，则技能无效！", player.Name)
+						msgPlayer += info
+						msgAll += info
+						break
+					}
+				}
 			}
-			game.Players[i].Ready.Casted = true
+			game.Players[i].State.Casted = true
 			break
 		}
 	}
@@ -1198,7 +1200,7 @@ func checkoutNight(mux *sync.Mutex, game *model.Room, executed *model.Player) {
 			msgAll = ""
 			// 拼接日志
 			msgAll += fmt.Sprintf("[%s] ", fromPlayer.Name)
-			info := fmt.Sprintf("认定 [%s] 为主人，他本轮拥有两票\n", game.Players[toPlayerIndexSlice[0]].Name)
+			info := fmt.Sprintf("认定 [%s] 为主人，他投你可选投，他不投你也不能投\n", game.Players[toPlayerIndexSlice[0]].Name)
 			msgPlayer += info
 			msgAll += info
 			game.Players[fromPlayer.Index].Log += msgPlayer
@@ -1314,6 +1316,7 @@ func checkout(game *model.Room, executed *model.Player) {
 	var aliveCount int       // 活人数量
 	var canVote int          // 可投票数量
 	var evilCount int        // 邪恶玩家数量
+	var mayorAlive bool      // 市长是否存活
 	for _, player := range game.Players {
 		// 对应邪恶胜利条件1
 		if player.Character == Slayer && player.State.Bullet {
@@ -1335,9 +1338,13 @@ func checkout(game *model.Room, executed *model.Player) {
 		if !player.State.Dead {
 			aliveCount++
 		}
-		// 对应平民胜利条件
+		// 对应平民胜利条件1
 		if player.CharacterType == Demons && !player.State.Dead {
 			realDemonCount++
+		}
+		// 对应平民胜利条件2
+		if player.Character == Mayor && !player.State.Dead {
+			mayorAlive = true
 		}
 	}
 	// 邪恶胜利条件1
@@ -1365,9 +1372,15 @@ func checkout(game *model.Room, executed *model.Player) {
 		msg += "本局结束，邪恶胜利\n"
 		game.Result = "邪恶阵营胜利"
 	}
-	// 平民胜利条件（恶魔受不了了自杀情况）
+	// 平民胜利条件1（恶魔受不了了自杀情况）
 	if realDemonCount == 0 {
-		msg += "达成平民胜利条件：恶魔死亡\n"
+		msg += "达成平民胜利条件一：恶魔死亡\n"
+		msg += "本局结束，平民胜利\n"
+		game.Result = "平民阵营胜利"
+	}
+	// 平民胜利条件2
+	if aliveCount == 3 && !game.State.Night && mayorAlive && executed == nil {
+		msg += "达成平民胜利条件二：白天剩三人，其中一个是市长，且当日无人被处决\n"
 		msg += "本局结束，平民胜利\n"
 		game.Result = "平民阵营胜利"
 	}

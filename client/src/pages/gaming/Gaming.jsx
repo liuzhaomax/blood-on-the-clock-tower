@@ -374,7 +374,7 @@ function Gaming() {
         // 死亡或者已放过技能都是ready
         let ready = true
         for (let i = 0; i < game.players.length; i++) {
-            ready = ready && (game.players[i].ready.casted || game.players[i].state.dead)
+            ready = ready && (game.players[i].state.casted || game.players[i].state.dead)
         }
         // 所有有技能的操作完，没技能的点完验证码，时间等待结束，不在投票阶段，则切换日夜，切换后首先结算前一阶段
         return !game.state.votingStep
@@ -593,7 +593,7 @@ function Gaming() {
                 break
             }
         }
-        if (!me.ready.casted && !game.state.votingStep && game.state.stage !== 0 &&
+        if (!me.state.casted && !game.state.votingStep && game.state.stage !== 0 &&
             (castToPlayersId.length === 1 &&
                 (me.character === "下毒者" ||
                 me.character === "管家" ||

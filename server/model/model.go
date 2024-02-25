@@ -67,18 +67,16 @@ type PlayerState struct {
 	Bullet    bool `json:"bullet"`    // 杀手
 	Blessed   bool `json:"blessed"`   // 圣女
 	Master    bool `json:"master"`    // 管家
-	Nominated bool `json:"nominated"` // 是否已被提名
+	Casted    bool `json:"casted"`    // 本轮是否已施放主动技能
+	Nominated bool `json:"nominated"` // 本轮是否已被提名
+	Voted     bool `json:"voted"`     // 本轮是否已投票
+	VoteCount int  `json:"voteCount"` // 得票数
 }
 
 type PlayerReady struct {
-	// 不同于playerState中的技能，这个是每个阶段的是否放技能的情况，
-	// 也就是说只要要进入的阶段是不能发动技能的，那这个属性直接被赋为true，
-	// 下个阶段开始会变为false
-	Casted    bool `json:"casted"`    // 已施法
 	Nominate  bool `json:"nominate"`  // 可以提名
 	Nominated bool `json:"nominated"` // 可以被提名
-	Vote      int  `json:"vote"`      // 可以投票
-	VoteCount int  `json:"voteCount"` // 得票数
+	Vote      int  `json:"vote"`      // 可以投票的票数
 }
 
 type ActionReq struct {
