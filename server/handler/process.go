@@ -130,7 +130,6 @@ func toggleNight(mux *sync.Mutex, game *model.Room) {
 		for i := range game.Players {
 			// 活人调整状态 - 让所有活人重新可以投票，夜转日结算，没投票还有票
 			if !game.Players[i].State.Dead {
-				game.Players[i].Ready.Nominate = true
 				game.Players[i].Ready.Nominated = true
 				game.Players[i].Ready.Vote = 1
 			}
@@ -1033,8 +1032,14 @@ func checkoutNight(mux *sync.Mutex, game *model.Room, executed *model.Player) {
 			if game.Players[toPlayerIndexSlice[0]].Character == Mayor &&
 				!game.Players[toPlayerIndexSlice[0]].State.Poisoned &&
 				!game.Players[toPlayerIndexSlice[0]].State.Drunk {
+				aliveCount := 0
+				for _, player := range game.Players {
+					if !player.State.Dead {
+						aliveCount += 1
+					}
+				}
 				for {
-					randInt := rand.Intn(len(game.Players))
+					randInt := rand.Intn(aliveCount)
 					if !game.Players[randInt].State.Dead &&
 						game.Players[randInt].CharacterType != Demons {
 						// 死的是除了恶魔的其他任意一人
