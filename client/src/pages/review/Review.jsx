@@ -11,9 +11,7 @@ function Review() {
     useEffect(() => {
         setTimeout(() => {
             loadGame()
-            if (game && game.status === "等待开始") {
-                jumpToRoom()
-            }
+            checkToReturnRoom()
         }, 100)
     }, [game])
     const loadGame = () => {
@@ -27,6 +25,15 @@ function Review() {
         }
         socket.onerror = function(error) {
             console.error("WebSocket error:", error)
+        }
+    }
+    const checkToReturnRoom = () => {
+        if (game) {
+            switch (game.status) {
+            case "等待开始":
+                jumpToRoom()
+                break
+            }
         }
     }
 

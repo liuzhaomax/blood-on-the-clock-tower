@@ -1,7 +1,11 @@
-import React, {useEffect, useState} from "react"
+import React, {useEffect, useMemo, useState} from "react"
 import "./Room.css"
-import {Button, Flex} from "antd"
+import {Button, Flex, notification} from "antd"
 import {useNavigate, useParams} from "react-router-dom"
+
+const Context = React.createContext({
+    name: "Default",
+})
 
 function Room() {
     const navigate = useNavigate()
@@ -34,14 +38,6 @@ function Room() {
             case "游戏中":
                 jumpToGame()
                 break
-            case "复盘中":
-                console.log("处于复盘中")
-                break
-            case "等待开始":
-                console.log("等待开始")
-                break
-            default:
-                console.log("等待开始")
             }
         }
     }
@@ -93,6 +89,10 @@ function Room() {
 
     const startGame = () => {
         // if (room.players.length >= 5) {
+        if (room && room.status === "复盘中") {
+            openReviewingNotification("topRight")
+            return
+        }
         const socket = new WebSocket(`ws://192.168.1.14:8080/startGame/${roomId}`)
         socket.onopen = function() {
             let playerInfo = {
@@ -106,6 +106,20 @@ function Room() {
         // }
         // TODO 游戏小于5人不能开始，弹出错误提示
     }
+    const [api, contextHolder] = notification.useNotification()
+    const openReviewingNotification = (placement) => {
+        api.info({
+            message: "房间未准备好",
+            description: <Context.Consumer>{() => "不好意思, 有玩家尚未退出复盘，请督促返回房间!"}</Context.Consumer>,
+            placement,
+        })
+    }
+    const contextValue = useMemo(
+        () => ({
+            name: "",
+        }),
+        [],
+    )
 
     return (
         <div id="ROOM" className="ROOM">
@@ -125,6 +139,9 @@ function Room() {
                     {sit()}
                 </div>
             </div>
+            <Context.Provider value={contextValue}>
+                {contextHolder}
+            </Context.Provider>
         </div>
     )
 }
