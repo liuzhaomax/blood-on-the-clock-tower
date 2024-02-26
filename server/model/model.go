@@ -60,19 +60,21 @@ type Player struct {
 }
 
 type PlayerState struct {
-	Dead      bool `json:"dead"`      // 全体
-	Evil      bool `json:"evil"`      // 隐士
-	Demon     bool `json:"demon"`     // 占卜
-	Drunk     bool `json:"drunk"`     // 酒鬼
-	Poisoned  bool `json:"poisoned"`  // 下毒
-	Protected bool `json:"protected"` // 僧侣
-	Bullet    bool `json:"bullet"`    // 杀手
-	Blessed   bool `json:"blessed"`   // 圣女
-	Master    bool `json:"master"`    // 管家
-	Casted    bool `json:"casted"`    // 本轮是否已施放主动技能
-	Nominated bool `json:"nominated"` // 本轮是否已被提名
-	Voted     bool `json:"voted"`     // 本轮是否已投票
-	VoteCount int  `json:"voteCount"` // 得票数
+	Dead            bool   `json:"dead"`            // 全体
+	Evil            bool   `json:"evil"`            // 隐士
+	RegardedAsSaved string `json:"regardedAsSaved"` // 隐士的被视作的身份，记录的
+	RegardedAs      string `json:"regardedAs"`      // 隐士的被视作的身份
+	Demon           bool   `json:"demon"`           // 占卜
+	Drunk           bool   `json:"drunk"`           // 酒鬼
+	Poisoned        bool   `json:"poisoned"`        // 下毒
+	Protected       bool   `json:"protected"`       // 僧侣
+	Bullet          bool   `json:"bullet"`          // 杀手
+	Blessed         bool   `json:"blessed"`         // 圣女
+	Master          bool   `json:"master"`          // 管家
+	Casted          bool   `json:"casted"`          // 本轮是否已施放主动技能
+	Nominated       bool   `json:"nominated"`       // 本轮是否已被提名
+	Voted           bool   `json:"voted"`           // 本轮是否已投票
+	VoteCount       int    `json:"voteCount"`       // 得票数
 }
 
 type PlayerReady struct {

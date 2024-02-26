@@ -187,11 +187,26 @@ function Gaming() {
         }
     }
 
+    const getMe = (game) => {
+        let me
+        for (let i = 0; i < game.players.length; i++) {
+            if (game.players[i].id === localStorage.getItem("PlayerID")) {
+                me = game.players[i]
+                break
+            }
+        }
+        return me
+    }
+
     // 点击玩家名字，选中玩家，保存被选中的玩家ID
     const [selectedPlayers, setSelectedPlayers] = useState([])
     const selectPlayer = (event) => {
         event.preventDefault()
-        if (!event.target.classList.contains("highlight-dead")) {
+        // 守鸦人可以继续选人
+        let me = getMe(game)
+        if (!event.target.classList.contains("highlight-dead")
+            || (me.character === "守鸦人" && event.target.classList.contains("highlight-dead"))
+        ) {
             let selectedPlayersCopy = selectedPlayers.slice()
             if (event.target.classList.contains("seat-selected")) {
                 event.target.classList.remove("seat-selected")
@@ -215,13 +230,14 @@ function Gaming() {
     // 更新seat死亡状态
     const updateSeatDead = () => {
         if (game) {
+            let me = getMe(game)
             for (let i = 0; i < game.players.length; i++) {
                 if (game.players[i].state.dead) {
                     let seat = document.getElementById(game.players[i].id)
                     if (!seat.classList.contains("highlight-dead")) {
                         seat.classList.add("highlight-dead")
                     }
-                    if (seat.classList.contains("seat-selected")) {
+                    if (me.character !== "守鸦人" && seat.classList.contains("seat-selected")) {
                         seat.classList.remove("seat-selected")
                     }
                 }
@@ -481,25 +497,13 @@ function Gaming() {
     const showNominateModal = () => {
         setIsNominateModalOpen(true)
         setNominateModalContent("抱歉，您此刻无法提名") // 将modal的内容重新初始化，防止错乱
-        let me
-        for (let i = 0; i < game.players.length; i++) {
-            if (game.players[i].id === localStorage.getItem("PlayerID")) {
-                me = game.players[i]
-                break
-            }
-        }
+        let me = getMe(game)
         setNominateModalContent(genNominateModalContent(me))
     }
     const handleNominateOk = () => {
         setIsNominateModalOpen(false)
         // 提名的条件是，提名是true，stage是偶数；提名成功的条件是，最快
-        let me
-        for (let i = 0; i < game.players.length; i++) {
-            if (game.players[i].id === localStorage.getItem("PlayerID")) {
-                me = game.players[i]
-                break
-            }
-        }
+        let me = getMe(game)
         if (me.ready.nominate && !game.state.night && !game.state.votingStep && game.state.stage !== 0) {
             for (let j = 0; j < game.players.length; j++) {
                 if (selectedPlayers[0] === game.players[j].id && game.players[j].ready.nominated) {
@@ -523,25 +527,13 @@ function Gaming() {
     const showVoteModal = () => {
         setIsVoteModalOpen(true)
         setVoteModalContent("抱歉，您此刻无法投票") // 将modal的内容重新初始化，防止错乱
-        let me
-        for (let i = 0; i < game.players.length; i++) {
-            if (game.players[i].id === localStorage.getItem("PlayerID")) {
-                me = game.players[i]
-                break
-            }
-        }
+        let me = getMe(game)
         setVoteModalContent(genVoteModalContent(me))
     }
     const handleVoteOk = () => {
         setIsVoteModalOpen(false)
         // 投票的条件是，投票是true，stage是偶数，有人被提名game.state.votingStep
-        let me
-        for (let i = 0; i < game.players.length; i++) {
-            if (game.players[i].id === localStorage.getItem("PlayerID")) {
-                me = game.players[i]
-                break
-            }
-        }
+        let me = getMe(game)
         if (me.ready.vote && game.state.votingStep && game.state.stage !== 0) {
             for (let j = 0; j < game.players.length; j++) {
                 if (game.players[j].state.nominated) {
@@ -564,13 +556,7 @@ function Gaming() {
     const showCastModal = () => {
         setIsCastModalOpen(true)
         setCastModalContent("抱歉，您无法发动技能") // 将modal的内容重新初始化，防止错乱
-        let me
-        for (let i = 0; i < game.players.length; i++) {
-            if (game.players[i].id === localStorage.getItem("PlayerID")) {
-                me = game.players[i]
-                break
-            }
-        }
+        let me = getMe(game)
         if (game.state.stage === 1 &&
             (me.character === "下毒者" ||
             me.character === "占卜师" ||
@@ -595,13 +581,7 @@ function Gaming() {
     const handleCastOk = () => {
         setIsCastModalOpen(false)
         // 后端判断 发动技能的条件是，取决于身份，drunk，白天黑夜，还有没有技能；前端随便发动，后端判断成不成功
-        let me
-        for (let i = 0; i < game.players.length; i++) {
-            if (game.players[i].id === localStorage.getItem("PlayerID")) {
-                me = game.players[i]
-                break
-            }
-        }
+        let me = getMe(game)
         if (!me.state.casted && !game.state.votingStep && game.state.stage !== 0 &&
             (castToPlayersId.length === 1 &&
                 (me.character === "下毒者" ||
@@ -614,6 +594,7 @@ function Gaming() {
                 (castToPlayersId.length === 2 &&
                 me.character === "占卜师")
             )) {
+            console.log(selectedPlayers)
             emitCast()
         }
     }
@@ -880,13 +861,7 @@ function Gaming() {
     }, [game && game.state.night])
     const showCaptchaModal = () => {
         if (game) {
-            let me
-            for (let i = 0; i < game.players.length; i++) {
-                if (game.players[i].id === localStorage.getItem("PlayerID")) {
-                    me = game.players[i]
-                    break
-                }
-            }
+            let me = getMe(game)
             if (game.state.night && !me.state.dead) {
                 let firstNight = false
                 if (game.state.stage ===1 ) {

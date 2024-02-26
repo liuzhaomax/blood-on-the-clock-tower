@@ -264,6 +264,12 @@ func initStatus(players []model.Player, replaceDrunk string) []model.Player {
 			players[i].State.Bullet = true
 		case Recluse:
 			players[i].State.Evil = true
+			evilCharacter := getRandEvilCharacter()
+			players[i].State.RegardedAs = evilCharacter
+			players[i].State.RegardedAsSaved = evilCharacter
+			if players[i].State.RegardedAsSaved == Imp {
+				players[i].State.Demon = true
+			}
 		case Drunk:
 			players[i].CharacterType = Townsfolk
 			players[i].Character = replaceDrunk
@@ -280,4 +286,10 @@ func initStatus(players []model.Player, replaceDrunk string) []model.Player {
 	}
 
 	return players
+}
+
+func getRandEvilCharacter() string {
+	evils := append(MinionsPool, DemonsPool...)
+	randInt := rand.Intn(len(evils))
+	return evils[randInt]
 }

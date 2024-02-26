@@ -114,6 +114,18 @@ func toggleNight(mux *sync.Mutex, game *model.Room) {
 				game.Players[i].State.Poisoned = false
 				game.Players[i].State.Protected = false
 				game.Players[i].State.Master = false
+				// 还原隐士邪恶身份 - 清除中毒效果
+				if game.Players[i].Character == Recluse {
+					game.Players[i].State.Evil = true
+					game.Players[i].State.RegardedAs = game.Players[i].State.RegardedAsSaved
+					if game.Players[i].State.RegardedAsSaved == Imp {
+						game.Players[i].State.Demon = true
+					}
+				}
+				// 还原间谍平民身份 - 清除中毒效果
+				if game.Players[i].Character == Spy {
+					game.Players[i].State.Evil = false
+				}
 			}
 		} else {
 			msg = fmt.Sprintf("第%d天，天亮了~\n", game.State.Day)
@@ -224,6 +236,15 @@ func toggleNight(mux *sync.Mutex, game *model.Room) {
 		}
 		// 保存到总日志
 		game.Log += "恶魔爪牙已互认身份\n"
+
+		// 给恶魔提供3个不在场的村民身份
+		msg = findThreeCharactersNotInGame(game.Players)
+		if err := cfg.ConnPool[demon.Id].WriteMessage(websocket.TextMessage, []byte(msg)); err != nil {
+			log.Println("Write error:", err)
+			return
+		}
+		// 保存到总日志
+		game.Log += msg
 	}
 }
 
@@ -562,7 +583,7 @@ func cast(mux *sync.Mutex, game *model.Room, playerId string, targets []string) 
 				if player.State.Bullet {
 					msg := fmt.Sprintf("[%s] ", player.Name)
 					game.Players[i].State.Bullet = false // 子弹不管怎样都会发射
-					if target.CharacterType == Demons {
+					if target.CharacterType == Demons || target.State.RegardedAs == Imp {
 						target.State.Dead = true
 						// 拼接日志
 						msg += fmt.Sprintf("枪杀了 [%s] \n", target.Name)
@@ -646,6 +667,18 @@ func checkoutNight(mux *sync.Mutex, game *model.Room, executed *model.Player) {
 	for fromPlayer, toPlayerIndexSlice := range castPoolObj {
 		if fromPlayer.Character == Poisoner && !fromPlayer.State.Dead {
 			game.Players[toPlayerIndexSlice[0]].State.Poisoned = true
+			// 判断隐士被毒变非邪恶
+			if game.Players[toPlayerIndexSlice[0]].Character == Recluse {
+				game.Players[toPlayerIndexSlice[0]].State.Evil = false
+				game.Players[toPlayerIndexSlice[0]].State.RegardedAs = Recluse
+				if game.Players[toPlayerIndexSlice[0]].State.RegardedAsSaved == Imp {
+					game.Players[toPlayerIndexSlice[0]].State.Demon = false
+				}
+			}
+			// 判断间谍被毒是邪恶
+			if game.Players[toPlayerIndexSlice[0]].Character == Spy {
+				game.Players[toPlayerIndexSlice[0]].State.Evil = true
+			}
 			break
 		}
 	}
@@ -1145,7 +1178,14 @@ func checkoutNight(mux *sync.Mutex, game *model.Room, executed *model.Player) {
 						if fromPlayer.Id == player.Id {
 							// 拼接日志
 							msgAll += fmt.Sprintf("[%s] ", player.Name)
-							info := fmt.Sprintf("发现 [%s] 的身份是 {%s}\n", game.Players[toPlayerIndexSlice[0]].Name, game.Players[toPlayerIndexSlice[0]].Character)
+							character := ""
+							// 看隐士情况，是看成他被当成的身份
+							if game.Players[toPlayerIndexSlice[0]].Character == Recluse {
+								character = game.Players[toPlayerIndexSlice[0]].State.RegardedAs
+							} else {
+								character = game.Players[toPlayerIndexSlice[0]].Character
+							}
+							info := fmt.Sprintf("发现 [%s] 的身份是 {%s}\n", game.Players[toPlayerIndexSlice[0]].Name, character)
 							msgPlayer += info
 							msgAll += info
 							game.Players[fromPlayer.Index].Log += msgPlayer
@@ -1253,7 +1293,14 @@ func checkoutNight(mux *sync.Mutex, game *model.Room, executed *model.Player) {
 						}
 						// 拼接日志
 						msgAll += fmt.Sprintf("[%s] ", player.Name)
-						info := fmt.Sprintf("发现今晚被处决的玩家 [%s] 的身份是 {%s}\n", executedPlayer.Name, executedPlayer.Character)
+						// 看隐士情况，是看成他被当成的身份
+						character := ""
+						if executedPlayer.Character == Recluse {
+							character = executedPlayer.State.RegardedAs
+						} else {
+							character = executedPlayer.Character
+						}
+						info := fmt.Sprintf("发现今晚被处决的玩家 [%s] 的身份是 {%s}\n", executedPlayer.Name, character)
 						msgPlayer += info
 						msgAll += info
 					}
@@ -1471,4 +1518,30 @@ func checkout(game *model.Room, executed *model.Player) {
 		}
 		game.Status = "复盘中"
 	}
+}
+
+func findThreeCharactersNotInGame(players []model.Player) string {
+	hasRepeatedCharacter := false
+	round := 0
+	charas := []string{}
+	msg := "这三个村民身份不在本局中："
+	for {
+		randInt := rand.Intn(len(TownsfolkPool))
+		for _, player := range players {
+			if player.Character == TownsfolkPool[randInt] {
+				hasRepeatedCharacter = true
+			}
+		}
+		if !hasRepeatedCharacter {
+			round += 1
+			charas = append(charas, TownsfolkPool[randInt])
+		}
+		if round == 3 {
+			break
+		}
+	}
+	for _, character := range charas {
+		msg += fmt.Sprintf("{%s} ", character)
+	}
+	return msg + "\n"
 }
