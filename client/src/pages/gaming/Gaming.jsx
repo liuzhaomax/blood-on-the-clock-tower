@@ -480,6 +480,7 @@ function Gaming() {
     const [nominateModalContent, setNominateModalContent] = useState("抱歉，您此刻无法提名")
     const showNominateModal = () => {
         setIsNominateModalOpen(true)
+        setNominateModalContent("抱歉，您此刻无法提名") // 将modal的内容重新初始化，防止错乱
         let me
         for (let i = 0; i < game.players.length; i++) {
             if (game.players[i].id === localStorage.getItem("PlayerID")) {
@@ -521,6 +522,7 @@ function Gaming() {
     const [voteModalContent, setVoteModalContent] = useState("抱歉，您此刻无法投票")
     const showVoteModal = () => {
         setIsVoteModalOpen(true)
+        setVoteModalContent("抱歉，您此刻无法投票") // 将modal的内容重新初始化，防止错乱
         let me
         for (let i = 0; i < game.players.length; i++) {
             if (game.players[i].id === localStorage.getItem("PlayerID")) {
@@ -561,6 +563,7 @@ function Gaming() {
     const [castModalContent, setCastModalContent] = useState("抱歉，您无法发动技能")
     const showCastModal = () => {
         setIsCastModalOpen(true)
+        setCastModalContent("抱歉，您无法发动技能") // 将modal的内容重新初始化，防止错乱
         let me
         for (let i = 0; i < game.players.length; i++) {
             if (game.players[i].id === localStorage.getItem("PlayerID")) {
@@ -712,6 +715,9 @@ function Gaming() {
         }
         switch (me.character) {
         case "下毒者":
+            if (!game.state.night) {
+                return "白天不能投毒"
+            }
             for (let i = 0; i < selectedPlayersObj.length; i++) {
                 if (selectedPlayersObj[i].state.dead) {
                     return "您不能毒已死的人"
@@ -732,6 +738,9 @@ function Gaming() {
             }
             return "您只能选2个人占卜"
         case "管家":
+            if (!game.state.night) {
+                return "白天不能认主"
+            }
             for (let i = 0; i < selectedPlayersObj.length; i++) {
                 if (selectedPlayersObj[i].character === "管家") {
                     return "您不能跟随自己"
@@ -743,6 +752,9 @@ function Gaming() {
             }
             return "您只能选1个人跟随"
         case "僧侣":
+            if (!game.state.night) {
+                return "白天不能守护"
+            }
             for (let i = 0; i < selectedPlayersObj.length; i++) {
                 if (selectedPlayersObj[i].state.dead) {
                     return "您不能守护已死的人"
@@ -757,6 +769,9 @@ function Gaming() {
             }
             return "您只能选1个人守护"
         case "小恶魔":
+            if (!game.state.night) {
+                return "白天不能击杀"
+            }
             for (let i = 0; i < selectedPlayersObj.length; i++) {
                 if (selectedPlayersObj[i].state.dead) {
                     return "您不能杀害已死的人"
@@ -768,12 +783,18 @@ function Gaming() {
             }
             return "您只能选1个人杀害"
         case "守鸦人":
+            if (!game.state.night) {
+                return "白天不能反向通灵"
+            }
             if (selectedPlayers.length === 1) {
                 content += "进行反向通灵吗？"
                 break
             }
             return "您只能选1个人反向通灵"
         case "杀手":
+            if (game.state.night) {
+                return "夜晚不能开枪"
+            }
             for (let i = 0; i < selectedPlayersObj.length; i++) {
                 if (selectedPlayersObj[i].state.dead) {
                     return "您不能枪毙已死的人"

@@ -701,7 +701,7 @@ func checkoutNight(mux *sync.Mutex, game *model.Room, executed *model.Player) {
 				msgAll += fmt.Sprintf("[%s] ", player.Name)
 				var info string
 				if reflect.ValueOf(realOutsider).IsZero() {
-					info = "发现本局 {没有外来者}"
+					info = "发现本局 {没有外来者}\n"
 				} else {
 					randInt := rand.Intn(2)
 					if randInt == 0 {
@@ -1316,10 +1316,10 @@ func checkout(game *model.Room, executed *model.Player) {
 	msg := ""
 	var realDemonCount int   // 恶魔数量，被占卜认定的不算
 	var canNominate int      // 可提名人数
-	var hasSlayerBullet bool // 有枪手且枪手有子弹
+	var hasSlayerBullet bool // 有杀手且杀手有子弹
 	var aliveCount int       // 活人数量
 	var canVote int          // 可投票数量
-	var evilCount int        // 邪恶玩家数量
+	var evilAliveCount int   // 邪恶玩家存活数量
 	var mayorAlive bool      // 市长是否存活
 	for _, player := range game.Players {
 		// 对应邪恶胜利条件1
@@ -1335,8 +1335,8 @@ func checkout(game *model.Room, executed *model.Player) {
 		} else {
 			canVote += 1 // 加活人的人数
 		}
-		if player.State.Evil && player.Character != Recluse {
-			evilCount++
+		if !player.State.Dead && (player.CharacterType == Demons || player.CharacterType == Minions) {
+			evilAliveCount++
 		}
 		// 对应邪恶胜利条件3
 		if !player.State.Dead {
@@ -1353,19 +1353,19 @@ func checkout(game *model.Room, executed *model.Player) {
 	}
 	// 邪恶胜利条件1
 	if !hasSlayerBullet && canNominate == 0 {
-		msg += "达成邪恶胜利条件一：场上没人可以提名，且没有枪手或有枪手没有子弹\n"
+		msg += "达成邪恶胜利条件一：场上没人可以提名，且没有杀手或有杀手没有子弹\n"
 		msg += "本局结束，邪恶胜利\n"
 		game.Result = "邪恶阵营胜利"
 	}
 	// 邪恶胜利条件2
 	halfAlive := int(math.Floor(float64(aliveCount / 2)))
-	if canVote <= halfAlive && evilCount >= halfAlive {
-		msg += "达成邪恶胜利条件二：可投的票数不大于活人的半数，且邪恶玩家数量不小于活人的半数\n"
+	if canVote <= halfAlive && evilAliveCount >= halfAlive {
+		msg += "达成邪恶胜利条件二：可投的票数不大于活人的半数，且存活的邪恶玩家数量不小于活人的半数\n"
 		msg += "本局结束，邪恶胜利\n"
 		game.Result = "邪恶阵营胜利"
 	}
 	// 邪恶胜利条件3
-	if evilCount == aliveCount {
+	if evilAliveCount == aliveCount {
 		msg += "达成邪恶胜利条件三：平民阵营被屠城\n"
 		msg += "本局结束，邪恶胜利\n"
 		game.Result = "邪恶阵营胜利"
