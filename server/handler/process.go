@@ -238,14 +238,16 @@ func endVoting(mux *sync.Mutex, game *model.Room) (executed *model.Player) {
 	}
 
 	// 判断管家 - 看管家的票是否算数
-	var hasMasterVoted bool // 主人是否投了票
-	var hasButlerVoted bool // 管家是否投了票
-	for _, player := range game.Players {
+	var hasMasterVoted bool        // 主人是否投了票
+	var hasButlerVoted bool        // 管家是否投了票
+	var butlerPlayer *model.Player // 管家玩家
+	for i, player := range game.Players {
 		if player.State.Master && player.State.Voted {
 			hasMasterVoted = true
 		}
 		if player.Character == Butler && player.State.Voted {
 			hasButlerVoted = true
+			butlerPlayer = &game.Players[i]
 		}
 	}
 
@@ -268,6 +270,28 @@ func endVoting(mux *sync.Mutex, game *model.Room) (executed *model.Player) {
 	// 主人没投，管家投了，票数减一，因为如果主人不投票，则管家不能跟票
 	if !hasMasterVoted && hasButlerVoted {
 		nominated.State.VoteCount -= 1
+		butlerPlayer.State.Voted = false
+		butlerPlayer.Ready.Vote = 1
+		// 拼接日志
+		msgButler := fmt.Sprintf("主人未投票，您投给 [%s] 的票无效！\n", nominated.Name)
+		butlerPlayer.Log += msgButler
+		// 发送日志 - 告诉管家投票无效
+		for id, conn := range cfg.ConnPool {
+			if id == butlerPlayer.Id {
+				if err := conn.WriteMessage(websocket.TextMessage, []byte(msgButler)); err != nil {
+					log.Println("Write error:", err)
+					return
+				}
+				break
+			}
+		}
+		// 票池要清除管家
+		for playerId := range game.VotePool {
+			if playerId == butlerPlayer.Id {
+				game.VotePool[playerId] = ""
+				break
+			}
+		}
 	}
 	if nominated != nil && nominated.State.VoteCount > int(math.Floor(float64(aliveCount/2))) {
 		executed = nominated
@@ -276,6 +300,10 @@ func endVoting(mux *sync.Mutex, game *model.Room) (executed *model.Player) {
 		executed.Ready.Nominate = false
 		executed.Ready.Nominated = false
 		executed.State.VoteCount = 0
+		// 打印所有投票成功的票型
+		for _, info := range game.VotePool {
+			msg += info
+		}
 		msg += fmt.Sprintf("处决结果：[%s] 被公投处决，死亡\n", executed.Name)
 		// 有人死亡，所有人本轮不能再提名
 		for i := range game.Players {
@@ -298,7 +326,7 @@ func endVoting(mux *sync.Mutex, game *model.Room) (executed *model.Player) {
 			return
 		}
 	}
-	// 判断圣徒 邪恶胜利条件4
+	// 判断圣徒 - 邪恶胜利条件4
 	if executed != nil && executed.Character == Saint {
 		checkout(game, executed)
 	}
@@ -368,7 +396,8 @@ func nominate(mux *sync.Mutex, game *model.Room, playerId string, targets []stri
 	// 判断圣女
 	var canGoToVotingStep = true
 	for i, player := range game.Players {
-		if player.Character == Virgin && player.Id == targets[0] && player.State.Blessed {
+		if player.Character == Virgin && player.Id == targets[0] && player.State.Blessed &&
+			!player.State.Poisoned && !player.State.Drunk {
 			msg = msgName
 			game.Players[i].State.Blessed = false
 			for i, player := range game.Players {
@@ -407,11 +436,12 @@ func vote(mux *sync.Mutex, game *model.Room, playerId string) {
 	mux.Lock()
 	defer mux.Unlock()
 
-	var msg = ""
+	var msgAll = ""
+	var msgPlayer = "您"
 
 	for i, player := range game.Players {
 		if player.Id == playerId && player.Ready.Vote > 0 && game.State.VotingStep {
-			msg += fmt.Sprintf("[%s] ", player.Name)
+			msgAll += fmt.Sprintf("[%s] ", player.Name)
 			var nominated *model.Player
 			for j, player := range game.Players {
 				if player.State.Nominated {
@@ -423,20 +453,23 @@ func vote(mux *sync.Mutex, game *model.Room, playerId string) {
 				game.Players[i].Ready.Vote = 0
 				game.Players[i].State.Voted = true
 				nominated.State.VoteCount += 1
-				msg += fmt.Sprintf("决意投票给 [%s] \n", nominated.Name)
+				msgAll += fmt.Sprintf("投票 [%s] 成功\n", nominated.Name)
+				msgPlayer += fmt.Sprintf("决意投给 [%s] \n", nominated.Name)
+			}
+			// 总日志加入票池
+			game.VotePool[player.Id] = msgAll
+			// 发送个人日志
+			for id, conn := range cfg.ConnPool {
+				if id == playerId {
+					game.Players[i].Log += msgPlayer
+					if err := conn.WriteMessage(websocket.TextMessage, []byte(msgPlayer)); err != nil {
+						log.Println("Write error:", err)
+						return
+					}
+					break
+				}
 			}
 			break
-		}
-	}
-	for i := range game.Players {
-		game.Players[i].Log += msg
-	}
-	game.Log += msg
-	// 发送日志
-	for _, conn := range cfg.ConnPool {
-		if err := conn.WriteMessage(websocket.TextMessage, []byte(msg)); err != nil {
-			log.Println("Write error:", err)
-			return
 		}
 	}
 }
@@ -922,17 +955,24 @@ func checkoutNight(mux *sync.Mutex, game *model.Room, executed *model.Player) {
 	// 判断杀害
 	var killed *model.Player
 	for fromPlayer, toPlayerIndexSlice := range castPoolObj {
-		if fromPlayer.Character == Imp && !fromPlayer.State.Poisoned &&
-			!game.Players[toPlayerIndexSlice[0]].State.Protected &&
-			game.Players[toPlayerIndexSlice[0]].Character != Soldier {
-			if game.Players[toPlayerIndexSlice[0]].Character != Mayor {
-				// 死的人
-				game.Players[toPlayerIndexSlice[0]].State.Dead = true
-				game.Players[toPlayerIndexSlice[0]].Ready.Nominate = false
-				game.Players[toPlayerIndexSlice[0]].Ready.Nominated = false
-				killed = &game.Players[toPlayerIndexSlice[0]]
-			} else {
-				// 刀市长
+		// 判断士兵
+		if game.Players[toPlayerIndexSlice[0]].Character == Soldier {
+			break
+		}
+		// 判断被僧侣守护
+		if game.Players[toPlayerIndexSlice[0]].State.Protected {
+			break
+		}
+		// 判断小恶魔被下毒
+		if fromPlayer.Character == Imp && fromPlayer.State.Poisoned {
+			break
+		}
+		// 必死人局面
+		if fromPlayer.Character == Imp && !fromPlayer.State.Poisoned {
+			// 判断刀市长
+			if game.Players[toPlayerIndexSlice[0]].Character == Mayor &&
+				!game.Players[toPlayerIndexSlice[0]].State.Poisoned &&
+				!game.Players[toPlayerIndexSlice[0]].State.Drunk {
 				for {
 					randInt := rand.Intn(len(game.Players))
 					if !game.Players[randInt].State.Dead &&
@@ -943,6 +983,13 @@ func checkoutNight(mux *sync.Mutex, game *model.Room, executed *model.Player) {
 						break
 					}
 				}
+				break
+			} else {
+				// 死的人
+				game.Players[toPlayerIndexSlice[0]].State.Dead = true
+				game.Players[toPlayerIndexSlice[0]].Ready.Nominate = false
+				game.Players[toPlayerIndexSlice[0]].Ready.Nominated = false
+				killed = &game.Players[toPlayerIndexSlice[0]]
 			}
 			// 自刀
 			if game.Players[toPlayerIndexSlice[0]].Character == Imp {

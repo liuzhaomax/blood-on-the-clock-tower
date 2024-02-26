@@ -162,6 +162,7 @@ func StartGame(w http.ResponseWriter, r *http.Request) {
 		cfg.Rooms[roomIndex].Result = ""
 		cfg.Rooms[roomIndex].Log = ""
 		cfg.Rooms[roomIndex].CastPool = map[string][]string{}
+		cfg.Rooms[roomIndex].VotePool = map[string]string{}
 		cfg.Rooms[roomIndex].State = model.GameState{}
 	}
 }
