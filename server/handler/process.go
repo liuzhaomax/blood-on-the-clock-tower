@@ -540,12 +540,44 @@ func cast(mux *sync.Mutex, game *model.Room, playerId string, targets []string) 
 					}
 				}
 			case Slayer:
-				for _, player := range game.Players {
+				var target *model.Player
+				for i, player := range game.Players {
 					if targets[0] == player.Id {
+						target = &game.Players[i]
 						info := fmt.Sprintf(" 对 [%s] 进行了枪毙！", player.Name)
 						msgPlayer += info
 						msgAll += info
 						break
+					}
+				}
+				// 杀手立即判断死活
+				// 不考虑酒鬼
+				if player.State.Drunk {
+					break
+				}
+				// 不考虑下毒了且没被保护
+				if player.State.Poisoned && !player.State.Protected {
+					break
+				}
+				// 考虑子弹
+				if player.State.Bullet {
+					msg := fmt.Sprintf("[%s] ", player.Name)
+					game.Players[i].State.Bullet = false // 子弹不管怎样都会发射
+					if target.CharacterType == Demons {
+						target.State.Dead = true
+						// 拼接日志
+						msg += fmt.Sprintf("枪杀了 [%s] \n", target.Name)
+						for i := range game.Players {
+							game.Players[i].Log += msg
+						}
+						game.Log += msg
+						// 发送日志
+						for _, conn := range cfg.ConnPool {
+							if err := conn.WriteMessage(websocket.TextMessage, []byte(msg)); err != nil {
+								log.Println("Write error:", err)
+								return
+							}
+						}
 					}
 				}
 			case Ravenkeeper:
@@ -1070,8 +1102,12 @@ func checkoutNight(mux *sync.Mutex, game *model.Room, executed *model.Player) {
 			switch player.Character {
 			// 给守鸦人提供信息
 			case Ravenkeeper:
-				if killed != nil &&
-					!player.State.Drunk && (!player.State.Poisoned || player.State.Protected) &&
+				// 没有死人
+				if killed == nil {
+					break
+				}
+				// 不是酒鬼，没被毒或被守护，死的正是守鸦人自己
+				if !player.State.Drunk && (!player.State.Poisoned || player.State.Protected) &&
 					player.Id == killed.Id {
 					for fromPlayer, toPlayerIndexSlice := range castPoolObj {
 						if fromPlayer.Id == player.Id {
@@ -1296,64 +1332,8 @@ func checkoutNight(mux *sync.Mutex, game *model.Room, executed *model.Player) {
 }
 
 func checkoutDay(mux *sync.Mutex, game *model.Room) {
-	cfg := model.GetConfig()
 	mux.Lock()
 	defer mux.Unlock()
-
-	var msgPlayer = "您"
-	var msgAll = ""
-
-	// 承载技能释放者对象的池
-	castPoolObj := map[model.Player][]int{}
-	for fromPlayerId, toPlayerIdSlice := range game.CastPool {
-		for _, player := range game.Players {
-			if player.Id == fromPlayerId {
-				castPoolObj[player] = []int{}
-				break
-			}
-		}
-		for _, toPlayerId := range toPlayerIdSlice {
-			for _, player := range game.Players {
-				if player.Id == toPlayerId {
-					castPoolObj[player] = append(castPoolObj[player], player.Index)
-					break
-				}
-			}
-		}
-	}
-
-	// 判断杀手
-	for fromPlayer, toPlayerIndexSlice := range castPoolObj {
-		if fromPlayer.Character == Slayer && fromPlayer.State.Bullet && len(toPlayerIndexSlice) == 1 {
-			info := ""
-			msgAll += fmt.Sprintf("[%s] ", fromPlayer.Name)
-			game.Players[fromPlayer.Index].State.Bullet = false
-			if game.Players[toPlayerIndexSlice[0]].CharacterType == Demons {
-				game.Players[toPlayerIndexSlice[0]].State.Dead = true
-				// 拼接日志
-				info += fmt.Sprintf("发现 [%s] 被您枪杀了\n", game.Players[toPlayerIndexSlice[0]].Name)
-			} else {
-				// 拼接日志
-				info += "发现没人被您枪杀\n"
-			}
-			msgPlayer += info
-			msgAll += info
-			game.Players[fromPlayer.Index].Log += msgPlayer
-			game.Log += msgAll
-			// 发送日志
-			for id, conn := range cfg.ConnPool {
-				if id == fromPlayer.Id {
-					if err := conn.WriteMessage(websocket.TextMessage, []byte(msgPlayer)); err != nil {
-						log.Println("Write error:", err)
-						return
-					}
-					break
-				}
-			}
-			break
-		}
-	}
-
 	// 结算本局
 	checkout(game, nil)
 }
@@ -1407,8 +1387,8 @@ func checkout(game *model.Room, executed *model.Player) {
 	}
 	// 邪恶胜利条件2
 	halfAlive := int(math.Floor(float64(aliveCount / 2)))
-	if canVote <= halfAlive && evilAliveCount >= halfAlive {
-		msg += "达成邪恶胜利条件二：可投的票数不大于活人的半数，且存活的邪恶玩家数量不小于活人的半数\n"
+	if canVote <= halfAlive && evilAliveCount >= halfAlive && !hasSlayerBullet {
+		msg += "达成邪恶胜利条件二：可投的票数不大于活人的半数，且存活的邪恶玩家数量不小于活人的半数，且没有杀手或有杀手没有子弹\n"
 		msg += "本局结束，邪恶胜利\n"
 		game.Result = "邪恶阵营胜利"
 	}
