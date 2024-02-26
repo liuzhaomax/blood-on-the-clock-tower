@@ -352,8 +352,9 @@ func endVoting(mux *sync.Mutex, game *model.Room) (executed *model.Player) {
 			}
 		}
 	}
-	// 退出投票环节
+	// 退出投票环节，清空票池
 	game.State.VotingStep = false
+	game.VotePool = map[string]string{}
 	return
 }
 

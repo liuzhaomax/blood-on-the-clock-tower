@@ -224,8 +224,6 @@
 #GAMING .highlight-number {
     color: limegreen;
     font-weight: bold;
-    /*color: hotpink;*/
-    /*color: purple;*/
 }
 
 #GAMING .highlight-player {
@@ -235,6 +233,7 @@
 
 #GAMING .highlight-skill {
     color: deepskyblue;
+    font-weight: bold;
 }
 
 #GAMING .highlight-skill-result {
@@ -244,14 +243,17 @@
 
 #GAMING .highlight-severe {
     color: red;
+    font-weight: bold;
 }
 
 #GAMING .highlight-nominate {
     color: chocolate;
+    font-weight: bold;
 }
 
 #GAMING .highlight-vote {
     color: orchid;
+    font-weight: bold;
 }
 
 #GAMING .highlight-dead {
