@@ -277,6 +277,10 @@ func endVoting(mux *sync.Mutex, game *model.Room) (executed *model.Player) {
 		executed.Ready.Nominated = false
 		executed.State.VoteCount = 0
 		msg += fmt.Sprintf("处决结果：[%s] 被公投处决，死亡\n", executed.Name)
+		// 有人死亡，所有人本轮不能再提名
+		for i := range game.Players {
+			game.Players[i].Ready.Nominate = false
+		}
 	} else {
 		if nominated != nil {
 			nominated.State.Nominated = false

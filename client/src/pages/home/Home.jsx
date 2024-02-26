@@ -51,9 +51,7 @@ function Home() {
         }
         socket.onmessage = function(event) {
             // console.log("Received message from server:", JSON.parse(event.data))
-            if (event.data !== null) {
-                setRoomList(JSON.parse(event.data))
-            }
+            setRoomList(JSON.parse(event.data))
         }
         socket.onerror = function(error) {
             console.error("WebSocket error:", error)
@@ -129,7 +127,7 @@ function Home() {
                 <Button className="btn" onClick={showDrawer}>创建房间</Button>
             </Flex>
             <div className="layout">
-                { roomList !== null ?
+                { roomList ?
                     <List style={{ width: "100%" }}
                         itemLayout="horizontal"
                         dataSource={roomList}
