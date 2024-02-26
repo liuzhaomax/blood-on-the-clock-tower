@@ -782,7 +782,11 @@ func checkoutNight(mux *sync.Mutex, game *model.Room, executed *model.Player) {
 				if reflect.ValueOf(realOutsider).IsZero() {
 					info = "发现本局 {没有外来者}\n"
 				} else {
-					randInt := rand.Intn(11)
+					randFixedNum := 21 // 假话：没有外来者，的最大概率是1/21
+					if len(game.Players) > 21 {
+						randFixedNum = len(game.Players)
+					}
+					randInt := rand.Intn(randFixedNum)
 					if randInt == 0 {
 						info = "发现本局 {没有外来者}\n"
 					} else if randInt%2 == 1 {
