@@ -116,7 +116,7 @@
     + 开始游戏 /startGame/:roomId
         + 功能：改变房间state
         + 输入：无
-        + 输出：无
+        + 输出："ok" or null
 + 游戏中页
     + 加载游戏 /game/:roomId
         + 功能：根据人数，分配身份；夜晚读秒

@@ -513,7 +513,7 @@ func cast(mux *sync.Mutex, game *model.Room, playerId string, targets []string) 
 			case Ravenkeeper:
 				for _, player := range game.Players {
 					if targets[0] == player.Id {
-						info := fmt.Sprintf(" 对 [%s] 进行了反向通灵，如果你没死，则技能无效！", player.Name)
+						info := fmt.Sprintf(" 对 [%s] 进行了反向通灵，如果施法者没死，则技能无效！", player.Name)
 						msgPlayer += info
 						msgAll += info
 						break

@@ -9,16 +9,11 @@ function Room() {
     const [room, setRoom] = useState(null)
 
     useEffect(() => {
-        loadRoom()
         setTimeout(() => {
-            if (room && room.status === "游戏中") {
-                navigate(`/game/${roomId}`, {
-                    replace: true,
-                    state: `/game/${roomId}`,
-                })
-            }
+            loadRoom()
+            checkToStartGame()
         }, 100)
-    }, [])
+    }, [room])
     const loadRoom = () => {
         const socket = new WebSocket(`ws://192.168.1.14:8080/room/${roomId}`)
         socket.onopen = function() {
@@ -30,6 +25,24 @@ function Room() {
         }
         socket.onerror = function(error) {
             console.error("WebSocket error:", error)
+        }
+    }
+
+    const checkToStartGame = () => {
+        if (room) {
+            switch (room.status) {
+            case "游戏中":
+                jumpToGame()
+                break
+            case "复盘中":
+                console.log("处于复盘中")
+                break
+            case "等待开始":
+                console.log("等待开始")
+                break
+            default:
+                console.log("等待开始")
+            }
         }
     }
 
@@ -71,12 +84,15 @@ function Room() {
         })
     }
 
-    const startGame = () => {
-        // if (room.players.length >= 5) {
+    const jumpToGame = () => {
         navigate(`/game/${roomId}`, {
             replace: true,
             state: `/game/${roomId}`,
         })
+    }
+
+    const startGame = () => {
+        // if (room.players.length >= 5) {
         const socket = new WebSocket(`ws://192.168.1.14:8080/startGame/${roomId}`)
         socket.onopen = function() {
             let playerInfo = {

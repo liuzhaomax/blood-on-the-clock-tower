@@ -21,7 +21,7 @@ func GetConfig() *Config {
 
 type Config struct {
 	Rooms    []Room
-	ConnPool map[string]*websocket.Conn // 游戏中玩家的长连接
+	ConnPool map[string]*websocket.Conn // 游戏中玩家的长连接 [playId]conn
 }
 
 type Room struct {
@@ -36,7 +36,7 @@ type Room struct {
 	Players  []Player  `json:"players"`
 	State    GameState `json:"state"` // 游戏中各身份状态
 	// 技能施放池，存储所有施放技能人，当前阶段施放的技能作用目标
-	CastPool map[string][]string `json:"castPool"`
+	CastPool map[string][]string `json:"castPool"` // [playId][]targetId{}
 }
 
 type GameState struct {
@@ -50,11 +50,12 @@ type Player struct {
 	Id            string      `json:"id"`
 	Name          string      `json:"name"`
 	Index         int         `json:"index"`
+	Waiting       bool        `json:"waiting"`
 	Character     string      `json:"character"`
 	CharacterType string      `json:"characterType"`
 	State         PlayerState `json:"state"`
-	Log           string      `json:"log"`
 	Ready         PlayerReady `json:"ready"`
+	Log           string      `json:"log"`
 }
 
 type PlayerState struct {

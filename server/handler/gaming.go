@@ -48,11 +48,6 @@ func LoadGame(w http.ResponseWriter, r *http.Request) {
 		cfg.Rooms[roomIndex].Init = true
 		cfg.Rooms[roomIndex].Result = ""
 		cfg.Rooms[roomIndex].Log = ""
-		// 分配身份
-		var replaceDrunk string
-		if cfg.Rooms[roomIndex].Players[0].Character == "" {
-			cfg.Rooms[roomIndex].Players, replaceDrunk = allocateCharacter(cfg.Rooms[roomIndex].Players)
-		}
 		// 初始化玩家状态 防止非法返回房间引起bug
 		for i, player := range room.Players {
 			newPlayer := model.Player{}
@@ -60,6 +55,11 @@ func LoadGame(w http.ResponseWriter, r *http.Request) {
 			newPlayer.Name = player.Name
 			newPlayer.Index = player.Index
 			room.Players[i] = newPlayer
+		}
+		// 分配身份
+		var replaceDrunk string
+		if cfg.Rooms[roomIndex].Players[0].Character == "" {
+			cfg.Rooms[roomIndex].Players, replaceDrunk = allocateCharacter(cfg.Rooms[roomIndex].Players)
 		}
 		// 初始化玩家状态 依赖身份
 		cfg.Rooms[roomIndex].Players = initStatus(cfg.Rooms[roomIndex].Players, replaceDrunk)
@@ -212,6 +212,7 @@ func allocateCharacter(players []model.Player) ([]model.Player, string) {
 		newPlayer.Id = players[i].Id
 		newPlayer.Name = players[i].Name
 		newPlayer.Index = i
+		newPlayer.Waiting = false
 		newPlayer.Character = characterPoolForSelection[i]
 		newPlayer.CharacterType = characterTypePoolForSelection[i]
 		newPlayers = append(newPlayers, newPlayer)

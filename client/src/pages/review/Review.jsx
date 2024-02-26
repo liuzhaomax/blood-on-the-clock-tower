@@ -9,16 +9,13 @@ function Review() {
 
     const [game, setGame] = useState(null)
     useEffect(() => {
-        loadGame()
         setTimeout(() => {
+            loadGame()
             if (game && game.status === "等待开始") {
-                navigate(`/room/${roomId}`, {
-                    replace: true,
-                    state: `/room/${roomId}`,
-                })
+                jumpToRoom()
             }
         }, 100)
-    }, [])
+    }, [game])
     const loadGame = () => {
         const socket = new WebSocket(`ws://192.168.1.14:8080/review/${roomId}`)
         socket.onopen = function() {

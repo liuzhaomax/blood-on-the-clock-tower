@@ -221,6 +221,9 @@ function Gaming() {
                     if (!seat.classList.contains("highlight-dead")) {
                         seat.classList.add("highlight-dead")
                     }
+                    if (seat.classList.contains("seat-selected")) {
+                        seat.classList.remove("seat-selected")
+                    }
                 }
             }
         }
@@ -328,6 +331,8 @@ function Gaming() {
     const [iconSunMoon, setIconSunMoon] = useState(true)
     const toggleSunMoon = () => {
         if (game && game.state.night === true) {
+            // 重置选择的玩家
+            resetSelectedPlayers()
             if (iconSunMoon) {
                 setIconSunMoon(false)
                 document.getElementById("GAMING").style.backgroundColor = "#35557EFF"
@@ -357,8 +362,6 @@ function Gaming() {
     // 日夜切换按钮
     const toggleNight = () => {
         if (checkReadyToToggleNight()) {
-            // 重置选择的玩家
-            resetSelectedPlayers()
             // 锁定与结算过程
             process(game.state.stage+1)
         } else {
@@ -876,10 +879,16 @@ function Gaming() {
                             && game.players[i].character !== "管家") {
                             open = true
                         }
-                        if ((game.players[i].character === "小恶魔" || game.players[i].character === "僧侣") && firstNight) {
+                        if ((game.players[i].character === "小恶魔"
+                                || game.players[i].character === "僧侣"
+                                || game.players[i].character === "守鸦人")
+                            && firstNight) {
                             open = true
                         }
-                        if ((game.players[i].character === "小恶魔" || game.players[i].character === "僧侣") && !firstNight) {
+                        if ((game.players[i].character === "小恶魔"
+                                || game.players[i].character === "僧侣"
+                                || game.players[i].character === "守鸦人")
+                            && !firstNight) {
                             open = false
                         }
                         if (open) {

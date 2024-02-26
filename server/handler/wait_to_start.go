@@ -151,5 +151,17 @@ func StartGame(w http.ResponseWriter, r *http.Request) {
 	defer cfgMutex.Unlock()
 	cfg := model.GetConfig()
 	_, roomIndex := findRoom(roomId)
-	cfg.Rooms[roomIndex].Status = "游戏中"
+
+	goodToStart := true
+	for _, player := range cfg.Rooms[roomIndex].Players {
+		goodToStart = goodToStart && player.Waiting
+	}
+	if goodToStart {
+		cfg.Rooms[roomIndex].Status = "游戏中"
+		cfg.Rooms[roomIndex].Init = false
+		cfg.Rooms[roomIndex].Result = ""
+		cfg.Rooms[roomIndex].Log = ""
+		cfg.Rooms[roomIndex].CastPool = map[string][]string{}
+		cfg.Rooms[roomIndex].State = model.GameState{}
+	}
 }

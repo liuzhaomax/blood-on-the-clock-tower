@@ -14,7 +14,9 @@ function Home() {
     const [roomList, setRoomList] = useState(null)
 
     useEffect(() => {
-        loadRoomList()
+        setTimeout(() => {
+            loadRoomList()
+        }, 100)
     }, [roomList])
     const navigate = useNavigate()
     const jump = roomId => {
@@ -63,6 +65,7 @@ function Home() {
         let player = {}
         player.id = localStorage.getItem("PlayerID")
         player.name = playerName
+        player.waiting = true
         let roomInfo = {
             id: roomId,
             name: roomName,
@@ -102,6 +105,7 @@ function Home() {
         let playerInfo = {
             id: localStorage.getItem("PlayerID"),
             name: playerName,
+            waiting: true,
         }
         const socket = new WebSocket(`ws://192.168.1.14:8080/joinRoom/${roomId}/${roomPassword}`)
         socket.onopen = function() {

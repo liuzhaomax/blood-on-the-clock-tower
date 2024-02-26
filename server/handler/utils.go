@@ -22,7 +22,7 @@ func findRoom(roomId string) (*model.Room, int) {
 	cfg := model.GetConfig()
 	for i, room := range cfg.Rooms {
 		if room.Id == roomId {
-			return &room, i
+			return &cfg.Rooms[i], i
 		}
 	}
 	return nil, 0
