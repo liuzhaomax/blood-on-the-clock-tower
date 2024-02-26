@@ -692,11 +692,20 @@ func checkoutNight(mux *sync.Mutex, game *model.Room, executed *model.Player) {
 							break
 						}
 					}
+					// 生成伪村民身份名
+					fakeCharacter := player.Character
+					for {
+						randInt := rand.Intn(len(TownsfolkPool))
+						if fakeCharacter != TownsfolkPool[randInt] {
+							realFolk.Character = TownsfolkPool[randInt]
+							break
+						}
+					}
 				}
 				// 拼接日志
 				msgAll += fmt.Sprintf("[%s] ", player.Name)
 				var info string
-				randInt := rand.Intn(2)
+				randInt := rand.Intn(2) // 随机顺序
 				if randInt == 0 {
 					info = fmt.Sprintf("发现 [%s] 和 [%s] 其中一个是 {%s}\n", realFolk.Name, other.Name, realFolk.Character)
 				} else {
@@ -747,19 +756,23 @@ func checkoutNight(mux *sync.Mutex, game *model.Room, executed *model.Player) {
 					}
 				} else {
 					// 生成伪信息
-					var hasOutsider bool
 					randInt := rand.Intn(len(game.Players))
 					if game.Players[randInt].Id != player.Id {
 						realOutsider = game.Players[randInt]
-						hasOutsider = true
 					}
-					if hasOutsider {
-						for {
-							randInt := rand.Intn(len(game.Players))
-							if game.Players[randInt].Id != realOutsider.Id && game.Players[randInt].Id != player.Id {
-								other = game.Players[randInt]
-								break
-							}
+					for {
+						randInt := rand.Intn(len(game.Players))
+						if game.Players[randInt].Id != realOutsider.Id && game.Players[randInt].Id != player.Id {
+							other = game.Players[randInt]
+							break
+						}
+					}
+					// 生成伪外来者身份名
+					for {
+						randInt := rand.Intn(len(OutsidersPool))
+						if OutsidersPool[randInt] != Drunk {
+							realOutsider.Character = OutsidersPool[randInt]
+							break
 						}
 					}
 				}
@@ -769,8 +782,10 @@ func checkoutNight(mux *sync.Mutex, game *model.Room, executed *model.Player) {
 				if reflect.ValueOf(realOutsider).IsZero() {
 					info = "发现本局 {没有外来者}\n"
 				} else {
-					randInt := rand.Intn(2)
+					randInt := rand.Intn(11)
 					if randInt == 0 {
+						info = "发现本局 {没有外来者}\n"
+					} else if randInt%2 == 1 {
 						info = fmt.Sprintf("发现 [%s] 和 [%s] 其中一个是 {%s}\n", realOutsider.Name, other.Name, realOutsider.Character)
 					} else {
 						info = fmt.Sprintf("发现 [%s] 和 [%s] 其中一个是 {%s}\n", other.Name, realOutsider.Name, realOutsider.Character)
@@ -825,6 +840,12 @@ func checkoutNight(mux *sync.Mutex, game *model.Room, executed *model.Player) {
 							other = game.Players[randInt]
 							break
 						}
+					}
+					// 生成伪爪牙身份名
+					randInt := rand.Intn(len(MinionsPool))
+					if MinionsPool[randInt] != Drunk {
+						realMinion.Character = MinionsPool[randInt]
+						break
 					}
 				}
 				// 拼接日志
@@ -954,24 +975,26 @@ func checkoutNight(mux *sync.Mutex, game *model.Room, executed *model.Player) {
 				}
 			// 给间谍提供信息
 			case Spy:
-				// 拼接日志
-				msgAll += fmt.Sprintf("[%s] 是间谍，知晓所有身份\n", player.Name)
-				var info string
-				info += "知晓所有身份：\n"
-				for _, player := range game.Players {
-					info += fmt.Sprintf("玩家 [%s] 的身份是 {%s}\n", player.Name, player.Character)
-				}
-				msgPlayer += info
-				game.Players[i].Log += msgPlayer
-				game.Log += msgAll
-				// 发送日志
-				for id, conn := range cfg.ConnPool {
-					if id == player.Id {
-						if err := conn.WriteMessage(websocket.TextMessage, []byte(msgPlayer)); err != nil {
-							log.Println("Write error:", err)
-							return
+				if !player.State.Poisoned || player.State.Protected {
+					// 拼接日志
+					msgAll += fmt.Sprintf("[%s] 是间谍，知晓所有身份\n", player.Name)
+					var info string
+					info += "知晓所有身份：\n"
+					for _, player := range game.Players {
+						info += fmt.Sprintf("玩家 [%s] 的身份是 {%s}\n", player.Name, player.Character)
+					}
+					msgPlayer += info
+					game.Players[i].Log += msgPlayer
+					game.Log += msgAll
+					// 发送日志
+					for id, conn := range cfg.ConnPool {
+						if id == player.Id {
+							if err := conn.WriteMessage(websocket.TextMessage, []byte(msgPlayer)); err != nil {
+								log.Println("Write error:", err)
+								return
+							}
+							break
 						}
-						break
 					}
 				}
 			}
@@ -1247,7 +1270,7 @@ func checkoutNight(mux *sync.Mutex, game *model.Room, executed *model.Player) {
 			msgPlayer = "您"
 			msgAll = ""
 			var hasDemon = "无"
-			if !fromPlayer.State.Drunk && !fromPlayer.State.Poisoned {
+			if !fromPlayer.State.Drunk && (!fromPlayer.State.Poisoned || fromPlayer.State.Protected) {
 				if game.Players[toPlayerIndexSlice[0]].State.Demon || game.Players[toPlayerIndexSlice[1]].State.Demon {
 					hasDemon = "有"
 				}
@@ -1281,7 +1304,7 @@ func checkoutNight(mux *sync.Mutex, game *model.Room, executed *model.Player) {
 	}
 	// 给管家提供信息
 	for fromPlayer, toPlayerIndexSlice := range castPoolObj {
-		if fromPlayer.Character == Butler && !fromPlayer.State.Poisoned && !fromPlayer.State.Dead {
+		if fromPlayer.Character == Butler && (!fromPlayer.State.Poisoned || fromPlayer.State.Protected) && !fromPlayer.State.Dead {
 			game.Players[toPlayerIndexSlice[0]].State.Master = true
 			game.Players[toPlayerIndexSlice[0]].Ready.Vote += 1
 			msgPlayer = "您"
