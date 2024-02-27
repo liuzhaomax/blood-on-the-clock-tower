@@ -79,7 +79,7 @@ func Gaming(w http.ResponseWriter, r *http.Request) {
 			}
 		case "checkout_day":
 			if playerId == game.Host {
-				checkoutDay(mux, game)
+				checkoutDay(mux, game, executed)
 			}
 		case "end_voting":
 			if playerId == game.Host {
@@ -1441,11 +1441,11 @@ func checkoutNight(mux *sync.Mutex, game *model.Room, executed *model.Player) {
 	checkout(game, nil) // 这里不要传入executed，因为晚上不处决人，晚上可能死圣徒
 }
 
-func checkoutDay(mux *sync.Mutex, game *model.Room) {
+func checkoutDay(mux *sync.Mutex, game *model.Room, executed *model.Player) {
 	mux.Lock()
 	defer mux.Unlock()
 	// 结算本局
-	checkout(game, nil)
+	checkout(game, executed)
 }
 
 // checkout 结算本局
@@ -1489,6 +1489,24 @@ func checkout(game *model.Room, executed *model.Player) {
 			mayorAlive = true
 		}
 	}
+	// 平民胜利条件1（恶魔受不了了自杀情况）
+	if realDemonCount == 0 {
+		msg += "达成平民胜利条件一：恶魔被铲除\n"
+		msg += "本局结束，平民胜利\n"
+		game.Result = "平民阵营胜利"
+	}
+	// 平民胜利条件2
+	if aliveCount == 3 && !game.State.Night && mayorAlive && executed == nil {
+		msg += "达成平民胜利条件二：白天剩三人，其中一个是市长，且当日无人被处决\n"
+		msg += "本局结束，平民胜利\n"
+		game.Result = "平民阵营胜利"
+	}
+	// 邪恶胜利条件4
+	if executed != nil && executed.Character == Saint {
+		msg += "达成邪恶胜利条件四：圣徒被投票处决\n"
+		msg += "本局结束，邪恶胜利\n"
+		game.Result = "邪恶阵营胜利"
+	}
 	// 邪恶胜利条件1
 	if !hasSlayerBullet && canNominate == 0 {
 		msg += "达成邪恶胜利条件一：场上没人可以提名，且没有杀手或有杀手没有子弹\n"
@@ -1507,24 +1525,6 @@ func checkout(game *model.Room, executed *model.Player) {
 		msg += "达成邪恶胜利条件三：平民阵营被屠城\n"
 		msg += "本局结束，邪恶胜利\n"
 		game.Result = "邪恶阵营胜利"
-	}
-	// 邪恶胜利条件4
-	if executed != nil && executed.Character == Saint {
-		msg += "达成邪恶胜利条件四：圣徒被投票处决\n"
-		msg += "本局结束，邪恶胜利\n"
-		game.Result = "邪恶阵营胜利"
-	}
-	// 平民胜利条件1（恶魔受不了了自杀情况）
-	if realDemonCount == 0 {
-		msg += "达成平民胜利条件一：恶魔被铲除\n"
-		msg += "本局结束，平民胜利\n"
-		game.Result = "平民阵营胜利"
-	}
-	// 平民胜利条件2
-	if aliveCount == 3 && !game.State.Night && mayorAlive && executed == nil {
-		msg += "达成平民胜利条件二：白天剩三人，其中一个是市长，且当日无人被处决\n"
-		msg += "本局结束，平民胜利\n"
-		game.Result = "平民阵营胜利"
 	}
 	// 拼接日志
 	for i := range game.Players {

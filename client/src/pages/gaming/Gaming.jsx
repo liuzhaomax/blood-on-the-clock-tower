@@ -1,6 +1,6 @@
 import {useNavigate, useParams} from "react-router-dom"
-import {Button, Modal, Switch, notification} from "antd"
-import {FireOutlined, RollbackOutlined, SmileFilled, SmileOutlined, StopOutlined} from "@ant-design/icons"
+import {Button, Modal, Switch, notification, Drawer} from "antd"
+import {FireOutlined, RollbackOutlined, SmileFilled, SmileOutlined, StopOutlined, ReadOutlined} from "@ant-design/icons"
 import React, {useEffect, useState, useMemo} from "react"
 import "./Gaming.css"
 import {remove} from "../../utils/array"
@@ -9,6 +9,7 @@ import dayImg from "../../assets/images/bg/day.png"
 import nightImg from "../../assets/images/bg/night.png"
 import "../../utils/captcha/captcha.css"
 import {startCaptcha} from "../../utils/captcha/captcha.js"
+import Instruction from "./Instruction"
 
 const Context = React.createContext({
     name: "Default",
@@ -205,8 +206,7 @@ function Gaming() {
         // 守鸦人可以验死人，占卜可以验死人
         let me = getMe(game)
         if (!event.target.classList.contains("highlight-dead")
-            || (me.character === "守鸦人" && event.target.classList.contains("highlight-dead"))
-            || (me.character === "占卜师" && event.target.classList.contains("highlight-dead"))
+            || me.character === "守鸦人" || me.character === "占卜师"
         ) {
             let selectedPlayersCopy = selectedPlayers.slice()
             if (event.target.classList.contains("seat-selected")) {
@@ -237,8 +237,14 @@ function Gaming() {
                     let seat = document.getElementById(game.players[i].id)
                     if (!seat.classList.contains("highlight-dead")) {
                         seat.classList.add("highlight-dead")
+                        seat.classList.add("highlight-dead-cant-be-selected")
                     }
-                    if (me.character !== "守鸦人" && seat.classList.contains("seat-selected")) {
+                    if ((me.character === "守鸦人" || me.character === "占卜师")
+                        && seat.classList.contains("highlight-dead-cant-be-selected")) {
+                        seat.classList.remove("highlight-dead-cant-be-selected")
+                    }
+                    if (!(me.character === "守鸦人" || me.character === "占卜师")
+                        && seat.classList.contains("seat-selected")) {
                         seat.classList.remove("seat-selected")
                     }
                 }
@@ -364,7 +370,7 @@ function Gaming() {
     const [api, contextHolder] = notification.useNotification()
     const openNotification = (placement) => {
         api.info({
-            message: "防连击保护机制",
+            message: "防连击保护",
             description: <Context.Consumer>{({ name }) => `不好意思, ${name}!`}</Context.Consumer>,
             placement,
         })
@@ -905,12 +911,22 @@ function Gaming() {
     }
     // TODO 测试代码 结束
 
+    // 游戏说明
+    const [open, setOpen] = useState(false)
+    const showDrawer = () => {
+        setOpen(true)
+    }
+    const onClose = () => {
+        setOpen(false)
+    }
+
     return (
         <div id="GAMING" className="GAMING" style={{backgroundImage: `url(${bgImg})`}}>
             <div className="layout west">
                 <div className="layout north">
                     <Button className="btn small-btn" onClick={returnRoom}><RollbackOutlined /></Button>
                     <Switch className="switch" checkedChildren="显示身份" unCheckedChildren="隐藏身份" defaultChecked onChange={checkSwitch} />
+                    <Button className="btn small-btn" onClick={showDrawer}><ReadOutlined /></Button>
                     { game && game.host === localStorage.getItem("PlayerID")
                         ?
                         <>
@@ -965,6 +981,16 @@ function Gaming() {
                     }
                 </div>
             </Modal>
+            <Drawer
+                title="游戏说明书"
+                placement="top"
+                closable={false}
+                onClose={onClose}
+                open={open}
+                key="top"
+            >
+                <Instruction/>
+            </Drawer>
         </div>
     )
 }

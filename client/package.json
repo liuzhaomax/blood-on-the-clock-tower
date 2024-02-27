@@ -36,6 +36,7 @@
     "jest-watch-typeahead": "^1.0.0",
     "less": "^4.1.3",
     "less-loader": "^11.0.0",
+    "marked": "^12.0.0",
     "mini-css-extract-plugin": "^2.4.5",
     "postcss": "^8.4.4",
     "postcss-flexbugs-fixes": "^5.0.2",

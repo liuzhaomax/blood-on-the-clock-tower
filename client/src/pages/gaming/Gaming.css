@@ -258,6 +258,9 @@
 
 #GAMING .highlight-dead {
     text-decoration: line-through;
+}
+
+#GAMING .highlight-dead-cant-be-selected {
     background-color: gray;
     color: black;
 }
