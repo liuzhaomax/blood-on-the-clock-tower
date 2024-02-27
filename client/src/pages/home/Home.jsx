@@ -124,7 +124,7 @@ function Home() {
     return (
         <div id={HOME.KEY} className={HOME.KEY}>
             <Flex className="layout" wrap="wrap">
-                <Button className="btn" onClick={showDrawer}>创建房间</Button>
+                <Button className="btn-main" onClick={showDrawer}>创建房间</Button>
             </Flex>
             <div className="layout">
                 { roomList ?
