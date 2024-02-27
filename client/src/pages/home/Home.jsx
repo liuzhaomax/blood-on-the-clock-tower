@@ -5,6 +5,8 @@ import { HOME } from "../../config/cstModule"
 import { Button, Flex, List, Avatar, Drawer, Space, Input } from "antd"
 import {genShortUUID} from "../../utils/uuid"
 import { useNavigate } from "react-router-dom"
+import {blood} from "../../utils/blood/blood"
+import {sleep} from "../../utils/time"
 
 if (localStorage.getItem("PlayerID") === null) {
     localStorage.setItem("PlayerID", genShortUUID())
@@ -120,9 +122,23 @@ function Home() {
             console.error("WebSocket error:", error)
         }
     }
+
+    useEffect(() => {
+        blood()
+        hideGif("Bat-gif", 3000)
+    }, [])
+    const hideGif = async (id, ms) => {
+        let gif = document.getElementById(id)
+        await sleep(ms)
+        gif.classList.add("hidden")
+    }
     
     return (
         <div id={HOME.KEY} className={HOME.KEY}>
+            <div id="Title-wrap">
+                <div id="Title">血染钟楼</div>
+            </div>
+            <img id="Bat-gif" src={process.env.PUBLIC_URL + "/video/bat.gif"} alt="Example GIF"/>
             <Flex className="layout" wrap="wrap">
                 <Button className="btn-main" onClick={showDrawer}>创建房间</Button>
             </Flex>
