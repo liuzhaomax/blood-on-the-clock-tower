@@ -52,7 +52,7 @@
 /*胜利提示*/
 #REVIEW .central div {
     font-size: 50px;
-    font-family: STHupo, "Cooper Black", -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    font-family: STHupo, "Cooper Black", sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
     height: 80px;
