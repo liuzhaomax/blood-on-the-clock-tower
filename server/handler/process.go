@@ -639,6 +639,7 @@ func cast(mux *sync.Mutex, game *model.Room, playerId string, targets []string) 
 	}
 }
 
+// 执行有顺序性，不可修改执行顺序
 func checkoutNight(mux *sync.Mutex, game *model.Room, executed *model.Player) {
 	cfg := model.GetConfig()
 	mux.Lock()
@@ -677,6 +678,21 @@ func checkoutNight(mux *sync.Mutex, game *model.Room, executed *model.Player) {
 				game.Players[toPlayerIndexSlice[0]].State.RegardedAs = Recluse
 				if game.Players[toPlayerIndexSlice[0]].State.RegardedAsSaved == Imp {
 					game.Players[toPlayerIndexSlice[0]].State.Demon = false
+					// 判断隐士是否是占卜认定的恶魔
+					var demonQuantity = 0
+					var hasFortuneTeller = false
+					for _, player := range game.Players {
+						if player.State.Demon {
+							demonQuantity += 1
+						}
+						if player.Character == FortuneTeller {
+							hasFortuneTeller = true
+						}
+					}
+					// 如果他是，那他demon还是true
+					if hasFortuneTeller && demonQuantity == 2 {
+						game.Players[toPlayerIndexSlice[0]].State.Demon = true
+					}
 				}
 			}
 			// 判断间谍被毒是邪恶
@@ -1063,33 +1079,12 @@ func checkoutNight(mux *sync.Mutex, game *model.Room, executed *model.Player) {
 		}
 		// 必死人局面
 		if fromPlayer.Character == Imp && !fromPlayer.State.Poisoned {
-			// 判断刀市长
-			if game.Players[toPlayerIndexSlice[0]].Character == Mayor &&
-				!game.Players[toPlayerIndexSlice[0]].State.Poisoned &&
-				!game.Players[toPlayerIndexSlice[0]].State.Drunk {
-				aliveCount := 0
-				for _, player := range game.Players {
-					if !player.State.Dead {
-						aliveCount += 1
-					}
+			// 死人状态改变在这个域的最后
+			// 刀下毒者
+			if game.Players[toPlayerIndexSlice[0]].Character == Poisoner {
+				for i := range game.Players {
+					game.Players[i].State.Poisoned = false
 				}
-				for {
-					randInt := rand.Intn(aliveCount)
-					if !game.Players[randInt].State.Dead &&
-						game.Players[randInt].CharacterType != Demons {
-						// 死的是除了恶魔的其他任意一人
-						game.Players[randInt].State.Dead = true
-						killed = &game.Players[randInt]
-						break
-					}
-				}
-				break
-			} else {
-				// 死的人
-				game.Players[toPlayerIndexSlice[0]].State.Dead = true
-				game.Players[toPlayerIndexSlice[0]].Ready.Nominate = false
-				game.Players[toPlayerIndexSlice[0]].Ready.Nominated = false
-				killed = &game.Players[toPlayerIndexSlice[0]]
 			}
 			// 自刀
 			if game.Players[toPlayerIndexSlice[0]].Character == Imp {
@@ -1140,6 +1135,12 @@ func checkoutNight(mux *sync.Mutex, game *model.Room, executed *model.Player) {
 					minionsAlive[randInt].Character = Imp
 					minionsAlive[randInt].State.Evil = true
 					minionsAlive[randInt].State.Demon = true
+					// 下毒转变为恶魔，当夜技能失效
+					if minionsAlive[randInt].Character == Poisoner {
+						for i := range game.Players {
+							game.Players[i].State.Poisoned = false
+						}
+					}
 					// 拼接日志
 					info := fmt.Sprintf("已变为小恶魔\n")
 					msgPlayer += info
@@ -1158,6 +1159,33 @@ func checkoutNight(mux *sync.Mutex, game *model.Room, executed *model.Player) {
 					}
 				}
 			}
+			// 判断刀市长
+			if game.Players[toPlayerIndexSlice[0]].Character == Mayor &&
+				!game.Players[toPlayerIndexSlice[0]].State.Poisoned &&
+				!game.Players[toPlayerIndexSlice[0]].State.Drunk {
+				aliveCount := 0
+				for _, player := range game.Players {
+					if !player.State.Dead {
+						aliveCount += 1
+					}
+				}
+				for {
+					randInt := rand.Intn(aliveCount)
+					if !game.Players[randInt].State.Dead &&
+						game.Players[randInt].CharacterType != Demons {
+						// 死的是除了恶魔的其他任意一人
+						game.Players[randInt].State.Dead = true
+						killed = &game.Players[randInt]
+						break
+					}
+				}
+				break
+			}
+			// 死的人
+			game.Players[toPlayerIndexSlice[0]].State.Dead = true
+			game.Players[toPlayerIndexSlice[0]].Ready.Nominate = false
+			game.Players[toPlayerIndexSlice[0]].Ready.Nominated = false
+			killed = &game.Players[toPlayerIndexSlice[0]]
 			break
 		}
 	}
@@ -1174,7 +1202,7 @@ func checkoutNight(mux *sync.Mutex, game *model.Room, executed *model.Player) {
 					break
 				}
 				// 不是酒鬼，没被毒或被守护，死的正是守鸦人自己
-				if !player.State.Drunk && (!player.State.Poisoned || player.State.Protected) &&
+				if !player.State.Drunk && !player.State.Poisoned &&
 					player.Id == killed.Id {
 					for fromPlayer, toPlayerIndexSlice := range castPoolObj {
 						if fromPlayer.Id == player.Id {
@@ -1210,7 +1238,7 @@ func checkoutNight(mux *sync.Mutex, game *model.Room, executed *model.Player) {
 			case Empath:
 				if !player.State.Dead { // 当晚死亡得不到信息
 					evilQuantity := 0 // 记录左右邪恶玩家数量
-					if !player.State.Drunk && (!player.State.Poisoned || player.State.Protected) && !player.State.Dead {
+					if !player.State.Drunk && !player.State.Poisoned && !player.State.Dead {
 						// 生成连座信息
 						var left int
 						var right int
@@ -1280,7 +1308,7 @@ func checkoutNight(mux *sync.Mutex, game *model.Room, executed *model.Player) {
 						msgAll += info
 					} else {
 						var executedPlayer *model.Player
-						if !player.State.Drunk && (!player.State.Poisoned || player.State.Protected) {
+						if !player.State.Drunk && !player.State.Poisoned {
 							// 生成死亡玩家身份信息
 							executedPlayer = executed
 						} else {
@@ -1328,7 +1356,7 @@ func checkoutNight(mux *sync.Mutex, game *model.Room, executed *model.Player) {
 			msgPlayer = "您"
 			msgAll = ""
 			var hasDemon = "无"
-			if !fromPlayer.State.Drunk && (!fromPlayer.State.Poisoned || fromPlayer.State.Protected) {
+			if !fromPlayer.State.Drunk && !fromPlayer.State.Poisoned {
 				if game.Players[toPlayerIndexSlice[0]].State.Demon || game.Players[toPlayerIndexSlice[1]].State.Demon {
 					hasDemon = "有"
 				}
@@ -1362,9 +1390,10 @@ func checkoutNight(mux *sync.Mutex, game *model.Room, executed *model.Player) {
 	}
 	// 给管家提供信息
 	for fromPlayer, toPlayerIndexSlice := range castPoolObj {
-		if fromPlayer.Character == Butler && (!fromPlayer.State.Poisoned || fromPlayer.State.Protected) && !fromPlayer.State.Dead {
-			game.Players[toPlayerIndexSlice[0]].State.Master = true
-			game.Players[toPlayerIndexSlice[0]].Ready.Vote += 1
+		if fromPlayer.Character == Butler && !fromPlayer.State.Dead {
+			if !fromPlayer.State.Poisoned {
+				game.Players[toPlayerIndexSlice[0]].State.Master = true
+			}
 			msgPlayer = "您"
 			msgAll = ""
 			// 拼接日志

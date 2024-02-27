@@ -202,10 +202,11 @@ function Gaming() {
     const [selectedPlayers, setSelectedPlayers] = useState([])
     const selectPlayer = (event) => {
         event.preventDefault()
-        // 守鸦人可以继续选人
+        // 守鸦人可以验死人，占卜可以验死人
         let me = getMe(game)
         if (!event.target.classList.contains("highlight-dead")
             || (me.character === "守鸦人" && event.target.classList.contains("highlight-dead"))
+            || (me.character === "占卜师" && event.target.classList.contains("highlight-dead"))
         ) {
             let selectedPlayersCopy = selectedPlayers.slice()
             if (event.target.classList.contains("seat-selected")) {
