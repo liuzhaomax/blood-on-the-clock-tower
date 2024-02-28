@@ -18,7 +18,7 @@ function Home() {
     useEffect(() => {
         setTimeout(() => {
             loadRoomList()
-        }, 100)
+        }, 500)
     }, [roomList])
     const navigate = useNavigate()
     const jump = roomId => {
@@ -49,7 +49,7 @@ function Home() {
     const loadRoomList = () => {
         const socket = new WebSocket("ws://192.168.1.14:8080/home")
         socket.onopen = function() {
-            socket.send("list rooms")
+            socket.send("list_rooms")
         }
         socket.onmessage = function(event) {
             // console.log("Received message from server:", JSON.parse(event.data))
