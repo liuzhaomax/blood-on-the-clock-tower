@@ -40,19 +40,21 @@ export const blood = async () => {
         new Blood(100, 68, 1, 1.3),
         new Blood(115, 40, 0.8, 0.8),
         new Blood(135, 75, 1, 1.3),
-        new Blood(160, 69, 1.5, 1.9),
+        new Blood(160, 62, 1.5, 1.9),
         // 钟
-        new Blood(182, 56, 0.8, 0.9),
-        new Blood(200, 75, 1, 1.4),
-        new Blood(220, 60, 0.7, 0.8),
-        new Blood(230, 85, 1, 1.1),
-        new Blood(250, 45, 1.3, 0.9),
+        new Blood(182, 50, 0.8, 0.9),
+        new Blood(203, 72, 1, 1.4),
+        new Blood(220, 55, 0.7, 0.8),
+        new Blood(230, 82, 1, 1.1),
+        new Blood(250, 40, 1.3, 0.9),
         // 楼
-        new Blood(265, 72, 1.3, 0.7),
-        new Blood(280, 85, 1.2, 1.3),
-        new Blood(300, 85, 0.8, 1),
-        new Blood(334, 68, 1.8, 1.2),
+        new Blood(268, 72, 1.3, 0.7),
+        new Blood(280, 82, 1.2, 1.3),
+        new Blood(300, 80, 0.8, 1),
+        new Blood(334, 62, 1.8, 1.2),
     ]
+
+    let stop = false
 
     var loop = async () => {
         // ctx.fillStyle = "rgba(0,0,0,0.005)"
@@ -71,6 +73,7 @@ export const blood = async () => {
             bloodDrops[i].opacity -= 0.006 // 透明度降低速度
             bloodDrops[i].r -= 0.005 // 半径减小
             if (bloodDrops[i].r <= 0) {
+                stop = true
                 break
             }
             if (Math.random() > 0.5) bloodDrops[i].cy += bloodDrops[i].speed
@@ -83,8 +86,9 @@ export const blood = async () => {
             bloodDrops[i].draw()
 
         }
-
-        requestAnimationFrame(loop)
+        if (!stop) {
+            requestAnimationFrame(loop)
+        }
         // if (!canvas.classList.contains("bottom-line")) {
         //     await sleep(2000)
         //     canvas.classList.add("bottom-line")
