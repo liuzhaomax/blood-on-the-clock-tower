@@ -283,5 +283,5 @@
 }
 
 #GAMING .gif-visible {
-    display: block;
+    display: block !important;
 }
