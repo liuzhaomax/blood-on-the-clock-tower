@@ -64,9 +64,53 @@ func LoadGame(w http.ResponseWriter, r *http.Request) {
 		// 初始化玩家状态 依赖身份
 		cfg.Rooms[roomIndex].Players = initStatus(cfg.Rooms[roomIndex].Players, replaceDrunk)
 		// 保存玩家身份到总日志
+		var hasFortuneTeller bool
+		var hasRecluse bool
 		cfg.Rooms[roomIndex].Log = "本局配置：\n"
 		for _, player := range cfg.Rooms[roomIndex].Players {
-			cfg.Rooms[roomIndex].Log += fmt.Sprintf("玩家 [%s] 的身份是 {%s} ~\n", player.Name, player.Character)
+			cfg.Rooms[roomIndex].Log += fmt.Sprintf("玩家 [%s] 的身份是 {%s} \n", player.Name, player.Character)
+			if player.State.Drunk {
+				cfg.Rooms[roomIndex].Log += fmt.Sprintf("玩家 [%s] 的身份其实是 {%s} ~\n", player.Name, Drunk)
+			}
+			if player.Character == Recluse {
+				cfg.Rooms[roomIndex].Log += fmt.Sprintf("玩家 [%s] 的被当作的身份是 {%s} ~\n", player.Name, player.State.RegardedAs)
+				hasRecluse = true
+			}
+			if player.Character == FortuneTeller {
+				hasFortuneTeller = true
+			}
+		}
+		if hasFortuneTeller && !hasRecluse {
+			for _, player := range cfg.Rooms[roomIndex].Players {
+				if player.State.Demon && player.CharacterType != Demons {
+					cfg.Rooms[roomIndex].Log += fmt.Sprintf("玩家 [%s] 是占卜师认定的恶魔~\n", player.Name)
+					break
+				}
+			}
+		}
+		if hasFortuneTeller && hasRecluse {
+			var extraDemonQuantity int
+			for _, player := range cfg.Rooms[roomIndex].Players {
+				if player.State.Demon && player.CharacterType != Demons {
+					extraDemonQuantity += 1
+				}
+			}
+			if extraDemonQuantity == 2 {
+				for _, player := range room.Players {
+					if player.Character == Recluse {
+						cfg.Rooms[roomIndex].Log += fmt.Sprintf("玩家 [%s] 是占卜师认定的恶魔~\n", player.Name)
+						break
+					}
+				}
+			}
+			if extraDemonQuantity == 3 {
+				for _, player := range room.Players {
+					if player.Character != Recluse && player.CharacterType != Demons && player.State.Demon {
+						cfg.Rooms[roomIndex].Log += fmt.Sprintf("玩家 [%s] 是占卜师认定的恶魔~\n", player.Name)
+						break
+					}
+				}
+			}
 		}
 		cfg.Rooms[roomIndex].Log += "------------本--局--开--始------------\n"
 	}
