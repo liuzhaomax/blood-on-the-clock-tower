@@ -1190,14 +1190,8 @@ func checkoutNight(mux *sync.Mutex, game *model.Room) {
 			if game.Players[toPlayerIndexSlice[0]].Character == Mayor &&
 				!game.Players[toPlayerIndexSlice[0]].State.Poisoned &&
 				!game.Players[toPlayerIndexSlice[0]].State.Drunk {
-				aliveCount := 0
-				for _, player := range game.Players {
-					if !player.State.Dead {
-						aliveCount += 1
-					}
-				}
 				for {
-					randInt := rand.Intn(aliveCount)
+					randInt := rand.Intn(len(game.Players))
 					if !game.Players[randInt].State.Dead &&
 						game.Players[randInt].CharacterType != Demons {
 						// 死的是除了恶魔的其他任意一人
