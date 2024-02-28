@@ -123,6 +123,7 @@ function Home() {
         }
     }
 
+    // 动画 蝙蝠 流血
     useEffect(() => {
         blood()
         hideGif("Bat-gif", 3000)
@@ -144,7 +145,7 @@ function Home() {
                     <feDisplacementMap in="SourceGraphic" in2="turbNoise" xChannelSelector="G" yChannelSelector="B" scale="6" result="disp"></feDisplacementMap>
                 </filter>
             </svg>
-            <img id="Bat-gif" src={process.env.PUBLIC_URL + "/video/bat.gif"} alt="Example GIF"/>
+            <img id="Bat-gif" src={process.env.PUBLIC_URL + "/video/bat.gif"} alt="Bat GIF"/>
             <Flex className="layout" wrap="wrap">
                 <Button className="btn-main" onClick={showDrawer}>创建房间</Button>
             </Flex>

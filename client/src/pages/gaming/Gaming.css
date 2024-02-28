@@ -275,3 +275,13 @@
     /*visibility: hidden;*/
     display: none;
 }
+
+/*胜利动画*/
+#GAMING .gif {
+    position: absolute;
+    display: none;
+}
+
+#GAMING .gif-visible {
+    display: block;
+}

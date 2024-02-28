@@ -483,11 +483,22 @@ function Gaming() {
     const loadAnimation = async () => {
         if (game) {
             if (game.result) {
-                // TODO 来个动画跳转
-                await sleep(5000)
+                if (game.result.substring(0, 2) === "平民") {
+                    await showGif("Civil-gif", 5000)
+                }
+                if (game.result.substring(0, 2) === "邪恶") {
+                    await showGif("Evil-gif", 5000)
+                }
                 jumpToReview()
             }
         }
+    }
+    // 动画 胜利结算
+    const showGif = async (id, ms) => {
+        let gif = document.getElementById(id)
+        gif.classList.add("gif-visible")
+        await sleep(ms)
+        gif.classList.remove("gif-visible")
     }
 
     // 提名对象
@@ -991,6 +1002,8 @@ function Gaming() {
             >
                 <Instruction/>
             </Drawer>
+            <img className="gif" id="Evil-gif" src={process.env.PUBLIC_URL + "/video/evil.gif"} alt="Evil GIF"/>
+            <img className="gif" id="Civil-gif" src={process.env.PUBLIC_URL + "/video/civil.gif"} alt="Civil GIF"/>
         </div>
     )
 }
