@@ -65,12 +65,12 @@ func Gaming(w http.ResponseWriter, r *http.Request) {
 		switch actionReq.Action {
 		case "toggle_night":
 			if playerId == game.Host {
-				toggleNight(mux, game)
+				toggleNight(mux, game, executed)
 			}
 		case "cast":
 			cast(mux, game, playerId, actionReq.Targets)
 		case "nominate":
-			nominate(mux, game, playerId, actionReq.Targets)
+			nominate(mux, game, playerId, actionReq.Targets, executed)
 		case "vote":
 			vote(mux, game, playerId)
 		case "checkout_night":
@@ -95,7 +95,7 @@ func Gaming(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func toggleNight(mux *sync.Mutex, game *model.Room) {
+func toggleNight(mux *sync.Mutex, game *model.Room, executed *model.Player) {
 	cfg := model.GetConfig()
 	mux.Lock()
 	defer mux.Unlock()
@@ -128,13 +128,9 @@ func toggleNight(mux *sync.Mutex, game *model.Room) {
 				}
 			}
 		} else {
-			for i := range game.Players {
-				if !game.Players[i].State.Dead {
-					game.Players[i].Ready.Nominate = true
-					game.Players[i].Ready.Nominated = true
-				}
-			}
 			msg = fmt.Sprintf("第%d天，天亮了~\n", game.State.Day)
+			// 天亮 清空executed
+			executed = nil
 		}
 		// 存入总日志
 		game.Log += msg
@@ -334,10 +330,6 @@ func endVoting(mux *sync.Mutex, game *model.Room) (executed *model.Player) {
 			msg += info
 		}
 		msg += fmt.Sprintf("处决结果：[%s] 被公投处决，死亡\n", executed.Name)
-		// 有人死亡，所有人本轮不能再提名
-		for i := range game.Players {
-			game.Players[i].Ready.Nominate = false
-		}
 	} else {
 		if nominated != nil {
 			nominated.State.Nominated = false
@@ -387,10 +379,24 @@ func endVoting(mux *sync.Mutex, game *model.Room) (executed *model.Player) {
 	return
 }
 
-func nominate(mux *sync.Mutex, game *model.Room, playerId string, targets []string) {
+func nominate(mux *sync.Mutex, game *model.Room, playerId string, targets []string, executed *model.Player) {
 	cfg := model.GetConfig()
 	mux.Lock()
 	defer mux.Unlock()
+
+	// 如果有处决者产生 不能提名
+	if executed != nil { // 发送日志
+		for id, conn := range cfg.ConnPool {
+			if id == playerId {
+				if err := conn.WriteMessage(websocket.TextMessage, []byte("本日已处决过人，不能再提名")); err != nil {
+					log.Println("Write error:", err)
+					return
+				}
+				break
+			}
+		}
+		return
+	}
 
 	var msg = ""
 	var msgName = ""
