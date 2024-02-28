@@ -32,7 +32,7 @@ router.get("/", (req, res, next) => {
 
 app.use("/", router)
 
-app.listen(80, (req, res) => {
-    console.log("Server fe-main running on 80.")
+app.listen(62120, (req, res) => {
+    console.log("Server fe的be running on 62120.")
     debug()
 })

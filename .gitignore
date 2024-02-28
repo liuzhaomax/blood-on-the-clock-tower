@@ -2,6 +2,8 @@
 .vscode
 
 client/node_modules/
+client/server/node_modules/
+client/server/build/
 
 sever/go.sum
 

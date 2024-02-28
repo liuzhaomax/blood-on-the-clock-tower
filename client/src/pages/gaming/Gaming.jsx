@@ -10,6 +10,7 @@ import nightImg from "../../assets/images/bg/night.png"
 import "../../utils/captcha/captcha.css"
 import {startCaptcha} from "../../utils/captcha/captcha.js"
 import Instruction from "./Instruction"
+import config from "../../config/config"
 
 const Context = React.createContext({
     name: "Default",
@@ -29,7 +30,7 @@ function Gaming() {
         loadGame()
     }, [])
     const loadGame = () => {
-        const socket = new WebSocket(`ws://192.168.1.14:8080/game/${roomId}`)
+        const socket = new WebSocket(`${config.beBaseUrl}/game/${roomId}`)
         socket.onopen = function() {
             socket.send("load_game")
         }
@@ -67,7 +68,7 @@ function Gaming() {
             replace: true,
             state: "/home",
         })
-        const socket = new WebSocket(`ws://192.168.1.14:8080/quitRoom/${roomId}`)
+        const socket = new WebSocket(`${config.beBaseUrl}/quitRoom/${roomId}`)
         socket.onopen = function() {
             let playerInfo = {
                 id: localStorage.getItem("PlayerID")
@@ -115,7 +116,7 @@ function Gaming() {
         gamingConn()
     }, [])
     const gamingConn = () => {
-        socketGaming = new WebSocket(`ws://192.168.1.14:8080/gaming/${roomId}/${localStorage.getItem("PlayerID")}`)
+        socketGaming = new WebSocket(`${config.beBaseUrl}/gaming/${roomId}/${localStorage.getItem("PlayerID")}`)
         socketGaming.onmessage = function(event) {
             // console.log("Received log from server:", event.data)
             addLog(event.data, ...wordClassPairs)

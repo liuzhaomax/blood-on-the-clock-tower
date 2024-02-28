@@ -2,6 +2,7 @@ import React, {useEffect, useMemo, useState} from "react"
 import "./Room.css"
 import {Button, Flex, notification} from "antd"
 import {useNavigate, useParams} from "react-router-dom"
+import config from "../../config/config"
 
 const Context = React.createContext({
     name: "Default",
@@ -19,7 +20,7 @@ function Room() {
         }, 100)
     }, [room])
     const loadRoom = () => {
-        const socket = new WebSocket(`ws://192.168.1.14:8080/room/${roomId}`)
+        const socket = new WebSocket(`${config.beBaseUrl}/room/${roomId}`)
         socket.onopen = function() {
             socket.send("load_room")
         }
@@ -58,7 +59,7 @@ function Room() {
             replace: true,
             state: "/home",
         })
-        const socket = new WebSocket(`ws://192.168.1.14:8080/quitRoom/${roomId}`)
+        const socket = new WebSocket(`${config.beBaseUrl}/quitRoom/${roomId}`)
         socket.onopen = function() {
             let playerInfo = {
                 id: localStorage.getItem("PlayerID")
@@ -93,7 +94,7 @@ function Room() {
             openReviewingNotification("topRight")
             return
         }
-        const socket = new WebSocket(`ws://192.168.1.14:8080/startGame/${roomId}`)
+        const socket = new WebSocket(`${config.beBaseUrl}/startGame/${roomId}`)
         socket.onopen = function() {
             let playerInfo = {
                 id: localStorage.getItem("PlayerID")

@@ -7,6 +7,7 @@ import {genShortUUID} from "../../utils/uuid"
 import { useNavigate } from "react-router-dom"
 import {blood} from "../../utils/blood/blood"
 import {sleep} from "../../utils/time"
+import config from "../../config/config"
 
 if (localStorage.getItem("PlayerID") === null) {
     localStorage.setItem("PlayerID", genShortUUID())
@@ -47,7 +48,7 @@ function Home() {
     }
 
     const loadRoomList = () => {
-        const socket = new WebSocket("ws://192.168.1.14:8080/home")
+        const socket = new WebSocket(config.beBaseUrl + "/home")
         socket.onopen = function() {
             socket.send("list_rooms")
         }
@@ -73,7 +74,7 @@ function Home() {
             host: localStorage.getItem("PlayerID"),
             players: [player],
         }
-        const socket = new WebSocket("ws://192.168.1.14:8080/createRoom")
+        const socket = new WebSocket(config.beBaseUrl + "/createRoom")
         socket.onopen = function() {
             console.log("WebSocket for creating room connected!")
             socket.send(JSON.stringify(roomInfo))

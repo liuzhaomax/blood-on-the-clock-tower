@@ -2,6 +2,7 @@ import "./Review.css"
 import {useNavigate, useParams} from "react-router-dom"
 import {Button} from "antd"
 import React, {useEffect, useState} from "react"
+import config from "../../config/config"
 
 function Review() {
     const navigate = useNavigate()
@@ -15,7 +16,7 @@ function Review() {
         }, 100)
     }, [game])
     const loadGame = () => {
-        const socket = new WebSocket(`ws://192.168.1.14:8080/review/${roomId}`)
+        const socket = new WebSocket(`${config.beBaseUrl}/review/${roomId}`)
         socket.onopen = function() {
             socket.send("review")
         }
@@ -40,7 +41,7 @@ function Review() {
     // 返回房间
     const returnRoom = () => {
         let meId = localStorage.getItem("PlayerID")
-        const socket = new WebSocket(`ws://192.168.1.14:8080/returnRoom/${roomId}/${meId}`)
+        const socket = new WebSocket(`${config.beBaseUrl}/returnRoom/${roomId}/${meId}`)
         socket.onopen = function() {
             socket.send("return_room")
             jumpToRoom()

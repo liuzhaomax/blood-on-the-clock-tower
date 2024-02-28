@@ -2,6 +2,14 @@
   "name": "blood-on-the-clock-tower",
   "version": "1.0",
   "private": true,
+  "scripts": {
+    "start": "node scripts/start.js",
+    "build": "node --max_old_space_size=1024 scripts/build.js",
+    "test": "node scripts/test.js",
+    "lint": "eslint src --fix",
+    "lint:create": "eslint --init",
+    "lint:report": "eslint ./src -f json --ext .js,.jsx"
+  },
   "dependencies": {
     "@ant-design/icons": "^4.8.1",
     "@babel/core": "^7.16.0",
@@ -66,14 +74,6 @@
     "webpack-dev-server": "^4.6.0",
     "webpack-manifest-plugin": "^4.0.2",
     "workbox-webpack-plugin": "^6.4.1"
-  },
-  "scripts": {
-    "start": "node scripts/start.js",
-    "build": "node --max_old_space_size=1024 scripts/build.js",
-    "test": "node scripts/test.js",
-    "lint": "eslint src --fix",
-    "lint:create": "eslint --init",
-    "lint:report": "eslint ./src -f json --ext .js,.jsx"
   },
   "eslintConfig": {
     "extends": [
