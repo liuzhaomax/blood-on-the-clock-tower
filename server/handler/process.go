@@ -42,6 +42,9 @@ func Gaming(w http.ResponseWriter, r *http.Request) {
 
 	mux := &sync.Mutex{}
 
+	// 被处决者
+	var executed *model.Player
+
 	for {
 		_, p, err := conn.ReadMessage()
 		if err != nil {
@@ -58,9 +61,6 @@ func Gaming(w http.ResponseWriter, r *http.Request) {
 		if err = json.Unmarshal(p, &actionReq); err != nil {
 			log.Println("JSON unmarshal error:", err)
 		}
-
-		// 被处决者
-		var executed *model.Player
 
 		switch actionReq.Action {
 		case "toggle_night":
