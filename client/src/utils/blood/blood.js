@@ -1,12 +1,14 @@
-export const blood = () => {
-    var h = 200, w = 600
+import {sleep} from "../time"
+
+export const blood = async () => {
+    await sleep(3000)
+    var h = 180, w = 345
     var canvas = document.createElement("canvas")
     var ctx = canvas.getContext("2d")
-    document.body.appendChild(canvas)
+    let container = document.getElementById("Title-wrap")
+    container.appendChild(canvas)
     canvas.height = h
     canvas.width = w
-    canvas.style.position = "absolute"
-    canvas.style.top = "0"
 
     var Blood = function(x, y, r, s) {
         this.x = x
@@ -14,48 +16,79 @@ export const blood = () => {
         this.r = r
         this.cy = y
         this.speed = s
+        this.opacity = 1 // 初始透明度为1，完全不透明
     }
 
     Blood.prototype.draw = function() {
+        ctx.globalAlpha = this.opacity // 设置圆的透明度
         ctx.beginPath()
         ctx.arc(this.x + 1, this.cy, this.r, 0, Math.PI * 2)
         ctx.closePath()
-        ctx.fillStyle = "red"
+        ctx.fillStyle = "rgba(160, 42, 42, 0.5)" // 半透明的红色
+        // ctx.fillStyle = "brown"
         ctx.fill()
     }
 
     var bloodDrops = [
-        new Blood(10, 70, 1, 2),
-        new Blood(35, 32, 1, 1.5),
-        new Blood(53, 72, 1.5, 1),
-        new Blood(80, 74, 2, 1.7),
+        // 血
+        new Blood(13, 76, 0.7, 0.9),
+        new Blood(31, 72, 1, 1.2),
+        new Blood(38, 30, 1.3, 1.5),
+        new Blood(70, 38, 1.2, 1),
+        new Blood(80, 74, 1.6, 1.7),
+        // 染
         new Blood(100, 68, 1, 1.3),
-        new Blood(154, 71, 1, 1.9),
-        new Blood(174, 71, 1, 1.4),
-        new Blood(222, 76, 1.3, 1.1),
-        new Blood(263, 72, 1.8, 0.7),
-        new Blood(280, 75, 1.4, 1.3),
-        new Blood(325, 72, 1.8, 1.2),
-        new Blood(380, 75, 1.4, 0.9),
-        new Blood(395, 88, 0.8, 1.3),
-        new Blood(418, 70, 1.2, 1.6),
-        new Blood(466, 67, 0.8, 1.3),
-        new Blood(487, 71, 1.2, 1.2),
-        new Blood(512, 74, 1.7, 1.5),
-        new Blood(542, 74, 1.7, 0.8)
+        new Blood(115, 40, 0.8, 0.8),
+        new Blood(135, 75, 1, 1.3),
+        new Blood(160, 69, 1.5, 1.9),
+        // 钟
+        new Blood(182, 56, 0.8, 0.9),
+        new Blood(200, 75, 1, 1.4),
+        new Blood(220, 60, 0.7, 0.8),
+        new Blood(230, 85, 1, 1.1),
+        new Blood(250, 45, 1.3, 0.9),
+        // 楼
+        new Blood(265, 72, 1.3, 0.7),
+        new Blood(280, 85, 1.2, 1.3),
+        new Blood(300, 85, 0.8, 1),
+        new Blood(334, 68, 1.8, 1.2),
     ]
 
-    var loop = function() {
-        ctx.fillStyle = "rgba(0,0,0,0.005)"
+    var loop = async () => {
+        // ctx.fillStyle = "rgba(0,0,0,0.005)"
+        ctx.fillStyle = "rgba(0,0,0,0)"
         ctx.fillRect(0, 0, w, h)
+
+        // for (var i = 0; i < bloodDrops.length; ++i) {
+        //     if (Math.random() > 0.5) bloodDrops[i].cy += bloodDrops[i].speed
+        //     else bloodDrops[i].cy += bloodDrops[i].speed / 3
+        //     if (bloodDrops[i].cy > h)
+        //         bloodDrops[i].cy = bloodDrops[i].y
+        //     bloodDrops[i].draw()
+        // }
+
         for (var i = 0; i < bloodDrops.length; ++i) {
+            bloodDrops[i].opacity -= 0.006 // 透明度降低速度
+            bloodDrops[i].r -= 0.005 // 半径减小
+            if (bloodDrops[i].r <= 0) {
+                break
+            }
             if (Math.random() > 0.5) bloodDrops[i].cy += bloodDrops[i].speed
             else bloodDrops[i].cy += bloodDrops[i].speed / 3
-            if (bloodDrops[i].cy > h)
-                bloodDrops[i].cy = bloodDrops[i].y
+            if (bloodDrops[i].cy > h) bloodDrops[i].cy = bloodDrops[i].y
+            // if (bloodDrops[i].opacity <= 0) {
+            //     bloodDrops[i].opacity = 1 // 重置血滴完全不透明
+            // }
+            bloodDrops[i].cy += bloodDrops[i].speed
             bloodDrops[i].draw()
+
         }
+
         requestAnimationFrame(loop)
+        // if (!canvas.classList.contains("bottom-line")) {
+        //     await sleep(2000)
+        //     canvas.classList.add("bottom-line")
+        // }
     }
 
     loop()

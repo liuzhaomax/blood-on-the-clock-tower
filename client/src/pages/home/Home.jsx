@@ -138,6 +138,12 @@ function Home() {
             <div id="Title-wrap">
                 <div id="Title">血染钟楼</div>
             </div>
+            <svg className="svg">
+                <filter id="noise">
+                    <feTurbulence baseFrequency="0.07" type="fractalNoise" result="turbNoise"></feTurbulence>
+                    <feDisplacementMap in="SourceGraphic" in2="turbNoise" xChannelSelector="G" yChannelSelector="B" scale="6" result="disp"></feDisplacementMap>
+                </filter>
+            </svg>
             <img id="Bat-gif" src={process.env.PUBLIC_URL + "/video/bat.gif"} alt="Example GIF"/>
             <Flex className="layout" wrap="wrap">
                 <Button className="btn-main" onClick={showDrawer}>创建房间</Button>

@@ -134,22 +134,31 @@
 }
 
 /*视频*/
-#HOME #bat-video {
+#HOME #Bat-gif {
     position: absolute;
 }
 
+#HOME .hidden {
+    display: none;
+}
+
+/*标题*/
 #HOME #Title-wrap {
     display: flex;
     flex-direction: column;
     flex-wrap: wrap;
     justify-content: flex-start;
     align-items: flex-start;
+    filter: blur(1px) contrast(1.6);
 }
 
 #HOME #Title {
     font-size: 5.5rem;
     font-family: 'BloodA', serif !important;
     color: brown;
+    z-index: 1;
+    filter: url(#noise);
+    white-space: nowrap;
 }
 
 @font-face {
@@ -161,10 +170,26 @@
     unicode-range: U+0000-00FF, U+4E00-9FFF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
-#HOME #Bat-gif {
+/*血*/
+#HOME canvas{
+    margin: 0 auto;
     position: absolute;
+    filter: url(#noise);
 }
 
-#HOME .hidden {
+#HOME .bottom-line {
+    border-bottom: 0 solid brown; /* 初始状态下，边框宽度为0 */
+    animation: bottom_line 5s forwards; /* 1s 表示动画持续1秒，forwards表示动画结束后保持最后状态 */
+}
+@keyframes bottom_line {
+    from {
+        border-bottom-width: 0;
+    }
+    to {
+        border-bottom-width: 5px;
+    }
+}
+
+#HOME .svg {
     display: none;
 }
