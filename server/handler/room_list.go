@@ -17,6 +17,16 @@ func ListRooms(w http.ResponseWriter, r *http.Request) {
 	}
 	defer conn.Close()
 
+	messageType, _, err := conn.ReadMessage()
+	if err != nil {
+		if websocket.IsCloseError(err, websocket.CloseGoingAway) {
+			log.Println("Client disconnected:", err)
+			return
+		}
+		log.Println("Read error:", err)
+		return
+	}
+
 	cfgMutex.Lock()
 	defer cfgMutex.Unlock()
 	cfg := model.GetConfig()
@@ -26,7 +36,7 @@ func ListRooms(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = conn.WriteMessage(websocket.TextMessage, marshalRooms); err != nil {
+	if err = conn.WriteMessage(messageType, marshalRooms); err != nil {
 		log.Println("Write error:", err)
 		return
 	}
