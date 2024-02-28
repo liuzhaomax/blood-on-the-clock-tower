@@ -128,6 +128,12 @@ func toggleNight(mux *sync.Mutex, game *model.Room) {
 				}
 			}
 		} else {
+			for i := range game.Players {
+				if !game.Players[i].State.Dead {
+					game.Players[i].Ready.Nominate = true
+					game.Players[i].Ready.Nominated = true
+				}
+			}
 			msg = fmt.Sprintf("第%d天，天亮了~\n", game.State.Day)
 		}
 		// 存入总日志
