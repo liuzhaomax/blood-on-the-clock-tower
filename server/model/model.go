@@ -36,8 +36,9 @@ type Room struct {
 	Players  []Player  `json:"players"`
 	State    GameState `json:"state"` // 游戏中各身份状态
 	// 技能施放池，存储所有施放技能人，当前阶段施放的技能作用目标
-	CastPool map[string][]string `json:"castPool"` // [playId][]targetId{}
-	VotePool map[string]string   // 本轮票池 [playId]log{}
+	CastPool map[string][]string `json:"castPool"` // 本轮施法池 [playId][]targetId{}
+	VotePool map[string]string   `json:"votePool"` // 本轮票池 [playId]log{}
+	Executed *Player             `json:"executed"` // 本轮被处决者
 }
 
 type GameState struct {
