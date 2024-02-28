@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"github.com/liuzhaomax/blood-on-the-clock-tower/server/handler"
 	"log"
 	"net/http"
@@ -23,8 +24,20 @@ func main() {
 	http.HandleFunc("/review/", handler.LoadReview)
 	http.HandleFunc("/returnRoom/", handler.ReturnRoom)
 
-	err := http.ListenAndServe(":62121", nil)
-	if err != nil {
-		log.Fatal("Error:", err)
+	var mode string
+	flag.StringVar(&mode, "mode", "dev", "dev or prod")
+	flag.Parse()
+
+	switch mode {
+	case "dev":
+		err := http.ListenAndServe(":62121", nil)
+		if err != nil {
+			log.Fatal("Error:", err)
+		}
+	case "prod":
+		err := http.ListenAndServeTLS(":62121", "tls/blood.liuzhaomax.cn.pem", "tls/blood.liuzhaomax.cn.key", nil)
+		if err != nil {
+			log.Fatal("Error:", err)
+		}
 	}
 }

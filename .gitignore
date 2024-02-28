@@ -4,6 +4,8 @@
 client/node_modules/
 client/server/node_modules/
 client/server/build/
+server/tls/
+client/src/tls
 
 sever/go.sum
 

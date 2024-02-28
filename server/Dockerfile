@@ -11,8 +11,10 @@ COPY . .
 
 # RUN go mod tidy
 
-RUN go build -o bin main/main.go
+# RUN go mod vendor
 
-# CMD ["sudo", "chmod", "+x", "bin/main"]
+RUN go build -o bin/main main/main.go
 
-CMD ["bin/main"]
+#CMD ["sudo", "chmod", "+x", "bin/main"]
+
+CMD ["sh", "-c", "chmod +x bin/main && ./bin/main -mode prod"]

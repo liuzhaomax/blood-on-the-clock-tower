@@ -1,0 +1,9 @@
+version: '3.3'
+
+services:
+  bloodfe:
+    image: bloodfe:latest
+    container_name: blood-fe
+    ports:
+      - "62120:62120"
+    restart: always

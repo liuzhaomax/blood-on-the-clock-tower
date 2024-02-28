@@ -108,7 +108,7 @@ function Home() {
             name: playerName,
             waiting: true,
         }
-        const socket = new WebSocket(`ws://192.168.1.14:8080/joinRoom/${roomId}/${roomPassword}`)
+        const socket = new WebSocket(`${config.beBaseUrl}/joinRoom/${roomId}/${roomPassword}`)
         socket.onopen = function() {
             socket.send(JSON.stringify(playerInfo))
         }
