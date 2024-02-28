@@ -525,7 +525,7 @@ func cast(mux *sync.Mutex, game *model.Room, playerId string, targets []string) 
 	var msgAll = ""
 	for i, player := range game.Players {
 		if player.Id == playerId && !player.State.Dead {
-			msgAll += fmt.Sprintf("[%s] (%s) ", player.Name, player.Character)
+			msgAll += fmt.Sprintf("[%s] ", player.Name)
 			switch player.Character {
 			case Poisoner:
 				for _, player := range game.Players {
@@ -1273,25 +1273,36 @@ func checkoutNight(mux *sync.Mutex, game *model.Room) {
 							left = player.Index - 1
 							right = player.Index + 1
 						}
+						var leftPrev = -1
+						var rightPrev = -1
 						for {
-							if !game.Players[left].State.Dead && game.Players[left].State.Evil {
-								evilQuantity += 1
+							if leftPrev != left {
+								leftPrev = left
+								if game.Players[left].State.Dead {
+									left--
+									if left < 0 {
+										left = len(game.Players) - 1
+									}
+								} else {
+									if game.Players[left].State.Evil {
+										evilQuantity += 1
+									}
+								}
 							}
-							if !game.Players[right].State.Dead && game.Players[right].State.Evil {
-								evilQuantity += 1
+							if rightPrev != right {
+								rightPrev = right
+								if game.Players[right].State.Dead {
+									right++
+									if right > len(game.Players)-1 {
+										right = 0
+									}
+								} else {
+									if game.Players[right].State.Evil {
+										evilQuantity += 1
+									}
+								}
 							}
-							left--
-							if left < 0 {
-								left = len(game.Players) - 1
-							}
-							if left == right {
-								break
-							}
-							right++
-							if right > len(game.Players)-1 {
-								right = 0
-							}
-							if left == right {
+							if leftPrev == left && rightPrev == right || left == right {
 								break
 							}
 						}
@@ -1302,7 +1313,7 @@ func checkoutNight(mux *sync.Mutex, game *model.Room) {
 					}
 					// 拼接日志
 					msgAll += fmt.Sprintf("[%s] ", player.Name)
-					info := fmt.Sprintf("发现与您邻座的邪恶玩家有 { %d } 个\n", evilQuantity)
+					info := fmt.Sprintf("发现左右邻座的邪恶玩家有 { %d } 个\n", evilQuantity)
 					msgPlayer += info
 					msgAll += info
 					game.Players[i].Log += msgPlayer
