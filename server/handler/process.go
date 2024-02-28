@@ -583,6 +583,16 @@ func cast(mux *sync.Mutex, game *model.Room, playerId string, targets []string) 
 						info := fmt.Sprintf(" 对 [%s] 进行了枪毙！", player.Name)
 						msgPlayer += info
 						msgAll += info
+						// 发送日志
+						for id, conn := range cfg.ConnPool {
+							if id == playerId {
+								if err := conn.WriteMessage(websocket.TextMessage, []byte(msgPlayer)); err != nil {
+									log.Println("Write error:", err)
+									return
+								}
+								break
+							}
+						}
 						break
 					}
 				}
