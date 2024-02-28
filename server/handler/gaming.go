@@ -68,7 +68,7 @@ func LoadGame(w http.ResponseWriter, r *http.Request) {
 		for _, player := range cfg.Rooms[roomIndex].Players {
 			cfg.Rooms[roomIndex].Log += fmt.Sprintf("玩家 [%s] 的身份是 {%s} ~\n", player.Name, player.Character)
 		}
-		cfg.Rooms[roomIndex].Log += "----本--局--开--始----\n"
+		cfg.Rooms[roomIndex].Log += "------------本--局--开--始------------\n"
 	}
 
 	marshaledRoom, err := json.Marshal(cfg.Rooms[roomIndex])
