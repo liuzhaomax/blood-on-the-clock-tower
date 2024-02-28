@@ -386,7 +386,7 @@ function Gaming() {
     const toggleNight = () => {
         if (checkReadyToToggleNight()) {
             // 锁定与结算过程
-            process(game.state.stage+1)
+            gameProcess(game.state.stage+1)
         } else {
             openNotification("topRight")
         }
@@ -405,7 +405,7 @@ function Gaming() {
     }
 
     // 游戏过程
-    const process = async (stage) => {
+    const gameProcess = async (stage) => {
         // TODO 语音- 请大家操作或输入验证码
         if (stage % 2 === 1) {
             wolfAudio.play() // 狼叫
