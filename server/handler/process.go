@@ -382,10 +382,18 @@ func nominate(mux *sync.Mutex, game *model.Room, playerId string, targets []stri
 	defer mux.Unlock()
 
 	// 如果有处决者产生 不能提名
-	if game.Executed != nil { // 发送日志
+	if game.Executed != nil {
+		msgPlayer := "本轮已处决过人，您的提名无效"
+		for i, player := range game.Players {
+			if player.Id == playerId {
+				game.Players[i].Log += msgPlayer
+				break
+			}
+		}
+		// 发送日志
 		for id, conn := range cfg.ConnPool {
 			if id == playerId {
-				if err := conn.WriteMessage(websocket.TextMessage, []byte("本日已处决过人，不能再提名")); err != nil {
+				if err := conn.WriteMessage(websocket.TextMessage, []byte(msgPlayer)); err != nil {
 					log.Println("Write error:", err)
 					return
 				}
