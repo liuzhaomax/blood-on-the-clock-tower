@@ -383,7 +383,7 @@ func nominate(mux *sync.Mutex, game *model.Room, playerId string, targets []stri
 
 	// 如果有处决者产生 不能提名
 	if game.Executed != nil {
-		msgPlayer := "本轮已处决过人，您的提名无效"
+		msgPlayer := "本轮已处决过人，您的提名无效\n"
 		for i, player := range game.Players {
 			if player.Id == playerId {
 				game.Players[i].Log += msgPlayer
@@ -1041,7 +1041,7 @@ func checkoutNight(mux *sync.Mutex, game *model.Room) {
 				}
 				// 拼接日志
 				msgAll += fmt.Sprintf("[%s] ", player.Name)
-				info := fmt.Sprintf("发现与您邻座的邪恶玩家有 { %d } 个\n", evilQuantity)
+				info := fmt.Sprintf("发现左右邻座的邪恶玩家有 { %d } 个\n", evilQuantity)
 				msgPlayer += info
 				msgAll += info
 				game.Players[i].Log += msgPlayer
