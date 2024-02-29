@@ -442,7 +442,7 @@ func nominate(mux *sync.Mutex, game *model.Room, playerId string, targets []stri
 			if !player.State.Poisoned {
 				msg = msgName
 				for i, player := range game.Players {
-					if player.Id == playerId {
+					if player.Id == playerId && player.CharacterType == Townsfolk {
 						game.Players[i].State.Dead = true
 						game.Players[i].Ready.Nominate = false
 						game.Players[i].Ready.Nominated = false
@@ -1093,11 +1093,13 @@ func checkoutNight(mux *sync.Mutex, game *model.Room) {
 	var killed *model.Player
 	for fromPlayer, toPlayerIndexSlice := range castPoolObj {
 		// 判断士兵
-		if game.Players[toPlayerIndexSlice[0]].Character == Soldier {
+		if game.Players[toPlayerIndexSlice[0]].Character == Soldier &&
+			!game.Players[toPlayerIndexSlice[0]].State.Poisoned {
 			break
 		}
 		// 判断被僧侣守护
-		if game.Players[toPlayerIndexSlice[0]].State.Protected {
+		if game.Players[toPlayerIndexSlice[0]].State.Protected &&
+			!game.Players[toPlayerIndexSlice[0]].State.Poisoned {
 			break
 		}
 		// 判断小恶魔被下毒
@@ -1578,6 +1580,7 @@ func checkout(game *model.Room, executed *model.Player) {
 				log.Println(err)
 				return
 			}
+			delete(cfg.GameConnPool, player.Id)
 		}
 		game.Status = "复盘中"
 	}

@@ -105,19 +105,6 @@ func quitRoom(room *model.Room, playerId string) {
 		cfg.Rooms = newRooms
 	}
 
-	// 关闭game的conn
-	for id := range cfg.GameConnPool {
-		for _, player := range room.Players {
-			if id == player.Id {
-				err := cfg.GameConnPool[id].Close()
-				if err != nil {
-					log.Println(err)
-					return
-				}
-			}
-		}
-	}
-
 	// 发送房间给所有人
 	marshalRoom, err := json.Marshal(*room)
 	if err != nil {
@@ -142,11 +129,7 @@ func quitRoom(room *model.Room, playerId string) {
 		log.Println("JSON marshal error:", err)
 		return
 	}
-	for id, conn := range cfg.HomeConnPool {
-		// 退出者加载首页会获取list
-		if id == playerId {
-			continue
-		}
+	for _, conn := range cfg.HomeConnPool {
 		if err := conn.WriteMessage(websocket.TextMessage, marshalRooms); err != nil {
 			log.Println("Write error:", err)
 			return

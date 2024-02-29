@@ -4,51 +4,49 @@ import {Button} from "antd"
 import React, {useEffect, useState} from "react"
 import config from "../../config/config"
 
+let socket
+
 function Review() {
     const navigate = useNavigate()
     let { roomId } = useParams()
 
     const [game, setGame] = useState(null)
     useEffect(() => {
-        setTimeout(() => {
-            loadGame()
-            checkToReturnRoom()
-        }, 100)
-    }, [game])
-    const loadGame = () => {
-        const socket = new WebSocket(`${config.beBaseUrl}/review/${roomId}`)
+        establishConn()
+    }, [])
+    const establishConn = () => {
+        socket = new WebSocket(`${config.beBaseUrl}/room/${roomId}`)
         socket.onopen = function() {
-            socket.send("review")
+            loadGame()
         }
         socket.onmessage = function(event) {
             // console.log("Received message from server:", JSON.parse(event.data))
             setGame(JSON.parse(event.data))
+            checkToReturnRoom(JSON.parse(event.data))
         }
         socket.onerror = function(error) {
             console.error("WebSocket error:", error)
         }
     }
-    const checkToReturnRoom = () => {
-        if (game) {
-            switch (game.status) {
-            case "等待开始":
-                jumpToRoom()
-                break
-            }
+    const loadGame = () => {
+        let data = {
+            action: "list_players",
+            payload: localStorage.getItem("PlayerID"),
+        }
+        socket.send(JSON.stringify(data))
+    }
+    const checkToReturnRoom = (game) => {
+        switch (game.status) {
+        case "等待开始":
+            jumpToRoom()
+            break
         }
     }
 
     // 返回房间
     const returnRoom = () => {
-        let meId = localStorage.getItem("PlayerID")
-        const socket = new WebSocket(`${config.beBaseUrl}/returnRoom/${roomId}/${meId}`)
-        socket.onopen = function() {
-            socket.send("return_room")
-            jumpToRoom()
-        }
-        socket.onerror = function(error) {
-            console.error("WebSocket error:", error)
-        }
+        jumpToRoom()
+        loadGame()
     }
     const jumpToRoom = () => {
         navigate(`/room/${roomId}`, {

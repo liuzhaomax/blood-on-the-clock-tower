@@ -211,12 +211,12 @@
         + 输入：action字符串
         + 输出：操作结果日志
 + 游戏结算页
-    + 加载结算 /review/:roomId
-        + 输入：无
-        + 输出：无
-    + 返回房间 /returnRoom/:roomId/:playerId
-        + 输入：无
-        + 输出：game
+    + 加载结算 /review/:roomId -> /room/:roomId
+        + 输入：action:list_players, playload:playerId
+        + 输出：room
+    + 返回房间 /room/:roomId
+        + 输入：action:list_players, playload:playerId
+        + 输出：room
 + 其他功能
     + 房间15分钟没有开始，自动销毁
     + 等待开始时，断线重连 √
@@ -379,7 +379,6 @@
 + 房间只存在5小时，超时后销毁
 + 加入房间，房间名称不能输入
 + 座位九宫格排列，用来表示邻座关系，单数最上面空着
-+ ☆后端优化：玩家连接池在进入home后生成，有独立的room连接池，方便群发: home room改造完毕，review待改造
 + 总日志所有人名后面带身份
 + ipad灰屏bug
 

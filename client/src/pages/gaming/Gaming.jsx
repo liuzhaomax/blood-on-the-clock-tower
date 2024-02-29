@@ -207,7 +207,8 @@ function Gaming() {
         // 守鸦人可以验死人，占卜可以验死人
         let me = getMe(game)
         if (!event.target.classList.contains("highlight-dead")
-            || me.character === "守鸦人" || me.character === "占卜师"
+            || (me.character === "守鸦人" && !me.state.dead)
+            || (me.character === "占卜师" && !me.state.dead)
         ) {
             let selectedPlayersCopy = selectedPlayers.slice()
             if (event.target.classList.contains("seat-selected")) {
@@ -241,10 +242,12 @@ function Gaming() {
                         seat.classList.add("highlight-dead-cant-be-selected")
                     }
                     if ((me.character === "守鸦人" || me.character === "占卜师")
+                        && !me.state.dead
                         && seat.classList.contains("highlight-dead-cant-be-selected")) {
                         seat.classList.remove("highlight-dead-cant-be-selected")
                     }
                     if (!(me.character === "守鸦人" || me.character === "占卜师")
+                        && !me.state.dead
                         && seat.classList.contains("seat-selected")) {
                         seat.classList.remove("seat-selected")
                     }
