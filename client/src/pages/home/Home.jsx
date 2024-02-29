@@ -13,14 +13,34 @@ if (localStorage.getItem("PlayerID") === null) {
     localStorage.setItem("PlayerID", genShortUUID())
 }
 
+let socketHome
+
 function Home() {
     const [roomList, setRoomList] = useState(null)
 
     useEffect(() => {
-        setTimeout(() => {
+        establishConn()
+    }, [])
+    const establishConn = () => {
+        socketHome = new WebSocket(`${config.beBaseUrl}/home`)
+        socketHome.onopen = function() {
             loadRoomList()
-        }, 500)
-    }, [roomList])
+        }
+        socketHome.onmessage = function(event) {
+            // console.log("Received message from server:", JSON.parse(event.data))
+            setRoomList(JSON.parse(event.data))
+        }
+        socketHome.onerror = function(error) {
+            console.error("WebSocket error:", error)
+        }
+    }
+    const loadRoomList = () => {
+        let data = {
+            action: "list_rooms",
+            payload: localStorage.getItem("PlayerID"),
+        }
+        socketHome.send(JSON.stringify(data))
+    }
     const navigate = useNavigate()
     const jump = roomId => {
         navigate(`/room/${roomId}`, {
@@ -47,20 +67,6 @@ function Home() {
         setOpen1(false)
     }
 
-    const loadRoomList = () => {
-        const socket = new WebSocket(config.beBaseUrl + "/home")
-        socket.onopen = function() {
-            socket.send("list_rooms")
-        }
-        socket.onmessage = function(event) {
-            // console.log("Received message from server:", JSON.parse(event.data))
-            setRoomList(JSON.parse(event.data))
-        }
-        socket.onerror = function(error) {
-            console.error("WebSocket error:", error)
-        }
-    }
-
     const createRoom = () => {
         onClose()
         let player = {}
@@ -74,11 +80,11 @@ function Home() {
             host: localStorage.getItem("PlayerID"),
             players: [player],
         }
-        const socket = new WebSocket(config.beBaseUrl + "/createRoom")
-        socket.onopen = function() {
-            console.log("WebSocket for creating room connected!")
-            socket.send(JSON.stringify(roomInfo))
+        let data = {
+            action: "create_room",
+            payload: roomInfo,
         }
+        socketHome.send(JSON.stringify(data))
         jump(roomInfo.id)
     }
     
@@ -108,20 +114,18 @@ function Home() {
             name: playerName,
             waiting: true,
         }
-        const socket = new WebSocket(`${config.beBaseUrl}/joinRoom/${roomId}/${roomPassword}`)
-        socket.onopen = function() {
-            socket.send(JSON.stringify(playerInfo))
+        let roomInfo = {
+            id: roomId,
+            password: roomPassword,
         }
-        socket.onmessage = function(event) {
-            // console.log("Received message from server:", JSON.parse(event.data))
-            if (event.data !== null) {
-                jump(roomId)
-            }
-            // TODO else 弹出密码错误对话框
+        let data = {
+            action: "join_room",
+            payload: {
+                room: roomInfo,
+                player: playerInfo,
+            },
         }
-        socket.onerror = function(error) {
-            console.error("WebSocket error:", error)
-        }
+        socketHome.send(JSON.stringify(data))
     }
 
     // 动画 蝙蝠 流血

@@ -10,9 +10,7 @@ import (
 func main() {
 	log.Println("服务启动")
 	// 房间列表页
-	http.HandleFunc("/home", handler.ListRooms)
-	http.HandleFunc("/createRoom", handler.CreateRoom)
-	http.HandleFunc("/joinRoom/", handler.JoinRoom)
+	http.HandleFunc("/home", handler.LoadHome)
 	// 等待开始页
 	http.HandleFunc("/room/", handler.LoadRoom)
 	http.HandleFunc("/quitRoom/", handler.QuitRoom)

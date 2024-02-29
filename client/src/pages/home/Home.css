@@ -55,13 +55,14 @@
     #HOME .btn-main::before {
         content: '';
         position: absolute;
-        inset: -10px;
+        /*inset: -10px;*/
         z-index: -1;
         background: linear-gradient(90deg, #03a9f4, #f441a5, #ffeb3b, #03a9f4);
         background-size: 300%;
         border-radius: 40px;
         opacity: 0.9;
         filter: blur(20px);
+        /*animation: flow_bg 8s linear infinite !important;*/
     }
 }
 

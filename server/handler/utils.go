@@ -5,6 +5,7 @@ import (
 	"github.com/liuzhaomax/blood-on-the-clock-tower/server/model"
 	"math/rand"
 	"net/http"
+	"reflect"
 	"sync"
 )
 
@@ -44,4 +45,25 @@ func Contains(s []string, e string) bool {
 		}
 	}
 	return false
+}
+
+func MapToStruct(m map[string]interface{}, s interface{}) error {
+	sValue := reflect.ValueOf(s).Elem()
+	// 遍历 map 中的键值对，将其赋值给结构体对应的字段
+	for k, v := range m {
+		field := sValue.FieldByName(k)
+		if !field.IsValid() {
+			// 如果字段不存在，忽略该键值对
+			continue
+		}
+		// 判断字段的类型是否可以直接赋值
+		if field.CanSet() {
+			// 如果字段可以直接赋值，将值转换为字段的类型并赋值
+			val := reflect.ValueOf(v)
+			if val.Type().AssignableTo(field.Type()) {
+				field.Set(val)
+			}
+		}
+	}
+	return nil
 }

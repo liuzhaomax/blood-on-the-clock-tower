@@ -179,17 +179,17 @@
 --------输入输出
 
 + 房间列表页 √
-    + 加载房间列表 /home 
-        + 输入：无
+    + 加载房间列表 /home
+        + 输入：action:list_rooms, playload:playerId
         + 输出：roomList
-    + 创建房间 /createRoom 
+    + 创建房间 /home 
         + 功能：创建的房间的state赋值
-        + 输入：room player
-        + 输出：无
-    + 加入房间 /joinRoom/:roomId/:roomPassword 
+        + 输入：action:create_room, playload:room player
+        + 输出：roomList
+    + 加入房间 /home
         + 功能：验证密码；当前用户重连；新玩家加入
-        + 输入：player{id, name}
-        + 输出：无
+        + 输入：action:join_room, playload:JoinRoomPayload
+        + 输出：roomList
 + 等待开始页 √
     + 加载房间 /room/:roomId
         + 输入：无
@@ -379,6 +379,7 @@
 + 房间只存在5小时，超时后销毁
 + 加入房间，房间名称不能输入
 + 座位九宫格排列，用来表示邻座关系，单数最上面空着
-+ ☆后端优化：玩家连接池在进入home后生成，有独立的room连接池，方便群发
++ ☆后端优化：玩家连接池在进入home后生成，有独立的room连接池，方便群发: home改造完毕，room review待改造
 + 总日志所有人名后面带身份
++ ipad灰屏bug
 
