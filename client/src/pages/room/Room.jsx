@@ -92,7 +92,17 @@ function Room() {
     }
 
     const startGame = () => {
-        // if (room.players.length >= 5) {
+        // 小于5人，无法开始游戏
+        if (room.players.length < 5) {
+            openPlayerNumNotification("topRight")
+            return
+        }
+        // 多于15人，无法开始游戏
+        if (room.players.length > 15) {
+            openPlayerNum2Notification("topRight")
+            return
+        }
+        // 有人在复盘页面，无法开始游戏
         if (room && room.status === "复盘中") {
             openReviewingNotification("topRight")
             return
@@ -102,14 +112,26 @@ function Room() {
             payload: "",
         }
         socket.send(JSON.stringify(data))
-        // }
-        // TODO 游戏小于5人不能开始，弹出错误提示
     }
     const [api, contextHolder] = notification.useNotification()
     const openReviewingNotification = (placement) => {
         api.info({
             message: "房间未准备好",
             description: <Context.Consumer>{() => "不好意思, 有玩家尚未退出复盘，请督促返回房间!"}</Context.Consumer>,
+            placement,
+        })
+    }
+    const openPlayerNumNotification = (placement) => {
+        api.info({
+            message: "房间未准备好",
+            description: <Context.Consumer>{() => "人数不足五人，无法开始游戏!"}</Context.Consumer>,
+            placement,
+        })
+    }
+    const openPlayerNum2Notification = (placement) => {
+        api.info({
+            message: "房间未准备好",
+            description: <Context.Consumer>{() => "人数多于十五人，无法开始游戏!"}</Context.Consumer>,
             placement,
         })
     }

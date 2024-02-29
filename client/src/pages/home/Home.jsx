@@ -1,8 +1,8 @@
-import React from "react"
+import React, {useMemo} from "react"
 import { useState, useEffect } from "react"
 import "./Home.css"
 import { HOME } from "../../config/cstModule"
-import { Button, Flex, List, Avatar, Drawer, Space, Input } from "antd"
+import { Button, Flex, List, Avatar, Drawer, Space, Input, notification } from "antd"
 import {genShortUUID} from "../../utils/uuid"
 import { useNavigate } from "react-router-dom"
 import {blood} from "../../utils/blood/blood"
@@ -12,6 +12,10 @@ import config from "../../config/config"
 if (localStorage.getItem("PlayerID") === null) {
     localStorage.setItem("PlayerID", genShortUUID())
 }
+
+const Context = React.createContext({
+    name: "Default",
+})
 
 let socketHome
 
@@ -62,10 +66,13 @@ function Home() {
         setOpen1(true)
         setRoomId(room.id)
         setRoomName(room.name)
+        setRoomSelected(room)
     }
     const onClose1 = () => {
         setOpen1(false)
     }
+
+    const [roomSelected, setRoomSelected] = useState(null)
 
     const createRoom = () => {
         onClose()
@@ -106,8 +113,16 @@ function Home() {
     }
 
     const joinRoom = () => {
-        // TODO 如果房间status是游戏中，则无法加入，弹出错误提示
-        // TODO 如果当前人数大于等于15，则无法加入房间，弹出错误提示
+        // 如果房间status是游戏中，则无法加入
+        if (roomSelected && roomSelected.status === "游戏中") {
+            openGamingNotification("topRight")
+            return
+        }
+        // 人数大于等于15，则无法加入房间
+        if (roomSelected && roomSelected.players.length >= 15) {
+            openPlayerNum2Notification("topRight")
+            return
+        }
         onClose1()
         let playerInfo = {
             id: localStorage.getItem("PlayerID"),
@@ -128,6 +143,27 @@ function Home() {
         socketHome.send(JSON.stringify(data))
         jump(roomId)
     }
+    const [api, contextHolder] = notification.useNotification()
+    const openPlayerNum2Notification = (placement) => {
+        api.info({
+            message: "操作无效",
+            description: <Context.Consumer>{() => "人数多于十五人，无法加入房间!"}</Context.Consumer>,
+            placement,
+        })
+    }
+    const openGamingNotification = (placement) => {
+        api.info({
+            message: "操作无效",
+            description: <Context.Consumer>{() => "游戏已开始，无法加入房间!"}</Context.Consumer>,
+            placement,
+        })
+    }
+    const contextValue = useMemo(
+        () => ({
+            name: "",
+        }),
+        [],
+    )
 
     // 动画 蝙蝠 流血
     useEffect(() => {
@@ -238,6 +274,9 @@ function Home() {
                     </Space.Compact>
                 </Space>
             </Drawer>
+            <Context.Provider value={contextValue}>
+                {contextHolder}
+            </Context.Provider>
         </div>
     )
 }
