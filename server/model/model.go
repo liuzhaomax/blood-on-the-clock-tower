@@ -11,7 +11,9 @@ var once sync.Once
 func init() {
 	once.Do(func() {
 		cfg = &Config{}
-		cfg.ConnPool = map[string]*websocket.Conn{}
+		cfg.HomeConnPool = map[string]*websocket.Conn{}
+		cfg.RoomConnPool = map[string]map[string]*websocket.Conn{}
+		cfg.GameConnPool = map[string]*websocket.Conn{}
 	})
 }
 
@@ -20,8 +22,10 @@ func GetConfig() *Config {
 }
 
 type Config struct {
-	Rooms    []Room
-	ConnPool map[string]*websocket.Conn // 游戏中玩家的长连接 [playId]conn
+	Rooms        []Room
+	HomeConnPool map[string]*websocket.Conn            // 首页 玩家长连接 [playId]conn
+	RoomConnPool map[string]map[string]*websocket.Conn // 等待开始 玩家的长连接 [roomId][playId]conn
+	GameConnPool map[string]*websocket.Conn            // 游戏中玩家的长连接 [playId]conn
 }
 
 type Room struct {
