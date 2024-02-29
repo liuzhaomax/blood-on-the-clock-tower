@@ -1,6 +1,6 @@
 package model
 
-type ReqBody struct {
+type HomeReqBody struct {
 	Action  string `json:"action"`
 	Payload any    `json:"payload"`
 }

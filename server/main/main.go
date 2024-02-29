@@ -13,8 +13,6 @@ func main() {
 	http.HandleFunc("/home", handler.LoadHome)
 	// 等待开始页
 	http.HandleFunc("/room/", handler.LoadRoom)
-	http.HandleFunc("/quitRoom/", handler.QuitRoom)
-	http.HandleFunc("/startGame/", handler.StartGame)
 	// 游戏中页
 	http.HandleFunc("/game/", handler.LoadGame)
 	http.HandleFunc("/gaming/", handler.Gaming)

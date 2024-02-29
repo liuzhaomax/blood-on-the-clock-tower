@@ -178,30 +178,30 @@
 ----功能 API
 --------输入输出
 
-+ 房间列表页 √
-    + 加载房间列表 /home
++ 房间列表页 /home
+    + 加载房间列表 
         + 输入：action:list_rooms, playload:playerId
         + 输出：roomList
-    + 创建房间 /home 
+    + 创建房间 
         + 功能：创建的房间的state赋值
-        + 输入：action:create_room, playload:room player
+        + 输入：action:create_room, playload:Room
         + 输出：roomList
-    + 加入房间 /home
+    + 加入房间 
         + 功能：验证密码；当前用户重连；新玩家加入
         + 输入：action:join_room, playload:JoinRoomPayload
         + 输出：roomList
-+ 等待开始页 √
-    + 加载房间 /room/:roomId
-        + 输入：无
++ 等待开始页 /room/:roomId
+    + 加载房间 
+        + 输入：action:list_players, playload:playerId
         + 输出：room
-    + 退出房间 /quitRoom/:roomId
+    + 退出房间 
         + 功能：房间减少当前玩家，如果房间人数为0，则销毁房间；
-        + 输入：player{id}
-        + 输出：无
-    + 开始游戏 /startGame/:roomId
+        + 输入：action:quit_room, playload:playerId
+        + 输出：room
+    + 开始游戏 
         + 功能：改变房间state
-        + 输入：无
-        + 输出："ok" or null
+        + 输入：action:start_game, playload:""
+        + 输出：room
 + 游戏中页
     + 加载游戏 /game/:roomId
         + 功能：根据人数，分配身份；夜晚读秒
@@ -379,7 +379,7 @@
 + 房间只存在5小时，超时后销毁
 + 加入房间，房间名称不能输入
 + 座位九宫格排列，用来表示邻座关系，单数最上面空着
-+ ☆后端优化：玩家连接池在进入home后生成，有独立的room连接池，方便群发: home改造完毕，room review待改造
++ ☆后端优化：玩家连接池在进入home后生成，有独立的room连接池，方便群发: home room改造完毕，review待改造
 + 总日志所有人名后面带身份
 + ipad灰屏bug
 

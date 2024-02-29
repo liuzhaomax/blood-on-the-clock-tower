@@ -8,38 +8,43 @@ const Context = React.createContext({
     name: "Default",
 })
 
+let socket
+
 function Room() {
     const navigate = useNavigate()
     let { roomId } = useParams()
     const [room, setRoom] = useState(null)
 
     useEffect(() => {
-        setTimeout(() => {
-            loadRoom()
-            checkToStartGame()
-        }, 100)
-    }, [room])
-    const loadRoom = () => {
-        const socket = new WebSocket(`${config.beBaseUrl}/room/${roomId}`)
+        establishConn()
+    }, [])
+    const establishConn = () => {
+        socket = new WebSocket(`${config.beBaseUrl}/room/${roomId}`)
         socket.onopen = function() {
-            socket.send("load_room")
+            loadRoom()
         }
         socket.onmessage = function(event) {
             // console.log("Received message from server:", JSON.parse(event.data))
             setRoom(JSON.parse(event.data))
+            checkToStartGame(JSON.parse(event.data))
         }
         socket.onerror = function(error) {
             console.error("WebSocket error:", error)
         }
     }
+    const loadRoom = () => {
+        let data = {
+            action: "list_players",
+            payload: localStorage.getItem("PlayerID"),
+        }
+        socket.send(JSON.stringify(data))
+    }
 
-    const checkToStartGame = () => {
-        if (room) {
-            switch (room.status) {
-            case "游戏中":
-                jumpToGame()
-                break
-            }
+    const checkToStartGame = (room) => {
+        switch (room.status) {
+        case "游戏中":
+            jumpToGame()
+            break
         }
     }
 
@@ -55,20 +60,15 @@ function Room() {
     }
 
     const quitRoom = () => {
+        let data = {
+            action: "quit_room",
+            payload: localStorage.getItem("PlayerID"),
+        }
+        socket.send(JSON.stringify(data))
         navigate("/home", {
             replace: true,
             state: "/home",
         })
-        const socket = new WebSocket(`${config.beBaseUrl}/quitRoom/${roomId}`)
-        socket.onopen = function() {
-            let playerInfo = {
-                id: localStorage.getItem("PlayerID")
-            }
-            socket.send(JSON.stringify(playerInfo))
-        }
-        socket.onerror = function(error) {
-            console.error("WebSocket error:", error)
-        }
     }
 
     const sit = () => {
@@ -94,16 +94,11 @@ function Room() {
             openReviewingNotification("topRight")
             return
         }
-        const socket = new WebSocket(`${config.beBaseUrl}/startGame/${roomId}`)
-        socket.onopen = function() {
-            let playerInfo = {
-                id: localStorage.getItem("PlayerID")
-            }
-            socket.send(JSON.stringify(playerInfo))
+        let data = {
+            action: "start_game",
+            payload: "",
         }
-        socket.onerror = function(error) {
-            console.error("WebSocket error:", error)
-        }
+        socket.send(JSON.stringify(data))
         // }
         // TODO 游戏小于5人不能开始，弹出错误提示
     }

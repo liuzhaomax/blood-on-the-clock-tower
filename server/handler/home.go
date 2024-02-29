@@ -28,7 +28,7 @@ func LoadHome(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		var reqBody model.ListRoomsReqBody
+		var reqBody model.HomeReqBody
 		if err = json.Unmarshal(p, &reqBody); err != nil {
 			log.Println("JSON unmarshal error:", err)
 		}
@@ -139,6 +139,19 @@ func joinRoom(joinRoomPayload model.JoinRoomPayload) {
 			continue
 		}
 		if err = conn.WriteMessage(websocket.TextMessage, marshalRooms); err != nil {
+			log.Println("Write error:", err)
+			return
+		}
+	}
+
+	// 发送房间给所有人
+	marshalRoom, err := json.Marshal(*room)
+	if err != nil {
+		log.Println("JSON marshal error:", err)
+		return
+	}
+	for _, conn := range cfg.RoomConnPool[room.Id] {
+		if err = conn.WriteMessage(websocket.TextMessage, marshalRoom); err != nil {
 			log.Println("Write error:", err)
 			return
 		}

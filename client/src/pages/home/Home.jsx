@@ -126,6 +126,7 @@ function Home() {
             },
         }
         socketHome.send(JSON.stringify(data))
+        jump(roomId)
     }
 
     // 动画 蝙蝠 流血
