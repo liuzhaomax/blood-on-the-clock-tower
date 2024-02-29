@@ -75,6 +75,11 @@ function Home() {
     const [roomSelected, setRoomSelected] = useState(null)
 
     const createRoom = () => {
+        // 房间名称不能为空
+        if (roomName === "") {
+            openRoomNameNotification("topRight")
+            return
+        }
         onClose()
         let player = {}
         player.id = localStorage.getItem("PlayerID")
@@ -155,6 +160,13 @@ function Home() {
         api.info({
             message: "操作无效",
             description: <Context.Consumer>{() => "游戏已开始，无法加入房间!"}</Context.Consumer>,
+            placement,
+        })
+    }
+    const openRoomNameNotification = (placement) => {
+        api.info({
+            message: "信息确实",
+            description: <Context.Consumer>{() => "房间名称不能为空!"}</Context.Consumer>,
             placement,
         })
     }
