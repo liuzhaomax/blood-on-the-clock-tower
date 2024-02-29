@@ -446,24 +446,24 @@ func nominate(mux *sync.Mutex, game *model.Room, playerId string, targets []stri
 						game.Players[i].State.Dead = true
 						game.Players[i].Ready.Nominate = false
 						game.Players[i].Ready.Nominated = false
+						canGoToVotingStep = false
+						msg += "被圣女弹死了\n"
+						for i := range game.Players {
+							game.Players[i].Log += msg
+						}
+						game.Log += msg
+						// 发送日志
+						for _, conn := range cfg.GameConnPool {
+							if err := conn.WriteMessage(websocket.TextMessage, []byte(msg)); err != nil {
+								log.Println("Write error:", err)
+								return
+							}
+						}
 						break
 					}
 				}
-				canGoToVotingStep = false
-				msg += "被圣女弹死了\n"
-				for i := range game.Players {
-					game.Players[i].Log += msg
-				}
-				game.Log += msg
 				break
 			}
-		}
-	}
-	// 发送日志
-	for _, conn := range cfg.GameConnPool {
-		if err := conn.WriteMessage(websocket.TextMessage, []byte(msg)); err != nil {
-			log.Println("Write error:", err)
-			return
 		}
 	}
 

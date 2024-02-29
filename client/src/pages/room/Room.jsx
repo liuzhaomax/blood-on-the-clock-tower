@@ -65,6 +65,9 @@ function Room() {
             payload: localStorage.getItem("PlayerID"),
         }
         socket.send(JSON.stringify(data))
+        jumpToHome()
+    }
+    const jumpToHome = () => {
         navigate("/home", {
             replace: true,
             state: "/home",

@@ -17,7 +17,7 @@ function Review() {
     const establishConn = () => {
         socket = new WebSocket(`${config.beBaseUrl}/room/${roomId}`)
         socket.onopen = function() {
-            loadGame()
+            reviewGame()
         }
         socket.onmessage = function(event) {
             // console.log("Received message from server:", JSON.parse(event.data))
@@ -28,9 +28,9 @@ function Review() {
             console.error("WebSocket error:", error)
         }
     }
-    const loadGame = () => {
+    const reviewGame = () => {
         let data = {
-            action: "list_players",
+            action: "review_game",
             payload: localStorage.getItem("PlayerID"),
         }
         socket.send(JSON.stringify(data))
@@ -46,13 +46,20 @@ function Review() {
     // 返回房间
     const returnRoom = () => {
         jumpToRoom()
-        loadGame()
+        backToRoom()
     }
     const jumpToRoom = () => {
         navigate(`/room/${roomId}`, {
             replace: true,
             state: `/room/${roomId}`,
         })
+    }
+    const backToRoom = () => {
+        let data = {
+            action: "back_to_room",
+            payload: localStorage.getItem("PlayerID"),
+        }
+        socket.send(JSON.stringify(data))
     }
 
     // 加载总日志

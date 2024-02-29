@@ -210,12 +210,12 @@
     + 游戏过程 /gaming/:roomId/:playerId
         + 输入：action字符串
         + 输出：操作结果日志
-+ 游戏结算页
-    + 加载结算 /review/:roomId -> /room/:roomId
-        + 输入：action:list_players, playload:playerId
++ 游戏结算页 /review/:roomId
+    + 加载结算 /room/:roomId
+        + 输入：action:review_game, playload:playerId
         + 输出：room
     + 返回房间 /room/:roomId
-        + 输入：action:list_players, playload:playerId
+        + 输入：action:back_to_room, playload:playerId
         + 输出：room
 + 其他功能
     + 房间15分钟没有开始，自动销毁

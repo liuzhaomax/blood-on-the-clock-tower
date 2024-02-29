@@ -16,9 +16,6 @@ func main() {
 	// 游戏中页
 	http.HandleFunc("/game/", handler.LoadGame)
 	http.HandleFunc("/gaming/", handler.Gaming)
-	// 游戏结算页
-	http.HandleFunc("/review/", handler.LoadReview)
-	http.HandleFunc("/returnRoom/", handler.ReturnRoom)
 
 	var mode string
 	flag.StringVar(&mode, "mode", "dev", "dev or prod")
