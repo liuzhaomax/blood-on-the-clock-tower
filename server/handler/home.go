@@ -150,6 +150,9 @@ func joinRoom(joinRoomPayload model.JoinRoomPayload) {
 		log.Println("JSON marshal error:", err)
 		return
 	}
+	if cfg.RoomConnPool[room.Id] == nil {
+		return // 防空指针异常
+	}
 	for _, conn := range cfg.RoomConnPool[room.Id] {
 		if err = conn.WriteMessage(websocket.TextMessage, marshalRoom); err != nil {
 			log.Println("Write error:", err)

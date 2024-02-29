@@ -168,6 +168,8 @@
 /*视频*/
 #HOME #Bat-gif {
     position: absolute;
+    height: 120%;
+    width: auto;
 }
 
 #HOME .hidden {
