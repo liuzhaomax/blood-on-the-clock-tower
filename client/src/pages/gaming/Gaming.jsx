@@ -68,12 +68,13 @@ function Gaming() {
             replace: true,
             state: "/home",
         })
-        const socket = new WebSocket(`${config.beBaseUrl}/quitRoom/${roomId}`)
+        const socket = new WebSocket(`${config.beBaseUrl}/room/${roomId}`)
         socket.onopen = function() {
-            let playerInfo = {
-                id: localStorage.getItem("PlayerID")
+            let data = {
+                action: "quit_room",
+                payload: localStorage.getItem("PlayerID"),
             }
-            socket.send(JSON.stringify(playerInfo))
+            socket.send(JSON.stringify(data))
         }
         socket.onerror = function(error) {
             console.error("WebSocket error:", error)
