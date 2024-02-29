@@ -35,7 +35,7 @@ func main() {
 			log.Fatal("Error:", err)
 		}
 	case "prod":
-		err := http.ListenAndServeTLS(":62121", "tls/blood.liuzhaomax.cn.pem", "tls/blood.liuzhaomax.cn.key", nil)
+		err := http.ListenAndServeTLS(":62121", "tls/bloodws.liuzhaomax.cn.pem", "tls/bloodws.liuzhaomax.cn.key", nil)
 		if err != nil {
 			log.Fatal("Error:", err)
 		}
