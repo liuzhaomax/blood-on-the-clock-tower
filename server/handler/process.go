@@ -114,6 +114,9 @@ func toggleNight(mux *sync.Mutex, game *model.Room) {
 				// 还原隐士邪恶身份 - 清除中毒效果
 				if game.Players[i].Character == Recluse {
 					game.Players[i].State.Evil = true
+					if game.Players[i].State.RegardedAsSaved == Spy {
+						game.Players[i].State.Evil = false
+					}
 					game.Players[i].State.RegardedAs = game.Players[i].State.RegardedAsSaved
 					if game.Players[i].State.RegardedAsSaved == Imp {
 						game.Players[i].State.Demon = true

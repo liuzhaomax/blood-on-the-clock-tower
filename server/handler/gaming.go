@@ -312,6 +312,9 @@ func initStatus(players []model.Player, replaceDrunk string) []model.Player {
 			players[i].State.Evil = true
 			evilCharacter := getRandEvilCharacter()
 			players[i].State.RegardedAs = evilCharacter
+			if evilCharacter == Spy {
+				players[i].State.Evil = false
+			}
 			players[i].State.RegardedAsSaved = evilCharacter
 			if players[i].State.RegardedAsSaved == Imp {
 				players[i].State.Demon = true
