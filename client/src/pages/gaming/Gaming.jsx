@@ -408,7 +408,7 @@ function Gaming() {
         // 所有有技能的操作完，没技能的点完验证码，时间等待结束，不在投票阶段，则切换日夜，切换后首先结算前一阶段
         return !game.state.votingStep
             && !castLock
-            // && ready // TODO 测试用，记得解锁
+            // && ready // TODO 测试用，记得解锁   内侧后删除
             || game.state.stage === 0
     }
 
@@ -924,11 +924,11 @@ function Gaming() {
             }
         }
     }
-    // TODO 测试代码 开始
+    // TODO 测试代码 开始   内侧后删除
     const handleCaptchaCancel = () => {
         setIsCaptchaModalOpen(false)
     }
-    // TODO 测试代码 结束
+    // TODO 测试代码 结束   内侧后删除
 
     // 游戏说明
     const [open, setOpen] = useState(false)
