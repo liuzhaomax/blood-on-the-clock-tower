@@ -420,14 +420,18 @@ function Gaming() {
         } else {
             cockAudio.play() // 鸡叫
         }
+        if (stage === 0) {
+            // 防抖
+            castLock = true
+            await sleep(2000)
+            castLock = false
+        }
         if (stage === 1) {
             // 发送日夜切换指令到后端，后端重置状态
             emitToggleNight()
-            // 给host锁定不能切换日夜
+            // 防抖
             castLock = true
-            // 防抖等2秒
             await sleep(2000)
-            // 给host解锁可以切换日夜
             castLock = false
         }
         if (stage !== 1 && stage % 2 === 0) {
@@ -435,11 +439,9 @@ function Gaming() {
             emitCheckoutNight()
             // 发送日夜切换指令到后端，后端重置状态
             emitToggleNight()
-            // 给host锁定不能切换日夜
+            // 防抖
             castLock = true
-            // 防抖等2秒
             await sleep(2000)
-            // 给host解锁可以切换日夜
             castLock = false
         }
         if (stage !== 1 && stage % 2 === 1) {
@@ -447,11 +449,9 @@ function Gaming() {
             emitCheckoutDay()
             // 发送日夜切换指令到后端，后端重置状态
             emitToggleNight()
-            // 给host锁定不能切换日夜
+            // 防抖
             castLock = true
-            // 防抖等2秒
             await sleep(2000)
-            // 给host解锁可以切换日夜
             castLock = false
         }
     }
