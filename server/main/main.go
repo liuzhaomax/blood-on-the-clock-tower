@@ -54,8 +54,7 @@ func main() {
 				}
 			}
 
-			// time.Sleep(time.Hour * 4)
-			time.Sleep(time.Second * 15)
+			time.Sleep(time.Hour * 4)
 		}
 	}()
 
