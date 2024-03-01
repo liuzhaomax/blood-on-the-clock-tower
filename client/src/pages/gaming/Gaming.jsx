@@ -754,7 +754,7 @@ function Gaming() {
                 }
             }
             if (selectedPlayers.length === 1) {
-                content += "跟随，让他这轮有两票吗？"
+                content += "跟随？他投你可选投，他不投你投无效。"
                 break
             }
             return "您只能选1个人跟随"
