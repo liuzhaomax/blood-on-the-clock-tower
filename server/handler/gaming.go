@@ -9,6 +9,7 @@ import (
 	"math/rand"
 	"net/http"
 	"strings"
+	"time"
 )
 
 func LoadGame(w http.ResponseWriter, r *http.Request) {
@@ -38,14 +39,15 @@ func LoadGame(w http.ResponseWriter, r *http.Request) {
 	}
 	roomId := parts[2]
 
-	cfgMutex.Lock()
-	defer cfgMutex.Unlock()
+	CfgMutex.Lock()
+	defer CfgMutex.Unlock()
 	cfg := model.GetConfig()
 	room, roomIndex := findRoom(roomId)
 
 	if !room.Init {
 		// 初始化
 		cfg.Rooms[roomIndex].Init = true
+		cfg.Rooms[roomIndex].CreatedAt = time.Now().Format(time.RFC3339)
 		cfg.Rooms[roomIndex].Result = ""
 		cfg.Rooms[roomIndex].Log = ""
 		// 初始化玩家状态 防止非法返回房间引起bug

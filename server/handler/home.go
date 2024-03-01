@@ -60,9 +60,9 @@ func LoadHome(w http.ResponseWriter, r *http.Request) {
 
 func listRooms(playerId string, conn *websocket.Conn) {
 	cfg := model.GetConfig()
-	cfgMutex.Lock()
+	CfgMutex.Lock()
 	cfg.HomeConnPool[playerId] = conn
-	cfgMutex.Unlock()
+	CfgMutex.Unlock()
 	// 发送房间列表给请求者
 	marshalRooms, err := json.Marshal(cfg.Rooms)
 	if err != nil {
@@ -77,10 +77,11 @@ func listRooms(playerId string, conn *websocket.Conn) {
 
 func createRoom(room model.Room) {
 	cfg := model.GetConfig()
-	cfgMutex.Lock()
+	CfgMutex.Lock()
 	room.Status = "等待开始"
+	room.CreatedAt = time.Now().Format(time.RFC3339)
 	cfg.Rooms = append(cfg.Rooms, room)
-	cfgMutex.Unlock()
+	CfgMutex.Unlock()
 	// 发送房间列表给所有人
 	marshalRooms, err := json.Marshal(cfg.Rooms)
 	if err != nil {
@@ -103,7 +104,7 @@ func createRoom(room model.Room) {
 
 func joinRoom(joinRoomPayload model.JoinRoomPayload) {
 	cfg := model.GetConfig()
-	cfgMutex.Lock()
+	CfgMutex.Lock()
 
 	room, roomIndex := findRoom(joinRoomPayload.Room.Id)
 
@@ -123,7 +124,7 @@ func joinRoom(joinRoomPayload model.JoinRoomPayload) {
 		cfg.Rooms[roomIndex].Players = append(room.Players, joinRoomPayload.Player)
 	}
 
-	cfgMutex.Unlock()
+	CfgMutex.Unlock()
 
 	// 发送房间列表给所有人
 	marshalRooms, err := json.Marshal(cfg.Rooms)

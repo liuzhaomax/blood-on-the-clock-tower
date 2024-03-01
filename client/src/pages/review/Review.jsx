@@ -26,6 +26,7 @@ function Review() {
         }
         socket.onerror = function(error) {
             console.error("WebSocket error:", error)
+            jumpToHome()
         }
     }
     const reviewGame = () => {
@@ -41,6 +42,12 @@ function Review() {
             jumpToRoom()
             break
         }
+    }
+    const jumpToHome = () => {
+        navigate("/home", {
+            replace: true,
+            state: "/home",
+        })
     }
 
     // 返回房间

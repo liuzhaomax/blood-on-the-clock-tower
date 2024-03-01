@@ -151,6 +151,10 @@
     height: 90% !important;
 }
 
+.ant-empty-image {
+    visibility: hidden !important;
+}
+
 #HOME .list-item span {
     font-size: 24px !important;
     color: white;

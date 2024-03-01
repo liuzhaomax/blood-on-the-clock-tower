@@ -1,12 +1,14 @@
 package handler
 
 import (
+	"fmt"
 	"github.com/gorilla/websocket"
 	"github.com/liuzhaomax/blood-on-the-clock-tower/server/model"
 	"math/rand"
 	"net/http"
 	"reflect"
 	"sync"
+	"time"
 )
 
 var Upgrader = websocket.Upgrader{
@@ -17,7 +19,7 @@ var Upgrader = websocket.Upgrader{
 	},
 }
 
-var cfgMutex sync.Mutex
+var CfgMutex sync.Mutex
 
 func findRoom(roomId string) (*model.Room, int) {
 	cfg := model.GetConfig()
@@ -45,6 +47,28 @@ func Contains(s []string, e string) bool {
 		}
 	}
 	return false
+}
+
+func HasPassedGivenHours(timeStr3339 string, hours int) (bool, error) {
+	now := time.Now()
+	createdAt, err := time.Parse(time.RFC3339, timeStr3339)
+	if err != nil {
+		fmt.Println("解析时间字符串时出错：", err)
+		return false, err
+	}
+	duration := now.Sub(createdAt).Hours()
+	if int(duration) > hours {
+		return true, nil
+	}
+	return false, nil
+}
+
+func RemoveElement(arr []model.Room, index int) []model.Room {
+	if index < 0 || index >= len(arr) {
+		return arr // 无效的索引，返回原始切片
+	}
+
+	return append(arr[:index], arr[index+1:]...)
 }
 
 func MapToStruct(m map[string]interface{}, s interface{}) error {

@@ -67,7 +67,7 @@ func listPlayers(room *model.Room, playerId string, conn *websocket.Conn) {
 		return
 	}
 	cfg := model.GetConfig()
-	cfgMutex.Lock()
+	CfgMutex.Lock()
 
 	if cfg.RoomConnPool[room.Id] == nil {
 		cfg.RoomConnPool[room.Id] = map[string]*websocket.Conn{}
@@ -86,7 +86,7 @@ func listPlayers(room *model.Room, playerId string, conn *websocket.Conn) {
 		room.Log = ""
 	}
 
-	cfgMutex.Unlock()
+	CfgMutex.Unlock()
 
 	// 发送房间给所有人
 	marshalRoom, err := json.Marshal(*room)
@@ -107,8 +107,8 @@ func listPlayers(room *model.Room, playerId string, conn *websocket.Conn) {
 
 func quitRoom(room *model.Room, playerId string) {
 	cfg := model.GetConfig()
-	cfgMutex.Lock()
-	defer cfgMutex.Unlock()
+	CfgMutex.Lock()
+	defer CfgMutex.Unlock()
 
 	// 删除退出者
 	var newPlayers []model.Player
@@ -166,8 +166,8 @@ func quitRoom(room *model.Room, playerId string) {
 
 func startGame(room *model.Room) {
 	cfg := model.GetConfig()
-	cfgMutex.Lock()
-	defer cfgMutex.Unlock()
+	CfgMutex.Lock()
+	defer CfgMutex.Unlock()
 
 	goodToStart := true
 	for _, player := range room.Players {
@@ -215,8 +215,8 @@ func startGame(room *model.Room) {
 
 func reviewGame(room *model.Room, playerId string, conn *websocket.Conn) {
 	cfg := model.GetConfig()
-	cfgMutex.Lock()
-	defer cfgMutex.Unlock()
+	CfgMutex.Lock()
+	defer CfgMutex.Unlock()
 	if cfg.RoomConnPool[room.Id] == nil {
 		cfg.RoomConnPool[room.Id] = map[string]*websocket.Conn{}
 	}
@@ -248,8 +248,8 @@ func reviewGame(room *model.Room, playerId string, conn *websocket.Conn) {
 
 func returnRoom(room *model.Room, playerId string) {
 	cfg := model.GetConfig()
-	cfgMutex.Lock()
-	defer cfgMutex.Unlock()
+	CfgMutex.Lock()
+	defer CfgMutex.Unlock()
 
 	for i, player := range room.Players {
 		if player.Id == playerId {

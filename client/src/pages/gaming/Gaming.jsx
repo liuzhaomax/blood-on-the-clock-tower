@@ -64,10 +64,7 @@ function Gaming() {
     const handleReturnRoomOk = () => {
         castLock = false
         setIsReturnRoomModalOpen(false)
-        navigate("/home", {
-            replace: true,
-            state: "/home",
-        })
+        jumpToHome()
         const socket = new WebSocket(`${config.beBaseUrl}/room/${roomId}`)
         socket.onopen = function() {
             let data = {
@@ -114,7 +111,7 @@ function Gaming() {
 
     // 建立长连接
     useEffect(() => {
-        gamingConn()
+        gamingConn() // 断线刷新重连
     }, [])
     const gamingConn = () => {
         socketGaming = new WebSocket(`${config.beBaseUrl}/gaming/${roomId}/${localStorage.getItem("PlayerID")}`)
@@ -127,6 +124,12 @@ function Gaming() {
             console.error("WebSocket error:", error)
             gamingConn() // 断线重连
         }
+    }
+    const jumpToHome = () => {
+        navigate("/home", {
+            replace: true,
+            state: "/home",
+        })
     }
 
     // 增加一条log 并上色  addLog(event.data, [/[0-9]/g, "highlight"], ["天", "highlight"])
