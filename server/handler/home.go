@@ -24,7 +24,7 @@ func LoadHome(w http.ResponseWriter, r *http.Request) {
 				log.Println("Client disconnected:", err)
 				return
 			}
-			log.Println("Read error:", err)
+			log.Println("Read error Home:", err)
 			return
 		}
 

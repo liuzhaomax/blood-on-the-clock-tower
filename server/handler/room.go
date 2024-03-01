@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -35,7 +36,7 @@ func LoadRoom(w http.ResponseWriter, r *http.Request) {
 				log.Println("Client disconnected:", err)
 				return
 			}
-			log.Println("Read error:", err)
+			log.Println("Read error Room:", err)
 			return
 		}
 
@@ -182,6 +183,10 @@ func startGame(room *model.Room) {
 		room.VotePool = map[string]string{}
 		room.State = model.GameState{}
 	}
+	// 初始化pool
+	cfg.GameConnPool[room.Id] = map[string]*websocket.Conn{}
+	cfg.GamingConnPool[room.Id] = map[string]*websocket.Conn{}
+	cfg.MuxPool[room.Id] = &sync.Mutex{}
 	// 发送房间给所有人
 	marshalRoom, err := json.Marshal(*room)
 	if err != nil {
@@ -210,64 +215,5 @@ func startGame(room *model.Room) {
 			log.Println("Write error:", err)
 			return
 		}
-	}
-}
-
-func reviewGame(room *model.Room, playerId string, conn *websocket.Conn) {
-	cfg := model.GetConfig()
-	CfgMutex.Lock()
-	defer CfgMutex.Unlock()
-	if cfg.RoomConnPool[room.Id] == nil {
-		cfg.RoomConnPool[room.Id] = map[string]*websocket.Conn{}
-	}
-	cfg.RoomConnPool[room.Id][playerId] = conn
-
-	// 把room发给请求者
-	marshalRoom, err := json.Marshal(*room)
-	if err != nil {
-		log.Println("JSON marshal error:", err)
-		return
-	}
-	if err := conn.WriteMessage(websocket.TextMessage, marshalRoom); err != nil {
-		log.Println("Write error:", err)
-		return
-	}
-	// 将room list 发给所有homeConn池里的人
-	marshalRooms, err := json.Marshal(cfg.Rooms)
-	if err != nil {
-		log.Println("JSON marshal error:", err)
-		return
-	}
-	for _, conn := range cfg.HomeConnPool {
-		if err := conn.WriteMessage(websocket.TextMessage, marshalRooms); err != nil {
-			log.Println("Write error:", err)
-			return
-		}
-	}
-}
-
-func returnRoom(room *model.Room, playerId string) {
-	cfg := model.GetConfig()
-	CfgMutex.Lock()
-	defer CfgMutex.Unlock()
-
-	for i, player := range room.Players {
-		if player.Id == playerId {
-			room.Players[i].Waiting = true
-			break
-		}
-	}
-	// 把room发给请求者
-	marshalRoom, err := json.Marshal(*room)
-	if err != nil {
-		log.Println("JSON marshal error:", err)
-		return
-	}
-	if cfg.RoomConnPool[room.Id] == nil {
-		return // 防空指针异常
-	}
-	if err := cfg.RoomConnPool[room.Id][playerId].WriteMessage(websocket.TextMessage, marshalRoom); err != nil {
-		log.Println("Write error:", err)
-		return
 	}
 }

@@ -16,6 +16,7 @@ const Context = React.createContext({
     name: "Default",
 })
 let socketGaming
+let socket
 let wolfAudio = new Audio("/audio/wolf.wav")
 let cockAudio = new Audio("/audio/cock.wav")
 let castLock = false // 入夜后给施放技能的时间，后端没有，只在前端限制，因为只限制主机
@@ -27,12 +28,13 @@ function Gaming() {
     // 加载游戏
     const [game, setGame] = useState(null)
     useEffect(() => {
-        loadGame()
+        establishConn()
     }, [])
-    const loadGame = () => {
-        const socket = new WebSocket(`${config.beBaseUrl}/game/${roomId}`)
+    const establishConn = () => {
+        // 获取game 长连接
+        socket = new WebSocket(`${config.beBaseUrl}/game/${roomId}/${localStorage.getItem("PlayerID")}`)
         socket.onopen = function() {
-            socket.send("load_game")
+            loadGame()
         }
         socket.onmessage = function(event) {
             console.log("Received message from server:", JSON.parse(event.data))
@@ -41,6 +43,27 @@ function Gaming() {
         socket.onerror = function(error) {
             console.error("WebSocket error:", error)
         }
+        // 获取日志 长连接
+        socketGaming = new WebSocket(`${config.beBaseUrl}/gaming/${roomId}/${localStorage.getItem("PlayerID")}`)
+        socketGaming.onmessage = function(event) {
+            // console.log("Received log from server:", event.data)
+            addLog(event.data, ...wordClassPairs)
+            // 如果有了result，那必然game的连接已被关闭，这里loadGame不起作用，无法跳转review
+            loadGame()
+        }
+        socketGaming.onerror = function(error) {
+            console.error("WebSocket error:", error)
+            establishConn() // 断线重连
+        }
+    }
+    const loadGame = () => {
+        socket.send("load_game")
+    }
+    const jumpToHome = () => {
+        navigate("/home", {
+            replace: true,
+            state: "/home",
+        })
     }
 
     // 防断线
@@ -107,29 +130,6 @@ function Gaming() {
                 myInfo[i].style.visibility = "hidden"
             }
         }
-    }
-
-    // 建立长连接
-    useEffect(() => {
-        gamingConn() // 断线刷新重连
-    }, [])
-    const gamingConn = () => {
-        socketGaming = new WebSocket(`${config.beBaseUrl}/gaming/${roomId}/${localStorage.getItem("PlayerID")}`)
-        socketGaming.onmessage = function(event) {
-            // console.log("Received log from server:", event.data)
-            addLog(event.data, ...wordClassPairs)
-            loadGame()
-        }
-        socketGaming.onerror = function(error) {
-            console.error("WebSocket error:", error)
-            gamingConn() // 断线重连
-        }
-    }
-    const jumpToHome = () => {
-        navigate("/home", {
-            replace: true,
-            state: "/home",
-        })
     }
 
     // 增加一条log 并上色  addLog(event.data, [/[0-9]/g, "highlight"], ["天", "highlight"])
@@ -408,7 +408,7 @@ function Gaming() {
         // 所有有技能的操作完，没技能的点完验证码，时间等待结束，不在投票阶段，则切换日夜，切换后首先结算前一阶段
         return !game.state.votingStep
             && !castLock
-            // && ready // TODO 测试用，记得解锁   内侧后删除
+            // && ready // TODO 测试用，记得解锁     内侧后删除
             || game.state.stage === 0
     }
 
@@ -941,6 +941,8 @@ function Gaming() {
 
     return (
         <div id="GAMING" className="GAMING" style={{backgroundImage: `url(${bgImg})`}}>
+            <img className="gif" id="Evil-gif" src={process.env.PUBLIC_URL + "/video/evil.gif"} alt="Evil GIF"/>
+            <img className="gif" id="Civil-gif" src={process.env.PUBLIC_URL + "/video/civil.gif"} alt="Civil GIF"/>
             <div className="layout west">
                 <div className="layout north">
                     <Button className="btn small-btn" onClick={returnRoom}><RollbackOutlined /></Button>
@@ -1010,8 +1012,6 @@ function Gaming() {
             >
                 <Instruction/>
             </Drawer>
-            <img className="gif" id="Evil-gif" src={process.env.PUBLIC_URL + "/video/evil.gif"} alt="Evil GIF"/>
-            <img className="gif" id="Civil-gif" src={process.env.PUBLIC_URL + "/video/civil.gif"} alt="Civil GIF"/>
         </div>
     )
 }

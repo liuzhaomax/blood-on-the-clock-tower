@@ -281,7 +281,7 @@
     position: absolute;
     width: auto;
     height: 120%;
-    top: 0;
+    top: -100px;
     display: none;
 }
 
