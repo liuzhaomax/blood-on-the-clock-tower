@@ -29,16 +29,17 @@ type Config struct {
 }
 
 type Room struct {
-	Id       string    `json:"id"`
-	Name     string    `json:"name"`
-	Password string    `json:"password"`
-	Host     string    `json:"host"`
-	Status   string    `json:"status"` // 等待开始，游戏中，复盘中
-	Init     bool      `json:"init"`   // 房间是否已初始化身份
-	Result   string    `json:"result"` // 游戏结果
-	Log      string    `json:"log"`    // 总日志
-	Players  []Player  `json:"players"`
-	State    GameState `json:"state"` // 游戏中各身份状态
+	Id        string    `json:"id"`
+	Name      string    `json:"name"`
+	Password  string    `json:"password"`
+	Host      string    `json:"host"`
+	CreatedAt string    `json:"createdAt"`
+	Status    string    `json:"status"` // 等待开始，游戏中，复盘中
+	Init      bool      `json:"init"`   // 房间是否已初始化身份
+	Result    string    `json:"result"` // 游戏结果
+	Log       string    `json:"log"`    // 总日志
+	Players   []Player  `json:"players"`
+	State     GameState `json:"state"` // 游戏中各身份状态
 	// 技能施放池，存储所有施放技能人，当前阶段施放的技能作用目标
 	CastPool map[string][]string `json:"castPool"` // 本轮施法池 [playId][]targetId{}
 	VotePool map[string]string   `json:"votePool"` // 本轮票池 [playId]log{}
