@@ -1494,11 +1494,19 @@ func checkout(game *model.Room, executed *model.Player) {
 	var evilAliveCount int   // 邪恶玩家存活数量
 	var mayorAlive bool      // 市长是否存活
 	for _, player := range game.Players {
+		// 对应平民胜利条件1
+		if player.CharacterType == Demons && !player.State.Dead {
+			realDemonCount++
+		}
+		// 对应平民胜利条件2
+		if player.Character == Mayor && !player.State.Dead {
+			mayorAlive = true
+		}
 		// 对应邪恶胜利条件1
 		if player.Character == Slayer && player.State.Bullet {
 			hasSlayerBullet = true
 		}
-		if !player.State.Dead {
+		if !player.State.Dead && player.Ready.Nominate {
 			canNominate++
 		}
 		// 对应邪恶胜利条件2
@@ -1513,14 +1521,6 @@ func checkout(game *model.Room, executed *model.Player) {
 		// 对应邪恶胜利条件3
 		if !player.State.Dead {
 			aliveCount++
-		}
-		// 对应平民胜利条件1
-		if player.CharacterType == Demons && !player.State.Dead {
-			realDemonCount++
-		}
-		// 对应平民胜利条件2
-		if player.Character == Mayor && !player.State.Dead {
-			mayorAlive = true
 		}
 	}
 	// 平民胜利条件1（恶魔受不了了自杀情况）
@@ -1542,15 +1542,15 @@ func checkout(game *model.Room, executed *model.Player) {
 		game.Result = "邪恶阵营胜利"
 	}
 	// 邪恶胜利条件1
-	if !hasSlayerBullet && canNominate == 0 {
-		msg += "达成邪恶胜利条件一：场上没人可以提名，且没有杀手或有杀手没有子弹\n"
+	if canNominate == 0 && !hasSlayerBullet && !mayorAlive {
+		msg += "达成邪恶胜利条件一：场上没人可以提名，且没有杀手或有杀手没有子弹，且没有市长或市长已死\n"
 		msg += "本局结束，邪恶胜利\n"
 		game.Result = "邪恶阵营胜利"
 	}
 	// 邪恶胜利条件2
-	halfAlive := int(math.Floor(float64(aliveCount / 2)))
-	if canVote <= halfAlive && evilAliveCount >= halfAlive && !hasSlayerBullet {
-		msg += "达成邪恶胜利条件二：可投的票数不大于活人的半数，且存活的邪恶玩家数量不小于活人的半数，且没有杀手或有杀手没有子弹\n"
+	halfAlive := int(math.Ceil(float64(aliveCount / 2)))
+	if canVote <= halfAlive && evilAliveCount >= halfAlive && !hasSlayerBullet && !mayorAlive {
+		msg += "达成邪恶胜利条件二：可投的票数不大于活人的半数（向上取整），且存活的邪恶玩家数量不小于活人的半数（向上取整），且没有杀手或有杀手没有子弹，且没有市长或市长已死\n"
 		msg += "本局结束，邪恶胜利\n"
 		game.Result = "邪恶阵营胜利"
 	}
