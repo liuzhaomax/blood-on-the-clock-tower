@@ -57,7 +57,12 @@ func LoadGame(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		mux.RLock()
+		mux.Lock()
+
+		if room == nil {
+			mux.Unlock()
+			return
+		}
 
 		if !room.Init {
 			// 初始化
@@ -65,6 +70,9 @@ func LoadGame(w http.ResponseWriter, r *http.Request) {
 			cfg.Rooms[roomIndex].CreatedAt = time.Now().Format(time.RFC3339)
 			cfg.Rooms[roomIndex].Result = ""
 			cfg.Rooms[roomIndex].Log = ""
+			cfg.Rooms[roomIndex].CastPool = map[string][]string{}
+			cfg.Rooms[roomIndex].VotePool = map[string]string{}
+			cfg.Rooms[roomIndex].State = model.GameState{}
 			// 初始化玩家状态 防止非法返回房间引起bug
 			for i, player := range room.Players {
 				newPlayer := model.Player{}
@@ -147,7 +155,7 @@ func LoadGame(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		mux.RUnlock()
+		mux.Unlock()
 
 		time.Sleep(time.Millisecond * 50)
 	}

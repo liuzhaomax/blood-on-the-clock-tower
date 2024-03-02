@@ -40,10 +40,6 @@ func Gaming(w http.ResponseWriter, r *http.Request) {
 		cfg.GamingConnPool[roomId] = map[string]*websocket.Conn{}
 	}
 	cfg.GamingConnPool[roomId][playerId] = conn
-	// 技能施放池，存储所有施放技能人，当前阶段施放的技能作用目标
-	if game.CastPool == nil {
-		game.CastPool = map[string][]string{}
-	}
 	// 初始化game的锁
 	if cfg.MuxPool[roomId] == nil {
 		cfg.MuxPool[roomId] = &sync.RWMutex{}
@@ -93,7 +89,7 @@ func Gaming(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		if game.Result != "" {
+		if game == nil || game.Result != "" {
 			break
 		}
 
@@ -103,8 +99,8 @@ func Gaming(w http.ResponseWriter, r *http.Request) {
 
 func toggleNight(mux *sync.RWMutex, game *model.Room) {
 	cfg := model.GetConfig()
-	mux.RLock()
-	defer mux.RUnlock()
+	mux.Lock()
+	defer mux.Unlock()
 
 	var msg string
 
@@ -266,8 +262,8 @@ func toggleNight(mux *sync.RWMutex, game *model.Room) {
 
 func endVoting(mux *sync.RWMutex, game *model.Room) {
 	cfg := model.GetConfig()
-	mux.RLock()
-	defer mux.RUnlock()
+	mux.Lock()
+	defer mux.Unlock()
 
 	if !game.State.VotingStep {
 		return
@@ -392,8 +388,8 @@ func endVoting(mux *sync.RWMutex, game *model.Room) {
 
 func nominate(mux *sync.RWMutex, game *model.Room, playerId string, targets []string) {
 	cfg := model.GetConfig()
-	mux.RLock()
-	defer mux.RUnlock()
+	mux.Lock()
+	defer mux.Unlock()
 
 	// 如果有处决者产生 不能提名
 	if game.Executed != nil {
@@ -489,8 +485,8 @@ func nominate(mux *sync.RWMutex, game *model.Room, playerId string, targets []st
 
 func vote(mux *sync.RWMutex, game *model.Room, playerId string) {
 	cfg := model.GetConfig()
-	mux.RLock()
-	defer mux.RUnlock()
+	mux.Lock()
+	defer mux.Unlock()
 
 	var msgAll = ""
 	var msgPlayer = "您"
@@ -532,8 +528,8 @@ func vote(mux *sync.RWMutex, game *model.Room, playerId string) {
 
 func cast(mux *sync.RWMutex, game *model.Room, playerId string, targets []string) {
 	cfg := model.GetConfig()
-	mux.RLock()
-	defer mux.RUnlock()
+	mux.Lock()
+	defer mux.Unlock()
 
 	var msgPlayer = "您"
 	var msgAll = ""
@@ -683,8 +679,8 @@ func cast(mux *sync.RWMutex, game *model.Room, playerId string, targets []string
 // 执行有顺序性，不可修改执行顺序
 func checkoutNight(mux *sync.RWMutex, game *model.Room) {
 	cfg := model.GetConfig()
-	mux.RLock()
-	defer mux.RUnlock()
+	mux.Lock()
+	defer mux.Unlock()
 
 	var msgPlayer = "您"
 	var msgAll = ""
@@ -1490,8 +1486,8 @@ func checkoutNight(mux *sync.RWMutex, game *model.Room) {
 }
 
 func checkoutDay(mux *sync.RWMutex, game *model.Room) {
-	mux.RLock()
-	defer mux.RUnlock()
+	mux.Lock()
+	defer mux.Unlock()
 	// 结算本局
 	checkout(game, game.Executed)
 }
