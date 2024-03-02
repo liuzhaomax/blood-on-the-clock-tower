@@ -66,19 +66,6 @@ function Gaming() {
         })
     }
 
-    // 防断线
-    useEffect(() => {
-        let timer = setInterval(() => {
-            if (socket) {
-                socket.send("ping")
-            }
-            if (socketGaming) {
-                socketGaming.send(JSON.stringify({action: "ping", targets: []}))
-            }
-        }, 10000)
-        return () => clearInterval(timer)
-    }, [])
-
     // 退出房间
     const returnRoom = () => {
         showReturnRoomModal()
