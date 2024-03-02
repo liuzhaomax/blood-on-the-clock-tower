@@ -325,6 +325,10 @@ func endVoting(mux *sync.RWMutex, game *model.Room) {
 			}
 		}
 	}
+	// 主人投了，管家也投了，要加入管家投票成功日志，对应vote函数的管家逻辑
+	if hasMasterVoted && hasButlerVoted {
+		msg += fmt.Sprintf("[%s] 投票 [%s] 成功\n", butlerPlayer.Name, nominated.Name)
+	}
 	if nominated != nil && nominated.State.VoteCount > int(math.Floor(float64(aliveCount/2))) {
 		game.Executed = nominated
 		game.Executed.State.Dead = true
@@ -505,8 +509,11 @@ func vote(mux *sync.RWMutex, game *model.Room, playerId string) {
 				game.Players[i].Ready.Vote = 0
 				game.Players[i].State.Voted = true
 				nominated.State.VoteCount += 1
-				msgAll += fmt.Sprintf("投票 [%s] 成功\n", nominated.Name)
 				msgPlayer += fmt.Sprintf("决意投给 [%s] \n", nominated.Name)
+			}
+			// 管家的投票在endVoting结算
+			if game.Players[i].Character != Butler {
+				msgAll += fmt.Sprintf("投票 [%s] 成功\n", nominated.Name)
 			}
 			// 总日志加入票池
 			game.VotePool[player.Id] = msgAll
