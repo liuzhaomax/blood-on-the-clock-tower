@@ -46,7 +46,7 @@ func Gaming(w http.ResponseWriter, r *http.Request) {
 	}
 	// 初始化game的锁
 	if cfg.MuxPool[roomId] == nil {
-		cfg.MuxPool[roomId] = &sync.Mutex{}
+		cfg.MuxPool[roomId] = &sync.RWMutex{}
 	}
 	CfgMutex.Unlock()
 
@@ -101,10 +101,10 @@ func Gaming(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func toggleNight(mux *sync.Mutex, game *model.Room) {
+func toggleNight(mux *sync.RWMutex, game *model.Room) {
 	cfg := model.GetConfig()
-	mux.Lock()
-	defer mux.Unlock()
+	mux.RLock()
+	defer mux.RUnlock()
 
 	var msg string
 
@@ -244,28 +244,30 @@ func toggleNight(mux *sync.Mutex, game *model.Room) {
 				break
 			}
 		}
+		// 保存到总日志
+		game.Log += "恶魔爪牙已互认身份\n"
+		// 发送
 		if err := cfg.GamingConnPool[game.Id][demon.Id].WriteMessage(websocket.TextMessage, []byte(msg)); err != nil {
 			log.Println("Write error:", err)
 			return
 		}
-		// 保存到总日志
-		game.Log += "恶魔爪牙已互认身份\n"
 
 		// 给恶魔提供3个不在场的村民身份
 		msg = findThreeCharactersNotInGame(game.Players)
+		// 保存到总日志
+		game.Log += msg
+		// 发送
 		if err := cfg.GamingConnPool[game.Id][demon.Id].WriteMessage(websocket.TextMessage, []byte(msg)); err != nil {
 			log.Println("Write error:", err)
 			return
 		}
-		// 保存到总日志
-		game.Log += msg
 	}
 }
 
-func endVoting(mux *sync.Mutex, game *model.Room) {
+func endVoting(mux *sync.RWMutex, game *model.Room) {
 	cfg := model.GetConfig()
-	mux.Lock()
-	defer mux.Unlock()
+	mux.RLock()
+	defer mux.RUnlock()
 
 	if !game.State.VotingStep {
 		return
@@ -388,10 +390,10 @@ func endVoting(mux *sync.Mutex, game *model.Room) {
 	return
 }
 
-func nominate(mux *sync.Mutex, game *model.Room, playerId string, targets []string) {
+func nominate(mux *sync.RWMutex, game *model.Room, playerId string, targets []string) {
 	cfg := model.GetConfig()
-	mux.Lock()
-	defer mux.Unlock()
+	mux.RLock()
+	defer mux.RUnlock()
 
 	// 如果有处决者产生 不能提名
 	if game.Executed != nil {
@@ -485,10 +487,10 @@ func nominate(mux *sync.Mutex, game *model.Room, playerId string, targets []stri
 	}
 }
 
-func vote(mux *sync.Mutex, game *model.Room, playerId string) {
+func vote(mux *sync.RWMutex, game *model.Room, playerId string) {
 	cfg := model.GetConfig()
-	mux.Lock()
-	defer mux.Unlock()
+	mux.RLock()
+	defer mux.RUnlock()
 
 	var msgAll = ""
 	var msgPlayer = "您"
@@ -528,10 +530,10 @@ func vote(mux *sync.Mutex, game *model.Room, playerId string) {
 	}
 }
 
-func cast(mux *sync.Mutex, game *model.Room, playerId string, targets []string) {
+func cast(mux *sync.RWMutex, game *model.Room, playerId string, targets []string) {
 	cfg := model.GetConfig()
-	mux.Lock()
-	defer mux.Unlock()
+	mux.RLock()
+	defer mux.RUnlock()
 
 	var msgPlayer = "您"
 	var msgAll = ""
@@ -679,10 +681,10 @@ func cast(mux *sync.Mutex, game *model.Room, playerId string, targets []string) 
 }
 
 // 执行有顺序性，不可修改执行顺序
-func checkoutNight(mux *sync.Mutex, game *model.Room) {
+func checkoutNight(mux *sync.RWMutex, game *model.Room) {
 	cfg := model.GetConfig()
-	mux.Lock()
-	defer mux.Unlock()
+	mux.RLock()
+	defer mux.RUnlock()
 
 	var msgPlayer = "您"
 	var msgAll = ""
@@ -1487,9 +1489,9 @@ func checkoutNight(mux *sync.Mutex, game *model.Room) {
 	checkout(game, nil) // 这里不要传入executed，因为晚上不处决人，晚上可能死圣徒
 }
 
-func checkoutDay(mux *sync.Mutex, game *model.Room) {
-	mux.Lock()
-	defer mux.Unlock()
+func checkoutDay(mux *sync.RWMutex, game *model.Room) {
+	mux.RLock()
+	defer mux.RUnlock()
 	// 结算本局
 	checkout(game, game.Executed)
 }

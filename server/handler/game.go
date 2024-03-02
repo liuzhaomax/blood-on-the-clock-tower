@@ -40,7 +40,7 @@ func LoadGame(w http.ResponseWriter, r *http.Request) {
 	cfg.GameConnPool[roomId][playerId] = conn
 	// 初始化game的锁
 	if cfg.MuxPool[roomId] == nil {
-		cfg.MuxPool[roomId] = &sync.Mutex{}
+		cfg.MuxPool[roomId] = &sync.RWMutex{}
 	}
 	CfgMutex.Unlock()
 
@@ -57,7 +57,7 @@ func LoadGame(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		mux.Lock()
+		mux.RLock()
 
 		if !room.Init {
 			// 初始化
@@ -147,7 +147,7 @@ func LoadGame(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		mux.Unlock()
+		mux.RUnlock()
 
 		time.Sleep(time.Millisecond * 50)
 	}

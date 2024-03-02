@@ -91,8 +91,10 @@ func createRoom(room model.Room) {
 	for id, conn := range cfg.HomeConnPool {
 		// 关闭创建房间者的连接
 		if id == room.Players[0].Id {
+			CfgMutex.Lock()
 			conn.Close()
 			delete(cfg.HomeConnPool, id)
+			CfgMutex.Unlock()
 			continue
 		}
 		if err = conn.WriteMessage(websocket.TextMessage, marshalRooms); err != nil {
@@ -135,8 +137,10 @@ func joinRoom(joinRoomPayload model.JoinRoomPayload) {
 	for id, conn := range cfg.HomeConnPool {
 		// 关闭加入房间者的连接
 		if id == joinRoomPayload.Player.Id {
+			CfgMutex.Lock()
 			conn.Close()
 			delete(cfg.HomeConnPool, id)
+			CfgMutex.Unlock()
 			continue
 		}
 		if err = conn.WriteMessage(websocket.TextMessage, marshalRooms); err != nil {

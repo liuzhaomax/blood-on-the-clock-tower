@@ -15,7 +15,7 @@ func init() {
 		cfg.RoomConnPool = map[string]map[string]*websocket.Conn{}
 		cfg.GameConnPool = map[string]map[string]*websocket.Conn{}
 		cfg.GamingConnPool = map[string]map[string]*websocket.Conn{}
-		cfg.MuxPool = map[string]*sync.Mutex{}
+		cfg.MuxPool = map[string]*sync.RWMutex{}
 	})
 }
 
@@ -29,7 +29,7 @@ type Config struct {
 	RoomConnPool   map[string]map[string]*websocket.Conn // 等待开始 玩家的长连接 [roomId][playId]conn
 	GameConnPool   map[string]map[string]*websocket.Conn // 游戏中玩家的game长连接 [roomId][playId]conn
 	GamingConnPool map[string]map[string]*websocket.Conn // 游戏中玩家的日志长连接 [roomId][playId]conn
-	MuxPool        map[string]*sync.Mutex                // 游戏进行锁 [roomId]*nux
+	MuxPool        map[string]*sync.RWMutex              // 游戏进行锁 [roomId]*nux
 }
 
 type Room struct {
