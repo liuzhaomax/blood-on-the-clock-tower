@@ -32,7 +32,7 @@ func LoadGame(w http.ResponseWriter, r *http.Request) {
 	playerId := parts[3]
 
 	CfgMutex.Lock()
-	room, roomIndex := findRoom(roomId)
+	room, _ := findRoom(roomId)
 	// 推入game连接池
 	if cfg.GameConnPool[roomId] == nil {
 		cfg.GameConnPool[roomId] = map[string]*websocket.Conn{}
@@ -47,7 +47,7 @@ func LoadGame(w http.ResponseWriter, r *http.Request) {
 	mux := cfg.MuxPool[roomId]
 
 	for {
-		messageType, _, err := conn.ReadMessage()
+		_, p, err := conn.ReadMessage()
 		if err != nil {
 			if websocket.IsCloseError(err, websocket.CloseGoingAway) {
 				log.Println("Client disconnected:", err)
@@ -57,107 +57,118 @@ func LoadGame(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		mux.Lock()
-
-		if room == nil {
-			mux.Unlock()
-			return
+		action := string(p)
+		switch action {
+		case "load_game":
+			initGame(mux, room)
+		case "quit_game":
+			quitGame(mux, room, playerId)
 		}
 
-		if !room.Init {
-			// 初始化
-			cfg.Rooms[roomIndex].Init = true
-			cfg.Rooms[roomIndex].CreatedAt = time.Now().Format(time.RFC3339)
-			cfg.Rooms[roomIndex].Result = ""
-			cfg.Rooms[roomIndex].Log = ""
-			cfg.Rooms[roomIndex].CastPool = map[string][]string{}
-			cfg.Rooms[roomIndex].VotePool = map[string]string{}
-			cfg.Rooms[roomIndex].State = model.GameState{}
-			// 初始化玩家状态 防止非法返回房间引起bug
-			for i, player := range room.Players {
-				newPlayer := model.Player{}
-				newPlayer.Id = player.Id
-				newPlayer.Name = player.Name
-				newPlayer.Index = player.Index
-				room.Players[i] = newPlayer
+		// 检测是否房间内所有人都退出游戏
+		detectIfAllQuited(mux, room)
+
+		time.Sleep(time.Millisecond * 50)
+	}
+}
+
+func initGame(mux *sync.RWMutex, room *model.Room) {
+	cfg := model.GetConfig()
+	mux.Lock()
+	defer mux.Unlock()
+	if room == nil {
+		return
+	}
+
+	if !room.Init {
+		// 初始化
+		room.Init = true
+		room.CreatedAt = time.Now().Format(time.RFC3339)
+		room.Result = ""
+		room.Log = ""
+		room.CastPool = map[string][]string{}
+		room.VotePool = map[string]string{}
+		room.State = model.GameState{}
+		// 初始化玩家状态 防止非法返回房间引起bug
+		for i, player := range room.Players {
+			newPlayer := model.Player{}
+			newPlayer.Id = player.Id
+			newPlayer.Name = player.Name
+			newPlayer.Index = player.Index
+			room.Players[i] = newPlayer
+		}
+		// 分配身份
+		var replaceDrunk string
+		if room.Players[0].Character == "" {
+			room.Players, replaceDrunk = allocateCharacter(room.Players)
+		}
+		// 初始化玩家状态 依赖身份
+		room.Players = initStatus(room.Players, replaceDrunk)
+		// 保存玩家身份到总日志
+		var hasFortuneTeller bool
+		var hasRecluse bool
+		room.Log = "本局配置：\n"
+		for _, player := range room.Players {
+			room.Log += fmt.Sprintf("玩家 [%s] 的身份是 {%s} \n", player.Name, player.Character)
+			if player.State.Drunk {
+				room.Log += fmt.Sprintf("玩家 [%s] 的身份其实是 {%s} ~\n", player.Name, Drunk)
 			}
-			// 分配身份
-			var replaceDrunk string
-			if cfg.Rooms[roomIndex].Players[0].Character == "" {
-				cfg.Rooms[roomIndex].Players, replaceDrunk = allocateCharacter(cfg.Rooms[roomIndex].Players)
+			if player.Character == Recluse {
+				room.Log += fmt.Sprintf("玩家 [%s] 的被当作的身份是 {%s} ~\n", player.Name, player.State.RegardedAs)
+				hasRecluse = true
 			}
-			// 初始化玩家状态 依赖身份
-			cfg.Rooms[roomIndex].Players = initStatus(cfg.Rooms[roomIndex].Players, replaceDrunk)
-			// 保存玩家身份到总日志
-			var hasFortuneTeller bool
-			var hasRecluse bool
-			cfg.Rooms[roomIndex].Log = "本局配置：\n"
-			for _, player := range cfg.Rooms[roomIndex].Players {
-				cfg.Rooms[roomIndex].Log += fmt.Sprintf("玩家 [%s] 的身份是 {%s} \n", player.Name, player.Character)
-				if player.State.Drunk {
-					cfg.Rooms[roomIndex].Log += fmt.Sprintf("玩家 [%s] 的身份其实是 {%s} ~\n", player.Name, Drunk)
-				}
-				if player.Character == Recluse {
-					cfg.Rooms[roomIndex].Log += fmt.Sprintf("玩家 [%s] 的被当作的身份是 {%s} ~\n", player.Name, player.State.RegardedAs)
-					hasRecluse = true
-				}
-				if player.Character == FortuneTeller {
-					hasFortuneTeller = true
+			if player.Character == FortuneTeller {
+				hasFortuneTeller = true
+			}
+		}
+		if hasFortuneTeller && !hasRecluse {
+			for _, player := range room.Players {
+				if player.State.Demon && player.CharacterType != Demons {
+					room.Log += fmt.Sprintf("玩家 [%s] 是占卜师认定的恶魔~\n", player.Name)
+					break
 				}
 			}
-			if hasFortuneTeller && !hasRecluse {
-				for _, player := range cfg.Rooms[roomIndex].Players {
-					if player.State.Demon && player.CharacterType != Demons {
-						cfg.Rooms[roomIndex].Log += fmt.Sprintf("玩家 [%s] 是占卜师认定的恶魔~\n", player.Name)
+		}
+		if hasFortuneTeller && hasRecluse {
+			var extraDemonQuantity int
+			for _, player := range room.Players {
+				if player.State.Demon && player.CharacterType != Demons {
+					extraDemonQuantity += 1
+				}
+			}
+			if extraDemonQuantity == 2 {
+				for _, player := range room.Players {
+					if player.Character == Recluse {
+						room.Log += fmt.Sprintf("玩家 [%s] 是占卜师认定的恶魔~\n", player.Name)
 						break
 					}
 				}
 			}
-			if hasFortuneTeller && hasRecluse {
-				var extraDemonQuantity int
-				for _, player := range cfg.Rooms[roomIndex].Players {
-					if player.State.Demon && player.CharacterType != Demons {
-						extraDemonQuantity += 1
-					}
-				}
-				if extraDemonQuantity == 2 {
-					for _, player := range room.Players {
-						if player.Character == Recluse {
-							cfg.Rooms[roomIndex].Log += fmt.Sprintf("玩家 [%s] 是占卜师认定的恶魔~\n", player.Name)
-							break
-						}
-					}
-				}
-				if extraDemonQuantity == 3 {
-					for _, player := range room.Players {
-						if player.Character != Recluse && player.CharacterType != Demons && player.State.Demon {
-							cfg.Rooms[roomIndex].Log += fmt.Sprintf("玩家 [%s] 是占卜师认定的恶魔~\n", player.Name)
-							break
-						}
+			if extraDemonQuantity == 3 {
+				for _, player := range room.Players {
+					if player.Character != Recluse && player.CharacterType != Demons && player.State.Demon {
+						room.Log += fmt.Sprintf("玩家 [%s] 是占卜师认定的恶魔~\n", player.Name)
+						break
 					}
 				}
 			}
-			cfg.Rooms[roomIndex].Log += "------------本--局--开--始------------\n"
 		}
+		room.Log += "------------本--局--开--始------------\n"
+	}
 
-		// 群发game
-		if room.Result == "" {
-			marshaledRoom, err := json.Marshal(cfg.Rooms[roomIndex])
-			if err != nil {
-				log.Println("JSON marshal error:", err)
+	// 群发game
+	if room.Result == "" {
+		marshaledRoom, err := json.Marshal(room)
+		if err != nil {
+			log.Println("JSON marshal error:", err)
+			return
+		}
+		for _, conn := range cfg.GameConnPool[room.Id] {
+			if err = conn.WriteMessage(websocket.TextMessage, marshaledRoom); err != nil {
+				log.Println("Write error:", err)
 				return
 			}
-			for _, conn := range cfg.GameConnPool[roomId] {
-				if err = conn.WriteMessage(messageType, marshaledRoom); err != nil {
-					log.Println("Write error:", err)
-					return
-				}
-			}
 		}
-
-		mux.Unlock()
-
-		time.Sleep(time.Millisecond * 50)
 	}
 }
 
@@ -373,4 +384,69 @@ func getRandEvilCharacter() string {
 	evils := append(MinionsPool, DemonsPool...)
 	randInt := rand.Intn(len(evils))
 	return evils[randInt]
+}
+
+func quitGame(mux *sync.RWMutex, room *model.Room, playerId string) {
+	cfg := model.GetConfig()
+	mux.Lock()
+	defer mux.Unlock()
+	if room == nil {
+		return
+	}
+
+	for i, player := range room.Players {
+		if player.Id == playerId {
+			room.Players[i].Quited = true
+			break
+		}
+	}
+
+	// 关闭退出者的gaming连接
+	if cfg.GamingConnPool[room.Id] == nil {
+		return // 防空指针异常
+	}
+	for id, conn := range cfg.GamingConnPool[room.Id] {
+		if id == playerId {
+			CfgMutex.Lock()
+			conn.Close()
+			delete(cfg.GamingConnPool[room.Id], id)
+			CfgMutex.Unlock()
+			continue
+		}
+	}
+	// 关闭退出者的game连接
+	if cfg.GameConnPool[room.Id] == nil {
+		return // 防空指针异常
+	}
+	for id, conn := range cfg.GameConnPool[room.Id] {
+		if id == playerId {
+			CfgMutex.Lock()
+			conn.Close()
+			delete(cfg.GameConnPool[room.Id], id)
+			CfgMutex.Unlock()
+			continue
+		}
+	}
+}
+
+func detectIfAllQuited(mux *sync.RWMutex, room *model.Room) {
+	cfg := model.GetConfig()
+	mux.Lock()
+	defer mux.Unlock()
+
+	var allQuited = true
+	for _, player := range room.Players {
+		allQuited = allQuited && player.Quited
+	}
+	if allQuited {
+		CfgMutex.Lock()
+		var newRooms []model.Room
+		for _, roomm := range cfg.Rooms {
+			if room.Id != roomm.Id {
+				newRooms = append(newRooms, roomm)
+			}
+		}
+		cfg.Rooms = newRooms
+		CfgMutex.Unlock()
+	}
 }

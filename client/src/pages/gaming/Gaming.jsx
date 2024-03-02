@@ -78,17 +78,7 @@ function Gaming() {
         castLock = false
         setIsReturnRoomModalOpen(false)
         jumpToHome()
-        const socket = new WebSocket(`${config.beBaseUrl}/room/${roomId}`)
-        socket.onopen = function() {
-            let data = {
-                action: "quit_room",
-                payload: localStorage.getItem("PlayerID"),
-            }
-            socket.send(JSON.stringify(data))
-        }
-        socket.onerror = function(error) {
-            console.error("WebSocket error:", error)
-        }
+        socket.send("quit_game")
     }
     const handleReturnRoomCancel = () => {
         setIsReturnRoomModalOpen(false)

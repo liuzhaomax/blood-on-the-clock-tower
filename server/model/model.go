@@ -61,7 +61,8 @@ type Player struct {
 	Id            string      `json:"id"`
 	Name          string      `json:"name"`
 	Index         int         `json:"index"`
-	Waiting       bool        `json:"waiting"`
+	Waiting       bool        `json:"waiting"` // 是否等待开始
+	Quited        bool        `json:"quited"`  // 是否已经退出
 	Character     string      `json:"character"`
 	CharacterType string      `json:"characterType"`
 	State         PlayerState `json:"state"`

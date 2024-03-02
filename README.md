@@ -215,11 +215,14 @@
 + 游戏中页
     + 加载游戏 /game/:roomId/:playerId
         + 功能：根据人数，分配身份；夜晚读秒
-        + 输入：无
+        + 输入：action:load_game
+        + 输出：game
+    + 退出游戏 /game/:roomId/:playerId
+        + 输入：action:quit_game
         + 输出：game
     + 游戏过程 /gaming/:roomId/:playerId
-        + 输入：action字符串
-        + 输出：操作结果日志
+        + 输入：action, targets:[playerId]
+        + 输出：操作结果日志string
 + 游戏结算页 /review/:roomId
     + 加载结算 /room/:roomId
         + 输入：action:review_game, playload:playerId

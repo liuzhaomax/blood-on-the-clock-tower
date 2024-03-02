@@ -89,9 +89,13 @@ func Gaming(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
+		// 有结果则跳出循环
 		if game == nil || game.Result != "" {
 			break
 		}
+
+		// 检测是否房间内所有人都退出游戏
+		detectIfAllQuited(mux, game)
 
 		time.Sleep(time.Millisecond * 50)
 	}
