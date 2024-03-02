@@ -1628,7 +1628,7 @@ func checkout(game *model.Room, executed *model.Player) {
 func findThreeCharactersNotInGame(players []model.Player) string {
 	hasRepeatedCharacter := false
 	round := 0
-	charas := []string{}
+	var chars []string
 	msg := "这三个村民身份不在本局中："
 	for {
 		randInt := rand.Intn(len(TownsfolkPool))
@@ -1639,13 +1639,13 @@ func findThreeCharactersNotInGame(players []model.Player) string {
 		}
 		if !hasRepeatedCharacter {
 			round += 1
-			charas = append(charas, TownsfolkPool[randInt])
+			chars = append(chars, TownsfolkPool[randInt])
 		}
 		if round == 3 {
 			break
 		}
 	}
-	for _, character := range charas {
+	for _, character := range chars {
 		msg += fmt.Sprintf("{%s} ", character)
 	}
 	return msg + "\n"
