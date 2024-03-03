@@ -31,9 +31,9 @@ func Gaming(w http.ResponseWriter, r *http.Request) {
 	}
 	roomId := parts[2]
 	playerId := parts[3]
+	game, _ := findRoom(roomId)
 
 	CfgMutex.Lock()
-	game, _ := findRoom(roomId)
 	// 推入连接池
 	cfg := model.GetConfig()
 	if cfg.GamingConnPool[roomId] == nil {

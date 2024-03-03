@@ -30,9 +30,9 @@ func LoadGame(w http.ResponseWriter, r *http.Request) {
 	}
 	roomId := parts[2]
 	playerId := parts[3]
+	room, _ := findRoom(roomId)
 
 	CfgMutex.Lock()
-	room, _ := findRoom(roomId)
 	// 推入game连接池
 	if cfg.GameConnPool[roomId] == nil {
 		cfg.GameConnPool[roomId] = map[string]*websocket.Conn{}
