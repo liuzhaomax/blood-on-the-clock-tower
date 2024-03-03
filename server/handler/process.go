@@ -333,6 +333,10 @@ func endVoting(mux *sync.RWMutex, game *model.Room) {
 	if hasMasterVoted && hasButlerVoted {
 		msg += fmt.Sprintf("[%s] 投票 [%s] 成功\n", butlerPlayer.Name, nominated.Name)
 	}
+	// 打印所有投票成功的票型
+	for _, info := range game.VotePool {
+		msg += info
+	}
 	if nominated != nil && nominated.State.VoteCount > int(math.Floor(float64(aliveCount/2))) {
 		game.Executed = nominated
 		game.Executed.State.Dead = true
@@ -340,10 +344,6 @@ func endVoting(mux *sync.RWMutex, game *model.Room) {
 		game.Executed.Ready.Nominate = false
 		game.Executed.Ready.Nominated = false
 		game.Executed.State.VoteCount = 0
-		// 打印所有投票成功的票型
-		for _, info := range game.VotePool {
-			msg += info
-		}
 		msg += fmt.Sprintf("处决结果：[%s] 被公投处决，死亡\n", game.Executed.Name)
 	} else {
 		if nominated != nil {
@@ -514,13 +514,13 @@ func vote(mux *sync.RWMutex, game *model.Room, playerId string) {
 				game.Players[i].State.Voted = true
 				nominated.State.VoteCount += 1
 				msgPlayer += fmt.Sprintf("决意投给 [%s] \n", nominated.Name)
-				// 管家的投票在endVoting结算
-				if game.Players[i].Character != Butler {
-					msgAll += fmt.Sprintf("投票 [%s] 成功\n", nominated.Name)
-				}
-				// 总日志加入票池
-				game.VotePool[player.Id] = msgAll
 			}
+			// 管家的投票在endVoting结算
+			if game.Players[i].Character != Butler {
+				msgAll += fmt.Sprintf("投票 [%s] 成功\n", nominated.Name)
+			}
+			// 总日志加入票池
+			game.VotePool[player.Id] = msgAll
 			// 发送个人日志
 			for id, conn := range cfg.GamingConnPool[game.Id] {
 				if id == playerId {
