@@ -639,16 +639,32 @@ func cast(mux *sync.RWMutex, game *model.Room, playerId string, targets []string
 						target.State.Dead = true
 						// 拼接日志
 						msg += fmt.Sprintf("枪杀了 [%s] \n", target.Name)
-						for i := range game.Players {
-							game.Players[i].Log += msg
+					} else {
+						// 拼接日志
+						msg += fmt.Sprintf("无事发生\n", target.Name)
+					}
+					for i := range game.Players {
+						game.Players[i].Log += msg
+					}
+					game.Log += msg
+					// 发送日志
+					for _, conn := range cfg.GamingConnPool[game.Id] {
+						if err := conn.WriteMessage(websocket.TextMessage, []byte(msg)); err != nil {
+							log.Println("Write error:", err)
+							return
 						}
-						game.Log += msg
-						// 发送日志
-						for _, conn := range cfg.GamingConnPool[game.Id] {
+					}
+				} else {
+					msg := "您已没有子弹"
+					game.Players[i].Log += msg
+					// 发送日志
+					for id, conn := range cfg.GamingConnPool[game.Id] {
+						if id == player.Id {
 							if err := conn.WriteMessage(websocket.TextMessage, []byte(msg)); err != nil {
 								log.Println("Write error:", err)
 								return
 							}
+							break
 						}
 					}
 				}

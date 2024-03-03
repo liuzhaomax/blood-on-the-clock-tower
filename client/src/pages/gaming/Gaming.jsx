@@ -618,7 +618,7 @@ function Gaming() {
             return "投票处决环节不能提名"
         }
         if (!me.ready.nominate) {
-            return "您本阶段已发起过提名"
+            return "您本局已发起过提名"
         }
         if (selectedPlayers.length === 0) {
             return "您想提名不能不选人"
