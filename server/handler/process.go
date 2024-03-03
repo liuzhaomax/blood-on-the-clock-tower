@@ -465,7 +465,7 @@ func nominate(mux *sync.RWMutex, game *model.Room, playerId string, targets []st
 						game.Players[i].Ready.Nominate = false
 						game.Players[i].Ready.Nominated = false
 						canGoToVotingStep = false
-						msg += "被圣女弹死了\n"
+						msg += "被圣女反弹死了\n"
 						for i := range game.Players {
 							game.Players[i].Log += msg
 						}
@@ -514,13 +514,13 @@ func vote(mux *sync.RWMutex, game *model.Room, playerId string) {
 				game.Players[i].State.Voted = true
 				nominated.State.VoteCount += 1
 				msgPlayer += fmt.Sprintf("决意投给 [%s] \n", nominated.Name)
+				// 管家的投票在endVoting结算
+				if game.Players[i].Character != Butler {
+					msgAll += fmt.Sprintf("投票 [%s] 成功\n", nominated.Name)
+				}
+				// 总日志加入票池
+				game.VotePool[player.Id] = msgAll
 			}
-			// 管家的投票在endVoting结算
-			if game.Players[i].Character != Butler {
-				msgAll += fmt.Sprintf("投票 [%s] 成功\n", nominated.Name)
-			}
-			// 总日志加入票池
-			game.VotePool[player.Id] = msgAll
 			// 发送个人日志
 			for id, conn := range cfg.GamingConnPool[game.Id] {
 				if id == playerId {
@@ -1508,7 +1508,7 @@ func checkout(game *model.Room, executed *model.Player) {
 	cfg := model.GetConfig()
 	msg := ""
 	var realDemonCount int   // 恶魔数量，被占卜认定的不算
-	var canNominate int      // 可提名人数
+	var canCivilNominate int // 可提名人数
 	var hasSlayerBullet bool // 有杀手且杀手有子弹
 	var aliveCount int       // 活人数量
 	var canVote int          // 可投票数量
@@ -1527,8 +1527,8 @@ func checkout(game *model.Room, executed *model.Player) {
 		if player.Character == Slayer && player.State.Bullet {
 			hasSlayerBullet = true
 		}
-		if !player.State.Dead && player.Ready.Nominate {
-			canNominate++
+		if !player.State.Dead && player.Ready.Nominate && (player.CharacterType == Townsfolk || player.CharacterType == Outsiders) {
+			canCivilNominate++
 		}
 		// 对应邪恶胜利条件2
 		if player.State.Dead {
@@ -1563,8 +1563,8 @@ func checkout(game *model.Room, executed *model.Player) {
 		game.Result = "邪恶阵营胜利"
 	}
 	// 邪恶胜利条件1
-	if canNominate == 0 && !hasSlayerBullet && !mayorAlive {
-		msg += "达成邪恶胜利条件一：场上没人可以提名，且没有杀手或有杀手没有子弹，且没有市长或市长已死\n"
+	if canCivilNominate == 0 && !hasSlayerBullet && !mayorAlive {
+		msg += "达成邪恶胜利条件一：场上没有平民可以提名，且没有杀手或有杀手没有子弹，且没有市长或市长已死\n"
 		msg += "本局结束，邪恶胜利\n"
 		game.Result = "邪恶阵营胜利"
 	}

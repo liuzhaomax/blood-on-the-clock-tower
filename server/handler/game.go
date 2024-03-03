@@ -434,6 +434,10 @@ func detectIfAllQuited(mux *sync.RWMutex, room *model.Room) {
 	mux.Lock()
 	defer mux.Unlock()
 
+	if room == nil {
+		return
+	}
+
 	var allQuited = true
 	for _, player := range room.Players {
 		allQuited = allQuited && player.Quited
