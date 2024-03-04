@@ -16,6 +16,7 @@ func toggleNight(mux *sync.Mutex, game *model.Room) {
 	cfg := model.GetConfig()
 	mux.Lock()
 	defer mux.Unlock()
+	sendMux := &sync.Mutex{}
 
 	var msg string
 
@@ -116,15 +117,25 @@ func toggleNight(mux *sync.Mutex, game *model.Room) {
 			log.Println("JSON marshal error:", err)
 			return
 		}
+		var wg = sync.WaitGroup{}
+		wg.Add(len(cfg.GameConnPool[game.Id]))
 		for _, conn := range cfg.GameConnPool[game.Id] {
-			if err := conn.WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
-				log.Println("Write error:", err)
-				return
-			}
+			go func(conn *websocket.Conn) {
+				sendMux.Lock()
+				defer sendMux.Unlock()
+				defer wg.Done()
+				if err := conn.WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
+					log.Println("Write error:", err)
+					return
+				}
+			}(conn)
 		}
+		wg.Wait()
 	}
 	// 第一夜恶魔爪牙互认身份
 	if game.State.Stage == 1 {
+		var wg = sync.WaitGroup{}
+		wg.Add(3)
 		msg = ""
 		var demon model.Player
 		for i, player := range game.Players {
@@ -146,10 +157,15 @@ func toggleNight(mux *sync.Mutex, game *model.Room) {
 					log.Println("JSON marshal error:", err)
 					return
 				}
-				if err := cfg.GameConnPool[game.Id][player.Id].WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
-					log.Println("Write error:", err)
-					return
-				}
+				go func(conn *websocket.Conn) {
+					sendMux.Lock()
+					defer sendMux.Unlock()
+					defer wg.Done()
+					if err := conn.WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
+						log.Println("Write error:", err)
+						return
+					}
+				}(cfg.GameConnPool[game.Id][player.Id])
 			}
 		}
 		// 发送恶魔身份给爪牙
@@ -174,10 +190,15 @@ func toggleNight(mux *sync.Mutex, game *model.Room) {
 			log.Println("JSON marshal error:", err)
 			return
 		}
-		if err := cfg.GameConnPool[game.Id][demon.Id].WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
-			log.Println("Write error:", err)
-			return
-		}
+		go func(conn *websocket.Conn) {
+			sendMux.Lock()
+			defer sendMux.Unlock()
+			defer wg.Done()
+			if err := conn.WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
+				log.Println("Write error:", err)
+				return
+			}
+		}(cfg.GameConnPool[game.Id][demon.Id])
 
 		// 给恶魔提供3个不在场的村民身份
 		msg = findThreeCharactersNotInGame(game.Players)
@@ -189,10 +210,16 @@ func toggleNight(mux *sync.Mutex, game *model.Room) {
 			log.Println("JSON marshal error:", err)
 			return
 		}
-		if err := cfg.GameConnPool[game.Id][demon.Id].WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
-			log.Println("Write error:", err)
-			return
-		}
+		go func(conn *websocket.Conn) {
+			sendMux.Lock()
+			defer sendMux.Unlock()
+			defer wg.Done()
+			if err := conn.WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
+				log.Println("Write error:", err)
+				return
+			}
+		}(cfg.GameConnPool[game.Id][demon.Id])
+		wg.Wait()
 	}
 }
 
@@ -314,7 +341,7 @@ func endVoting(mux *sync.Mutex, game *model.Room) {
 		// 拼接日志
 		msgPlayer := "您"
 		msgAll := ""
-		info := fmt.Sprintf("已变为小恶魔\n")
+		info := "已变为小恶魔\n"
 		msgPlayer += info
 		msgAll += fmt.Sprintf("[%s] ", scarletWoman.Name) + info
 		scarletWoman.Log += msgPlayer
@@ -613,7 +640,7 @@ func cast(mux *sync.Mutex, game *model.Room, playerId string, targets []string) 
 						msg += fmt.Sprintf("枪杀了 [%s] \n", target.Name)
 					} else {
 						// 拼接日志
-						msg += fmt.Sprintf("无事发生\n", target.Name)
+						msg += "无事发生\n"
 					}
 					for i := range game.Players {
 						game.Players[i].Log += msg
@@ -1195,7 +1222,7 @@ func checkoutNight(mux *sync.Mutex, game *model.Room) {
 					scarletWoman.State.Evil = true
 					scarletWoman.State.Demon = true
 					// 拼接日志
-					info := fmt.Sprintf("已变为小恶魔\n")
+					info := "已变为小恶魔\n"
 					msgPlayer += info
 					msgAll += fmt.Sprintf("[%s] ", scarletWoman.Name) + info
 					scarletWoman.Log += msgPlayer
@@ -1230,7 +1257,7 @@ func checkoutNight(mux *sync.Mutex, game *model.Room) {
 						}
 					}
 					// 拼接日志
-					info := fmt.Sprintf("已变为小恶魔\n")
+					info := "已变为小恶魔\n"
 					msgPlayer += info
 					msgAll += fmt.Sprintf("[%s] ", minionsAlive[randInt].Name) + info
 					minionsAlive[randInt].Log += msgPlayer

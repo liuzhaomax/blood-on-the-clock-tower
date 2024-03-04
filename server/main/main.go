@@ -46,12 +46,13 @@ func main() {
 				log.Println("JSON marshal error:", err)
 				return
 			}
-			for _, conn := range cfg.HomeConnPool {
-				if err := conn.WriteMessage(websocket.TextMessage, marshalRooms); err != nil {
+			cfg.HomeConnPool.Range(func(id, conn any) bool {
+				if err = conn.(*websocket.Conn).WriteMessage(websocket.TextMessage, marshalRooms); err != nil {
 					log.Println("Write error:", err)
-					return
+					return true
 				}
-			}
+				return true
+			})
 
 			time.Sleep(time.Hour * 4)
 		}

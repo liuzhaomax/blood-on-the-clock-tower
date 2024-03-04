@@ -29,9 +29,9 @@ func LoadGame(w http.ResponseWriter, r *http.Request) {
 	}
 	roomId := parts[2]
 	playerId := parts[3]
-	game, _ := findRoom(roomId)
 
 	CfgMutex.Lock()
+	game, _ := findRoom(roomId)
 	// 推入连接池
 	cfg := model.GetConfig()
 	if cfg.GameConnPool[roomId] == nil {
@@ -64,9 +64,7 @@ func LoadGame(w http.ResponseWriter, r *http.Request) {
 
 		switch actionReq.Action {
 		case "load_game":
-			if playerId == game.Host {
-				initGame(mux, game)
-			}
+			initGame(mux, game)
 		case "toggle_night":
 			if playerId == game.Host {
 				toggleNight(mux, game)
@@ -109,6 +107,7 @@ func initGame(mux *sync.Mutex, game *model.Room) {
 	cfg := model.GetConfig()
 	mux.Lock()
 	defer mux.Unlock()
+	sendMux := &sync.Mutex{}
 	if game == nil {
 		return
 	}
@@ -196,12 +195,20 @@ func initGame(mux *sync.Mutex, game *model.Room) {
 			log.Println("JSON marshal error:", err)
 			return
 		}
+		var wg = sync.WaitGroup{}
+		wg.Add(len(cfg.GameConnPool[game.Id]))
 		for _, conn := range cfg.GameConnPool[game.Id] {
-			if err = conn.WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
-				log.Println("Write error:", err)
-				return
-			}
+			go func(conn *websocket.Conn) {
+				sendMux.Lock()
+				defer sendMux.Unlock()
+				defer wg.Done()
+				if err = conn.WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
+					log.Println("Write error:", err)
+					return
+				}
+			}(conn)
 		}
+		wg.Wait()
 	}
 }
 
