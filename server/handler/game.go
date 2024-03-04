@@ -180,23 +180,7 @@ func initGame(mux *sync.Mutex, game *model.Room, playerId string, conn *websocke
 
 	// 群发game
 	if game.Result == "" {
-		marshaledGame, err := json.Marshal(*game)
-		if err != nil {
-			log.Println("JSON marshal error:", err)
-			return
-		}
-		game.GameConnPool.Range(func(id, conn any) bool {
-			if id == playerId {
-				game.ResMux.Lock()
-				defer game.ResMux.Unlock()
-				if err = conn.(*websocket.Conn).WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
-					log.Println("Write error:", err)
-					return false
-				}
-				return false
-			}
-			return true
-		})
+		emit(game, playerId)
 	}
 }
 
