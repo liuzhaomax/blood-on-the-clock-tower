@@ -33,11 +33,11 @@ function Gaming() {
         // 获取game 长连接
         socket = new WebSocket(`${config.beBaseUrl}/game/${roomId}/${localStorage.getItem("PlayerID")}`)
         socket.onopen = function() {
+            console.log("game连接成功")
             loadGame()
         }
         socket.onmessage = function(event) {
             console.log("Received message from server:", JSON.parse(event.data))
-            // addLog(event.data.log, ...wordClassPairs)
             setGame(JSON.parse(event.data))
         }
         socket.onerror = function(error) {
@@ -113,17 +113,6 @@ function Gaming() {
         [/(提名)/g, "highlight highlight-nominate"], // 提名
         [/(投票)/g, "highlight highlight-vote"], // 投票
     ]
-    // const addLog = (text, ...wordClassPairs) => {
-    //     let replacedText = updateText(text, ...wordClassPairs[0])
-    //     if (wordClassPairs.length > 1) {
-    //         for (let i = 1; i < wordClassPairs.length; i++) {
-    //             replacedText = updateText(replacedText, ...wordClassPairs[i])
-    //         }
-    //     }
-    //     if (document.getElementById("LOG")) {
-    //         document.getElementById("LOG").innerHTML = document.getElementById("LOG").innerHTML + `<span>${replacedText}</span>`
-    //     }
-    // }
     const updateText = (text, word, className) => {
         if (typeof word === "string") {
             let regex = new RegExp(word, "g")

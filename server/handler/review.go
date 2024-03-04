@@ -10,13 +10,8 @@ import (
 func reviewGame(room *model.Room, playerId string, conn *websocket.Conn) {
 	cfg := model.GetConfig()
 	CfgMutex.Lock()
-
-	if cfg.RoomConnPool[room.Id] == nil {
-		cfg.RoomConnPool[room.Id] = map[string]*websocket.Conn{}
-	}
-	cfg.RoomConnPool[room.Id][playerId] = conn
-
-	CfgMutex.Unlock()
+	defer CfgMutex.Unlock()
+	room.GameConnPool.Store(playerId, conn)
 
 	// 把room发给请求者
 	marshalRoom, err := json.Marshal(*room)
@@ -24,7 +19,8 @@ func reviewGame(room *model.Room, playerId string, conn *websocket.Conn) {
 		log.Println("JSON marshal error:", err)
 		return
 	}
-	if err := conn.WriteMessage(websocket.TextMessage, marshalRoom); err != nil {
+	connVal, _ := cfg.HomeConnPool.LoadOrStore(playerId, conn)
+	if err = connVal.(*websocket.Conn).WriteMessage(websocket.TextMessage, marshalRoom); err != nil {
 		log.Println("Write error:", err)
 		return
 	}
@@ -44,8 +40,8 @@ func reviewGame(room *model.Room, playerId string, conn *websocket.Conn) {
 }
 
 func returnRoom(room *model.Room, playerId string) {
-	cfg := model.GetConfig()
 	CfgMutex.Lock()
+	defer CfgMutex.Unlock()
 
 	for i, player := range room.Players {
 		if player.Id == playerId {
@@ -54,19 +50,17 @@ func returnRoom(room *model.Room, playerId string) {
 		}
 	}
 
-	CfgMutex.Unlock()
-
 	// 把room发给请求者
 	marshalRoom, err := json.Marshal(*room)
 	if err != nil {
 		log.Println("JSON marshal error:", err)
 		return
 	}
-	if cfg.RoomConnPool[room.Id] == nil {
-		return // 防空指针异常
-	}
-	if err := cfg.RoomConnPool[room.Id][playerId].WriteMessage(websocket.TextMessage, marshalRoom); err != nil {
-		log.Println("Write error:", err)
-		return
-	}
+	room.GameConnPool.Range(func(id, conn any) bool {
+		if err = conn.(*websocket.Conn).WriteMessage(websocket.TextMessage, marshalRoom); err != nil {
+			log.Println("Write error:", err)
+			return false
+		}
+		return true
+	})
 }

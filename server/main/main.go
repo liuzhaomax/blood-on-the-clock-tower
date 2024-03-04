@@ -49,7 +49,7 @@ func main() {
 			cfg.HomeConnPool.Range(func(id, conn any) bool {
 				if err = conn.(*websocket.Conn).WriteMessage(websocket.TextMessage, marshalRooms); err != nil {
 					log.Println("Write error:", err)
-					return true
+					return false
 				}
 				return true
 			})

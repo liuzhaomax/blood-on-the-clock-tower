@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -16,7 +17,6 @@ func LoadRoom(w http.ResponseWriter, r *http.Request) {
 		log.Println("Upgrade error:", err)
 		return
 	}
-	defer conn.Close()
 
 	// 获取URL参数
 	path := r.URL.Path
@@ -62,18 +62,18 @@ func LoadRoom(w http.ResponseWriter, r *http.Request) {
 }
 
 func listPlayers(room *model.Room, playerId string, conn *websocket.Conn) {
-	cfg := model.GetConfig()
 	CfgMutex.Lock()
-
+	defer CfgMutex.Unlock()
 	if room == nil {
-		CfgMutex.Unlock()
 		return
 	}
 
-	if cfg.RoomConnPool[room.Id] == nil {
-		cfg.RoomConnPool[room.Id] = map[string]*websocket.Conn{}
+	if room.GameConnPool == nil {
+		room.GameConnPool = &sync.Map{}
 	}
-	cfg.RoomConnPool[room.Id][playerId] = conn
+	room.GameConnPool.Store(playerId, conn)
+	room.Mux = &sync.Mutex{}
+	room.ResMux = &sync.Mutex{}
 
 	// 结束一局后 返回房间 读取房间
 	goodToStart := true
@@ -87,30 +87,29 @@ func listPlayers(room *model.Room, playerId string, conn *websocket.Conn) {
 		room.Log = ""
 	}
 
-	CfgMutex.Unlock()
-
 	// 发送房间给所有人
 	marshalRoom, err := json.Marshal(*room)
 	if err != nil {
 		log.Println("JSON marshal error:", err)
 		return
 	}
-	for _, conn := range cfg.RoomConnPool[room.Id] {
-		if err = conn.WriteMessage(websocket.TextMessage, marshalRoom); err != nil {
+	room.GameConnPool.Range(func(id, conn any) bool {
+		if err = conn.(*websocket.Conn).WriteMessage(websocket.TextMessage, marshalRoom); err != nil {
 			log.Println("Write error:", err)
-			return
+			return false
 		}
-	}
+		return true
+	})
 }
 
 func quitRoom(room *model.Room, playerId string) {
 	cfg := model.GetConfig()
 	CfgMutex.Lock()
-
+	defer CfgMutex.Unlock()
 	if room == nil {
-		CfgMutex.Unlock()
 		return
 	}
+
 	// 删除退出者
 	var newPlayers []model.Player
 	for _, player := range room.Players {
@@ -130,31 +129,25 @@ func quitRoom(room *model.Room, playerId string) {
 		cfg.Rooms = newRooms
 	}
 
-	CfgMutex.Unlock()
-
 	// 发送房间给所有人
 	marshalRoom, err := json.Marshal(*room)
 	if err != nil {
 		log.Println("JSON marshal error:", err)
 		return
 	}
-	if cfg.RoomConnPool[room.Id] == nil {
-		return // 防空指针异常
-	}
-	for id, conn := range cfg.RoomConnPool[room.Id] {
-		// 关闭退出房间者的连接
+	room.GameConnPool.Range(func(id, conn any) bool {
+		// 关闭创建房间者的连接
 		if id == playerId {
-			CfgMutex.Lock()
-			conn.Close()
-			delete(cfg.RoomConnPool[room.Id], id)
-			CfgMutex.Unlock()
-			continue
+			conn.(*websocket.Conn).Close()
+			room.GameConnPool.Delete(id)
+			return true
 		}
-		if err := conn.WriteMessage(websocket.TextMessage, marshalRoom); err != nil {
+		if err = conn.(*websocket.Conn).WriteMessage(websocket.TextMessage, marshalRoom); err != nil {
 			log.Println("Write error:", err)
-			return
+			return false
 		}
-	}
+		return true
+	})
 	// 将room list 发给所有homeConn池里的人
 	marshalRooms, err := json.Marshal(cfg.Rooms)
 	if err != nil {
@@ -173,9 +166,8 @@ func quitRoom(room *model.Room, playerId string) {
 func startGame(room *model.Room) {
 	cfg := model.GetConfig()
 	CfgMutex.Lock()
-
+	defer CfgMutex.Unlock()
 	if room == nil {
-		CfgMutex.Unlock()
 		return
 	}
 
@@ -192,10 +184,6 @@ func startGame(room *model.Room) {
 		room.VotePool = map[string]string{}
 		room.State = model.GameState{}
 	}
-	// 初始化pool
-	cfg.GameConnPool[room.Id] = map[string]*websocket.Conn{}
-
-	CfgMutex.Unlock()
 
 	// 发送房间给所有人
 	marshalRoom, err := json.Marshal(*room)
@@ -203,21 +191,15 @@ func startGame(room *model.Room) {
 		log.Println("JSON marshal error:", err)
 		return
 	}
-	if cfg.RoomConnPool[room.Id] == nil {
-		return // 防空指针异常
-	}
-	for _, conn := range cfg.RoomConnPool[room.Id] {
-		if err := conn.WriteMessage(websocket.TextMessage, marshalRoom); err != nil {
+	room.GameConnPool.Range(func(id, conn any) bool {
+		room.ResMux.Lock()
+		defer room.ResMux.Unlock()
+		if err = conn.(*websocket.Conn).WriteMessage(websocket.TextMessage, marshalRoom); err != nil {
 			log.Println("Write error:", err)
-			return
+			return false
 		}
-		CfgMutex.Lock()
-		conn.Close()
-		CfgMutex.Unlock()
-	}
-	CfgMutex.Lock()
-	delete(cfg.RoomConnPool, room.Id)
-	CfgMutex.Unlock()
+		return true
+	})
 
 	// 将room list 发给所有homeConn池里的人
 	marshalRooms, err := json.Marshal(cfg.Rooms)

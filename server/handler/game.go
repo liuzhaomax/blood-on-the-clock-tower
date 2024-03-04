@@ -29,23 +29,14 @@ func LoadGame(w http.ResponseWriter, r *http.Request) {
 	}
 	roomId := parts[2]
 	playerId := parts[3]
-
-	CfgMutex.Lock()
 	game, _ := findRoom(roomId)
-	// 推入连接池
-	cfg := model.GetConfig()
-	if cfg.GameConnPool[roomId] == nil {
-		cfg.GameConnPool[roomId] = map[string]*websocket.Conn{}
-	}
-	cfg.GameConnPool[roomId][playerId] = conn
-	CfgMutex.Unlock()
 
 	for {
 		if game == nil {
 			break
 		}
 
-		mux := &sync.Mutex{}
+		mux := game.Mux
 
 		_, p, err := conn.ReadMessage()
 		if err != nil {
@@ -64,7 +55,7 @@ func LoadGame(w http.ResponseWriter, r *http.Request) {
 
 		switch actionReq.Action {
 		case "load_game":
-			initGame(mux, game)
+			initGame(mux, game, playerId, conn)
 		case "toggle_night":
 			if playerId == game.Host {
 				toggleNight(mux, game)
@@ -103,11 +94,10 @@ func LoadGame(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func initGame(mux *sync.Mutex, game *model.Room) {
-	cfg := model.GetConfig()
+func initGame(mux *sync.Mutex, game *model.Room, playerId string, conn *websocket.Conn) {
 	mux.Lock()
 	defer mux.Unlock()
-	sendMux := &sync.Mutex{}
+	game.GameConnPool.Store(playerId, conn)
 	if game == nil {
 		return
 	}
@@ -190,25 +180,20 @@ func initGame(mux *sync.Mutex, game *model.Room) {
 
 	// 群发game
 	if game.Result == "" {
-		marshaledGame, err := json.Marshal(game)
+		marshaledGame, err := json.Marshal(*game)
 		if err != nil {
 			log.Println("JSON marshal error:", err)
 			return
 		}
-		var wg = sync.WaitGroup{}
-		wg.Add(len(cfg.GameConnPool[game.Id]))
-		for _, conn := range cfg.GameConnPool[game.Id] {
-			go func(conn *websocket.Conn) {
-				sendMux.Lock()
-				defer sendMux.Unlock()
-				defer wg.Done()
-				if err = conn.WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
-					log.Println("Write error:", err)
-					return
-				}
-			}(conn)
-		}
-		wg.Wait()
+		game.GameConnPool.Range(func(id, conn any) bool {
+			game.ResMux.Lock()
+			defer game.ResMux.Unlock()
+			if err = conn.(*websocket.Conn).WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
+				log.Println("Write error:", err)
+				return false
+			}
+			return true
+		})
 	}
 }
 
@@ -427,7 +412,6 @@ func getRandEvilCharacter() string {
 }
 
 func quitGame(mux *sync.Mutex, game *model.Room, playerId string) {
-	cfg := model.GetConfig()
 	mux.Lock()
 	defer mux.Unlock()
 	if game == nil {
@@ -442,18 +426,15 @@ func quitGame(mux *sync.Mutex, game *model.Room, playerId string) {
 	}
 
 	// 关闭退出者的game连接
-	if cfg.GameConnPool[game.Id] == nil {
-		return // 防空指针异常
-	}
-	for id, conn := range cfg.GameConnPool[game.Id] {
+	game.GameConnPool.Range(func(id, conn any) bool {
+		// 关闭创建房间者的连接
 		if id == playerId {
-			CfgMutex.Lock()
-			conn.Close()
-			delete(cfg.GameConnPool[game.Id], id)
-			CfgMutex.Unlock()
-			continue
+			conn.(*websocket.Conn).Close()
+			game.GameConnPool.Delete(id)
+			return true
 		}
-	}
+		return true
+	})
 }
 
 func detectIfAllQuited(mux *sync.Mutex, game *model.Room) {

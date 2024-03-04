@@ -13,10 +13,8 @@ import (
 )
 
 func toggleNight(mux *sync.Mutex, game *model.Room) {
-	cfg := model.GetConfig()
 	mux.Lock()
 	defer mux.Unlock()
-	sendMux := &sync.Mutex{}
 
 	var msg string
 
@@ -117,20 +115,15 @@ func toggleNight(mux *sync.Mutex, game *model.Room) {
 			log.Println("JSON marshal error:", err)
 			return
 		}
-		var wg = sync.WaitGroup{}
-		wg.Add(len(cfg.GameConnPool[game.Id]))
-		for _, conn := range cfg.GameConnPool[game.Id] {
-			go func(conn *websocket.Conn) {
-				sendMux.Lock()
-				defer sendMux.Unlock()
-				defer wg.Done()
-				if err := conn.WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
-					log.Println("Write error:", err)
-					return
-				}
-			}(conn)
-		}
-		wg.Wait()
+		game.GameConnPool.Range(func(id, conn any) bool {
+			game.ResMux.Lock()
+			defer game.ResMux.Unlock()
+			if err = conn.(*websocket.Conn).WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
+				log.Println("Write error:", err)
+				return false
+			}
+			return true
+		})
 	}
 	// 第一夜恶魔爪牙互认身份
 	if game.State.Stage == 1 {
@@ -157,15 +150,16 @@ func toggleNight(mux *sync.Mutex, game *model.Room) {
 					log.Println("JSON marshal error:", err)
 					return
 				}
-				go func(conn *websocket.Conn) {
-					sendMux.Lock()
-					defer sendMux.Unlock()
-					defer wg.Done()
-					if err := conn.WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
-						log.Println("Write error:", err)
-						return
+				game.GameConnPool.Range(func(id, conn any) bool {
+					if id == player.Id {
+						if err := conn.(*websocket.Conn).WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
+							log.Println("Write error:", err)
+							return false
+						}
+						return false
 					}
-				}(cfg.GameConnPool[game.Id][player.Id])
+					return true
+				})
 			}
 		}
 		// 发送恶魔身份给爪牙
@@ -190,15 +184,16 @@ func toggleNight(mux *sync.Mutex, game *model.Room) {
 			log.Println("JSON marshal error:", err)
 			return
 		}
-		go func(conn *websocket.Conn) {
-			sendMux.Lock()
-			defer sendMux.Unlock()
-			defer wg.Done()
-			if err := conn.WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
-				log.Println("Write error:", err)
-				return
+		game.GameConnPool.Range(func(id, conn any) bool {
+			if id == demon.Id {
+				if err := conn.(*websocket.Conn).WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
+					log.Println("Write error:", err)
+					return false
+				}
+				return false
 			}
-		}(cfg.GameConnPool[game.Id][demon.Id])
+			return true
+		})
 
 		// 给恶魔提供3个不在场的村民身份
 		msg = findThreeCharactersNotInGame(game.Players)
@@ -210,21 +205,20 @@ func toggleNight(mux *sync.Mutex, game *model.Room) {
 			log.Println("JSON marshal error:", err)
 			return
 		}
-		go func(conn *websocket.Conn) {
-			sendMux.Lock()
-			defer sendMux.Unlock()
-			defer wg.Done()
-			if err := conn.WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
-				log.Println("Write error:", err)
-				return
+		game.GameConnPool.Range(func(id, conn any) bool {
+			if id == demon.Id {
+				if err := conn.(*websocket.Conn).WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
+					log.Println("Write error:", err)
+					return false
+				}
+				return false
 			}
-		}(cfg.GameConnPool[game.Id][demon.Id])
-		wg.Wait()
+			return true
+		})
 	}
 }
 
 func endVoting(mux *sync.Mutex, game *model.Room) {
-	cfg := model.GetConfig()
 	mux.Lock()
 	defer mux.Unlock()
 
@@ -276,15 +270,16 @@ func endVoting(mux *sync.Mutex, game *model.Room) {
 			log.Println("JSON marshal error:", err)
 			return
 		}
-		for id, conn := range cfg.GameConnPool[game.Id] {
+		game.GameConnPool.Range(func(id, conn any) bool {
 			if id == butlerPlayer.Id {
-				if err := conn.WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
+				if err := conn.(*websocket.Conn).WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
 					log.Println("Write error:", err)
-					return
+					return false
 				}
-				break
+				return false
 			}
-		}
+			return true
+		})
 		// 票池要清除管家
 		for playerId := range game.VotePool {
 			if playerId == butlerPlayer.Id {
@@ -325,12 +320,15 @@ func endVoting(mux *sync.Mutex, game *model.Room) {
 		log.Println("JSON marshal error:", err)
 		return
 	}
-	for _, conn := range cfg.GameConnPool[game.Id] {
-		if err := conn.WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
+	game.GameConnPool.Range(func(id, conn any) bool {
+		game.ResMux.Lock()
+		defer game.ResMux.Unlock()
+		if err = conn.(*websocket.Conn).WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
 			log.Println("Write error:", err)
-			return
+			return false
 		}
-	}
+		return true
+	})
 	// 判断圣徒 - 邪恶胜利条件4
 	if game.Executed != nil && game.Executed.Character == Saint {
 		checkout(game, game.Executed)
@@ -352,15 +350,16 @@ func endVoting(mux *sync.Mutex, game *model.Room) {
 			log.Println("JSON marshal error:", err)
 			return
 		}
-		for id, conn := range cfg.GameConnPool[game.Id] {
+		game.GameConnPool.Range(func(id, conn any) bool {
 			if id == scarletWoman.Id {
-				if err := conn.WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
+				if err := conn.(*websocket.Conn).WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
 					log.Println("Write error:", err)
-					return
+					return false
 				}
-				break
+				return false
 			}
-		}
+			return true
+		})
 	}
 	// 退出投票环节，清空票池
 	game.State.VotingStep = false
@@ -369,7 +368,6 @@ func endVoting(mux *sync.Mutex, game *model.Room) {
 }
 
 func nominate(mux *sync.Mutex, game *model.Room, playerId string, targets []string) {
-	cfg := model.GetConfig()
 	mux.Lock()
 	defer mux.Unlock()
 
@@ -388,15 +386,16 @@ func nominate(mux *sync.Mutex, game *model.Room, playerId string, targets []stri
 			log.Println("JSON marshal error:", err)
 			return
 		}
-		for id, conn := range cfg.GameConnPool[game.Id] {
+		game.GameConnPool.Range(func(id, conn any) bool {
 			if id == playerId {
-				if err := conn.WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
+				if err := conn.(*websocket.Conn).WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
 					log.Println("Write error:", err)
-					return
+					return false
 				}
-				break
+				return false
 			}
-		}
+			return true
+		})
 		return
 	}
 
@@ -429,12 +428,15 @@ func nominate(mux *sync.Mutex, game *model.Room, playerId string, targets []stri
 		log.Println("JSON marshal error:", err)
 		return
 	}
-	for _, conn := range cfg.GameConnPool[game.Id] {
-		if err := conn.WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
+	game.GameConnPool.Range(func(id, conn any) bool {
+		game.ResMux.Lock()
+		defer game.ResMux.Unlock()
+		if err = conn.(*websocket.Conn).WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
 			log.Println("Write error:", err)
-			return
+			return false
 		}
-	}
+		return true
+	})
 
 	// 判断圣女
 	var canGoToVotingStep = true
@@ -460,12 +462,15 @@ func nominate(mux *sync.Mutex, game *model.Room, playerId string, targets []stri
 							log.Println("JSON marshal error:", err)
 							return
 						}
-						for _, conn := range cfg.GameConnPool[game.Id] {
-							if err := conn.WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
+						game.GameConnPool.Range(func(id, conn any) bool {
+							game.ResMux.Lock()
+							defer game.ResMux.Unlock()
+							if err = conn.(*websocket.Conn).WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
 								log.Println("Write error:", err)
-								return
+								return false
 							}
-						}
+							return true
+						})
 						break
 					}
 				}
@@ -481,7 +486,6 @@ func nominate(mux *sync.Mutex, game *model.Room, playerId string, targets []stri
 }
 
 func vote(mux *sync.Mutex, game *model.Room, playerId string) {
-	cfg := model.GetConfig()
 	mux.Lock()
 	defer mux.Unlock()
 
@@ -516,23 +520,22 @@ func vote(mux *sync.Mutex, game *model.Room, playerId string) {
 				log.Println("JSON marshal error:", err)
 				return
 			}
-			for id, conn := range cfg.GameConnPool[game.Id] {
+			game.GameConnPool.Range(func(id, conn any) bool {
 				if id == playerId {
-					game.Players[i].Log += msgPlayer
-					if err := conn.WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
+					if err = conn.(*websocket.Conn).WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
 						log.Println("Write error:", err)
-						return
+						return false
 					}
-					break
+					return false
 				}
-			}
+				return true
+			})
 			break
 		}
 	}
 }
 
 func cast(mux *sync.Mutex, game *model.Room, playerId string, targets []string) {
-	cfg := model.GetConfig()
 	mux.Lock()
 	defer mux.Unlock()
 
@@ -609,15 +612,16 @@ func cast(mux *sync.Mutex, game *model.Room, playerId string, targets []string) 
 							log.Println("JSON marshal error:", err)
 							return
 						}
-						for id, conn := range cfg.GameConnPool[game.Id] {
+						game.GameConnPool.Range(func(id, conn any) bool {
 							if id == playerId {
-								if err := conn.WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
+								if err = conn.(*websocket.Conn).WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
 									log.Println("Write error:", err)
-									return
+									return false
 								}
-								break
+								return false
 							}
-						}
+							return true
+						})
 						break
 					}
 				}
@@ -652,12 +656,15 @@ func cast(mux *sync.Mutex, game *model.Room, playerId string, targets []string) 
 						log.Println("JSON marshal error:", err)
 						return
 					}
-					for _, conn := range cfg.GameConnPool[game.Id] {
-						if err := conn.WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
+					game.GameConnPool.Range(func(id, conn any) bool {
+						game.ResMux.Lock()
+						defer game.ResMux.Unlock()
+						if err = conn.(*websocket.Conn).WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
 							log.Println("Write error:", err)
-							return
+							return false
 						}
-					}
+						return true
+					})
 				} else {
 					msg := "您已没有子弹"
 					game.Players[i].Log += msg
@@ -667,15 +674,16 @@ func cast(mux *sync.Mutex, game *model.Room, playerId string, targets []string) 
 						log.Println("JSON marshal error:", err)
 						return
 					}
-					for id, conn := range cfg.GameConnPool[game.Id] {
+					game.GameConnPool.Range(func(id, conn any) bool {
 						if id == player.Id {
-							if err := conn.WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
+							if err = conn.(*websocket.Conn).WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
 								log.Println("Write error:", err)
-								return
+								return false
 							}
-							break
+							return false
 						}
-					}
+						return true
+					})
 				}
 			case Ravenkeeper:
 				for _, player := range game.Players {
@@ -706,20 +714,20 @@ func cast(mux *sync.Mutex, game *model.Room, playerId string, targets []string) 
 		log.Println("JSON marshal error:", err)
 		return
 	}
-	for id, conn := range cfg.GameConnPool[game.Id] {
+	game.GameConnPool.Range(func(id, conn any) bool {
 		if id == playerId {
-			if err := conn.WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
+			if err = conn.(*websocket.Conn).WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
 				log.Println("Write error:", err)
-				return
+				return false
 			}
-			break
+			return false
 		}
-	}
+		return true
+	})
 }
 
 // 执行有顺序性，不可修改执行顺序
 func checkoutNight(mux *sync.Mutex, game *model.Room) {
-	cfg := model.GetConfig()
 	mux.Lock()
 	defer mux.Unlock()
 
@@ -851,15 +859,16 @@ func checkoutNight(mux *sync.Mutex, game *model.Room) {
 					log.Println("JSON marshal error:", err)
 					return
 				}
-				for id, conn := range cfg.GameConnPool[game.Id] {
+				game.GameConnPool.Range(func(id, conn any) bool {
 					if id == player.Id {
-						if err := conn.WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
+						if err = conn.(*websocket.Conn).WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
 							log.Println("Write error:", err)
-							return
+							return false
 						}
-						break
+						return false
 					}
-				}
+					return true
+				})
 			// 给图书管理员提供信息
 			case Librarian:
 				var realOutsider model.Player
@@ -940,15 +949,16 @@ func checkoutNight(mux *sync.Mutex, game *model.Room) {
 					log.Println("JSON marshal error:", err)
 					return
 				}
-				for id, conn := range cfg.GameConnPool[game.Id] {
+				game.GameConnPool.Range(func(id, conn any) bool {
 					if id == player.Id {
-						if err := conn.WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
+						if err = conn.(*websocket.Conn).WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
 							log.Println("Write error:", err)
-							return
+							return false
 						}
-						break
+						return false
 					}
-				}
+					return true
+				})
 			// 给调查员提供信息
 			case Investigator:
 				var realMinion model.Player
@@ -1011,15 +1021,16 @@ func checkoutNight(mux *sync.Mutex, game *model.Room) {
 					log.Println("JSON marshal error:", err)
 					return
 				}
-				for id, conn := range cfg.GameConnPool[game.Id] {
+				game.GameConnPool.Range(func(id, conn any) bool {
 					if id == player.Id {
-						if err := conn.WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
+						if err = conn.(*websocket.Conn).WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
 							log.Println("Write error:", err)
-							return
+							return false
 						}
-						break
+						return false
 					}
-				}
+					return true
+				})
 			// 给厨师提供信息
 			case Chef:
 				connected := 0 // 记录连座数
@@ -1069,15 +1080,16 @@ func checkoutNight(mux *sync.Mutex, game *model.Room) {
 					log.Println("JSON marshal error:", err)
 					return
 				}
-				for id, conn := range cfg.GameConnPool[game.Id] {
+				game.GameConnPool.Range(func(id, conn any) bool {
 					if id == player.Id {
-						if err := conn.WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
+						if err = conn.(*websocket.Conn).WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
 							log.Println("Write error:", err)
-							return
+							return false
 						}
-						break
+						return false
 					}
-				}
+					return true
+				})
 			// 给共情者提供信息
 			case Empath:
 				evilQuantity := 0 // 记录左右邪恶玩家数量
@@ -1123,15 +1135,16 @@ func checkoutNight(mux *sync.Mutex, game *model.Room) {
 					log.Println("JSON marshal error:", err)
 					return
 				}
-				for id, conn := range cfg.GameConnPool[game.Id] {
+				game.GameConnPool.Range(func(id, conn any) bool {
 					if id == player.Id {
-						if err := conn.WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
+						if err = conn.(*websocket.Conn).WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
 							log.Println("Write error:", err)
-							return
+							return false
 						}
-						break
+						return false
 					}
-				}
+					return true
+				})
 			// 给间谍提供信息
 			case Spy:
 				// 拼接日志
@@ -1150,15 +1163,16 @@ func checkoutNight(mux *sync.Mutex, game *model.Room) {
 					log.Println("JSON marshal error:", err)
 					return
 				}
-				for id, conn := range cfg.GameConnPool[game.Id] {
+				game.GameConnPool.Range(func(id, conn any) bool {
 					if id == player.Id {
-						if err := conn.WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
+						if err = conn.(*websocket.Conn).WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
 							log.Println("Write error:", err)
-							return
+							return false
 						}
-						break
+						return false
 					}
-				}
+					return true
+				})
 			}
 		}
 	}
@@ -1233,15 +1247,16 @@ func checkoutNight(mux *sync.Mutex, game *model.Room) {
 						log.Println("JSON marshal error:", err)
 						return
 					}
-					for id, conn := range cfg.GameConnPool[game.Id] {
+					game.GameConnPool.Range(func(id, conn any) bool {
 						if id == scarletWoman.Id {
-							if err := conn.WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
+							if err = conn.(*websocket.Conn).WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
 								log.Println("Write error:", err)
-								return
+								return false
 							}
-							break
+							return false
 						}
-					}
+						return true
+					})
 				}
 				// 如果没有魅魔或魅魔死了
 				if reflect.ValueOf(scarletWoman).IsZero() && len(minionsAlive) != 0 {
@@ -1268,15 +1283,16 @@ func checkoutNight(mux *sync.Mutex, game *model.Room) {
 						log.Println("JSON marshal error:", err)
 						return
 					}
-					for id, conn := range cfg.GameConnPool[game.Id] {
+					game.GameConnPool.Range(func(id, conn any) bool {
 						if id == minionsAlive[randInt].Id {
-							if err := conn.WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
+							if err = conn.(*websocket.Conn).WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
 								log.Println("Write error:", err)
-								return
+								return false
 							}
-							break
+							return false
 						}
-					}
+						return true
+					})
 				}
 			}
 			// 判断刀市长
@@ -1340,15 +1356,16 @@ func checkoutNight(mux *sync.Mutex, game *model.Room) {
 								log.Println("JSON marshal error:", err)
 								return
 							}
-							for id, conn := range cfg.GameConnPool[game.Id] {
+							game.GameConnPool.Range(func(id, conn any) bool {
 								if id == fromPlayer.Id {
-									if err := conn.WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
+									if err = conn.(*websocket.Conn).WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
 										log.Println("Write error:", err)
-										return
+										return false
 									}
-									break
+									return false
 								}
-							}
+								return true
+							})
 							break
 						}
 					}
@@ -1422,15 +1439,16 @@ func checkoutNight(mux *sync.Mutex, game *model.Room) {
 						log.Println("JSON marshal error:", err)
 						return
 					}
-					for id, conn := range cfg.GameConnPool[game.Id] {
+					game.GameConnPool.Range(func(id, conn any) bool {
 						if id == player.Id {
-							if err := conn.WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
+							if err = conn.(*websocket.Conn).WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
 								log.Println("Write error:", err)
-								return
+								return false
 							}
-							break
+							return false
 						}
-					}
+						return true
+					})
 				}
 			// 给掘墓人提供信息
 			case Undertaker:
@@ -1477,15 +1495,16 @@ func checkoutNight(mux *sync.Mutex, game *model.Room) {
 						log.Println("JSON marshal error:", err)
 						return
 					}
-					for id, conn := range cfg.GameConnPool[game.Id] {
+					game.GameConnPool.Range(func(id, conn any) bool {
 						if id == player.Id {
-							if err := conn.WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
+							if err = conn.(*websocket.Conn).WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
 								log.Println("Write error:", err)
-								return
+								return false
 							}
-							break
+							return false
 						}
-					}
+						return true
+					})
 				}
 			}
 		}
@@ -1521,15 +1540,16 @@ func checkoutNight(mux *sync.Mutex, game *model.Room) {
 				log.Println("JSON marshal error:", err)
 				return
 			}
-			for id, conn := range cfg.GameConnPool[game.Id] {
+			game.GameConnPool.Range(func(id, conn any) bool {
 				if id == fromPlayer.Id {
-					if err := conn.WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
+					if err = conn.(*websocket.Conn).WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
 						log.Println("Write error:", err)
-						return
+						return false
 					}
-					break
+					return false
 				}
-			}
+				return true
+			})
 			break
 		}
 	}
@@ -1554,15 +1574,16 @@ func checkoutNight(mux *sync.Mutex, game *model.Room) {
 				log.Println("JSON marshal error:", err)
 				return
 			}
-			for id, conn := range cfg.GameConnPool[game.Id] {
+			game.GameConnPool.Range(func(id, conn any) bool {
 				if id == fromPlayer.Id {
-					if err := conn.WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
+					if err = conn.(*websocket.Conn).WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
 						log.Println("Write error:", err)
-						return
+						return false
 					}
-					break
+					return false
 				}
-			}
+				return true
+			})
 			break
 		}
 	}
@@ -1586,12 +1607,15 @@ func checkoutNight(mux *sync.Mutex, game *model.Room) {
 		log.Println("JSON marshal error:", err)
 		return
 	}
-	for _, conn := range cfg.GameConnPool[game.Id] {
-		if err := conn.WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
+	game.GameConnPool.Range(func(id, conn any) bool {
+		game.ResMux.Lock()
+		defer game.ResMux.Unlock()
+		if err = conn.(*websocket.Conn).WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
 			log.Println("Write error:", err)
-			return
+			return false
 		}
-	}
+		return true
+	})
 	// 结算本局
 	checkout(game, nil) // 这里不要传入executed，因为晚上不处决人，晚上可能死圣徒
 }
@@ -1605,7 +1629,6 @@ func checkoutDay(mux *sync.Mutex, game *model.Room) {
 
 // checkout 结算本局
 func checkout(game *model.Room, executed *model.Player) {
-	cfg := model.GetConfig()
 	msg := ""
 	var realDemonCount int   // 恶魔数量，被占卜认定的不算
 	var canCivilNominate int // 可提名人数
@@ -1692,12 +1715,15 @@ func checkout(game *model.Room, executed *model.Player) {
 		log.Println("JSON marshal error:", err)
 		return
 	}
-	for _, conn := range cfg.GameConnPool[game.Id] {
-		if err := conn.WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
+	game.GameConnPool.Range(func(id, conn any) bool {
+		game.ResMux.Lock()
+		defer game.ResMux.Unlock()
+		if err = conn.(*websocket.Conn).WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
 			log.Println("Write error:", err)
-			return
+			return false
 		}
-	}
+		return true
+	})
 
 	if game.Result != "" {
 		// 发送game 以便前端跳转review
@@ -1706,21 +1732,15 @@ func checkout(game *model.Room, executed *model.Player) {
 			log.Println("JSON marshal error:", err)
 			return
 		}
-		for _, conn := range cfg.GameConnPool[game.Id] {
-			if err := conn.WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
+		game.GameConnPool.Range(func(id, conn any) bool {
+			game.ResMux.Lock()
+			defer game.ResMux.Unlock()
+			if err = conn.(*websocket.Conn).WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
 				log.Println("Write error:", err)
-				return
+				return false
 			}
-		}
-		// 关闭房间内所有玩家的game长连接
-		for _, player := range game.Players {
-			err := cfg.GameConnPool[game.Id][player.Id].Close()
-			if err != nil {
-				log.Println(err)
-				return
-			}
-			delete(cfg.GameConnPool[game.Id], player.Id)
-		}
+			return true
+		})
 		game.Status = "复盘中"
 	}
 }
