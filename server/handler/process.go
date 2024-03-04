@@ -8,101 +8,11 @@ import (
 	"log"
 	"math"
 	"math/rand"
-	"net/http"
 	"reflect"
-	"strings"
 	"sync"
-	"time"
 )
 
-func Gaming(w http.ResponseWriter, r *http.Request) {
-	conn, err := Upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		log.Println("Upgrade error:", err)
-		return
-	}
-
-	// 获取URL参数
-	path := r.URL.Path
-	parts := strings.Split(path, "/")
-	if len(parts) < 4 {
-		http.NotFound(w, r)
-		return
-	}
-	roomId := parts[2]
-	playerId := parts[3]
-	game, _ := findRoom(roomId)
-
-	CfgMutex.Lock()
-	// 推入连接池
-	cfg := model.GetConfig()
-	if cfg.GamingConnPool[roomId] == nil {
-		cfg.GamingConnPool[roomId] = map[string]*websocket.Conn{}
-	}
-	cfg.GamingConnPool[roomId][playerId] = conn
-	// 初始化game的锁
-	if cfg.MuxPool[roomId] == nil {
-		cfg.MuxPool[roomId] = &sync.RWMutex{}
-	}
-	CfgMutex.Unlock()
-
-	mux := cfg.MuxPool[roomId]
-
-	for {
-		_, p, err := conn.ReadMessage()
-		if err != nil {
-			if websocket.IsCloseError(err, websocket.CloseGoingAway) {
-				log.Println("Client disconnected:", err)
-				return
-			}
-			log.Println("Read error Gaming Process:", err)
-			return
-		}
-
-		var actionReq model.ActionReq
-		if err = json.Unmarshal(p, &actionReq); err != nil {
-			log.Println("JSON unmarshal error:", err)
-		}
-
-		switch actionReq.Action {
-		case "toggle_night":
-			if playerId == game.Host {
-				toggleNight(mux, game)
-			}
-		case "cast":
-			cast(mux, game, playerId, actionReq.Targets)
-		case "nominate":
-			nominate(mux, game, playerId, actionReq.Targets)
-		case "vote":
-			vote(mux, game, playerId)
-		case "checkout_night":
-			if playerId == game.Host {
-				checkoutNight(mux, game)
-			}
-		case "checkout_day":
-			if playerId == game.Host {
-				checkoutDay(mux, game)
-			}
-		case "end_voting":
-			if playerId == game.Host {
-				endVoting(mux, game)
-			}
-		}
-
-		// 有结果则跳出循环
-		if game == nil || game.Result != "" {
-			break
-		}
-
-		// 检测是否房间内所有人都退出游戏
-		detectIfAllQuited(mux, game)
-
-		time.Sleep(time.Millisecond * 50)
-	}
-}
-
-func toggleNight(mux *sync.RWMutex, game *model.Room) {
-	cfg := model.GetConfig()
+func toggleNight(mux *sync.Mutex, game *model.Room) {
 	mux.Lock()
 	defer mux.Unlock()
 
@@ -200,15 +110,12 @@ func toggleNight(mux *sync.RWMutex, game *model.Room) {
 			game.Players[i].State.Protected = false
 		}
 		// 将日夜切换日志群发
-		for _, conn := range cfg.GamingConnPool[game.Id] {
-			if err := conn.WriteMessage(websocket.TextMessage, []byte(msg)); err != nil {
-				log.Println("Write error:", err)
-				return
-			}
-		}
+		broadcast(game)
 	}
 	// 第一夜恶魔爪牙互认身份
 	if game.State.Stage == 1 {
+		var wg = sync.WaitGroup{}
+		wg.Add(3)
 		msg = ""
 		var demon model.Player
 		for i, player := range game.Players {
@@ -224,10 +131,8 @@ func toggleNight(mux *sync.RWMutex, game *model.Room) {
 				minions[player.Name] = player.Character
 				msg += fmt.Sprintf("本局恶魔 [%s] 的身份是 {%s}\n", demon.Name, demon.Character)
 				game.Players[i].Log += msg
-				if err := cfg.GamingConnPool[game.Id][player.Id].WriteMessage(websocket.TextMessage, []byte(msg)); err != nil {
-					log.Println("Write error:", err)
-					return
-				}
+				// 发送日志
+				emit(game, player.Id)
 			}
 		}
 		// 发送恶魔身份给爪牙
@@ -247,25 +152,18 @@ func toggleNight(mux *sync.RWMutex, game *model.Room) {
 		// 保存到总日志
 		game.Log += "恶魔爪牙已互认身份\n"
 		// 发送
-		if err := cfg.GamingConnPool[game.Id][demon.Id].WriteMessage(websocket.TextMessage, []byte(msg)); err != nil {
-			log.Println("Write error:", err)
-			return
-		}
+		emit(game, demon.Id)
 
 		// 给恶魔提供3个不在场的村民身份
 		msg = findThreeCharactersNotInGame(game.Players)
 		// 保存到总日志
 		game.Log += msg
 		// 发送
-		if err := cfg.GamingConnPool[game.Id][demon.Id].WriteMessage(websocket.TextMessage, []byte(msg)); err != nil {
-			log.Println("Write error:", err)
-			return
-		}
+		emit(game, demon.Id)
 	}
 }
 
-func endVoting(mux *sync.RWMutex, game *model.Room) {
-	cfg := model.GetConfig()
+func endVoting(mux *sync.Mutex, game *model.Room) {
 	mux.Lock()
 	defer mux.Unlock()
 
@@ -312,15 +210,7 @@ func endVoting(mux *sync.RWMutex, game *model.Room) {
 		msgButler := fmt.Sprintf("主人未投票，您投给 [%s] 的票无效！\n", nominated.Name)
 		butlerPlayer.Log += msgButler
 		// 发送日志 - 告诉管家投票无效
-		for id, conn := range cfg.GamingConnPool[game.Id] {
-			if id == butlerPlayer.Id {
-				if err := conn.WriteMessage(websocket.TextMessage, []byte(msgButler)); err != nil {
-					log.Println("Write error:", err)
-					return
-				}
-				break
-			}
-		}
+		emit(game, butlerPlayer.Id)
 		// 票池要清除管家
 		for playerId := range game.VotePool {
 			if playerId == butlerPlayer.Id {
@@ -356,12 +246,7 @@ func endVoting(mux *sync.RWMutex, game *model.Room) {
 	}
 	game.Log += msg
 	// 发送日志
-	for _, conn := range cfg.GamingConnPool[game.Id] {
-		if err := conn.WriteMessage(websocket.TextMessage, []byte(msg)); err != nil {
-			log.Println("Write error:", err)
-			return
-		}
-	}
+	broadcast(game)
 	// 判断圣徒 - 邪恶胜利条件4
 	if game.Executed != nil && game.Executed.Character == Saint {
 		checkout(game, game.Executed)
@@ -372,30 +257,22 @@ func endVoting(mux *sync.RWMutex, game *model.Room) {
 		// 拼接日志
 		msgPlayer := "您"
 		msgAll := ""
-		info := fmt.Sprintf("已变为小恶魔\n")
+		info := "已变为小恶魔\n"
 		msgPlayer += info
 		msgAll += fmt.Sprintf("[%s] ", scarletWoman.Name) + info
 		scarletWoman.Log += msgPlayer
 		game.Log += msgAll
 		// 发送日志
-		for id, conn := range cfg.GamingConnPool[game.Id] {
-			if id == scarletWoman.Id {
-				if err := conn.WriteMessage(websocket.TextMessage, []byte(msgPlayer)); err != nil {
-					log.Println("Write error:", err)
-					return
-				}
-				break
-			}
-		}
+		emit(game, scarletWoman.Id)
 	}
 	// 退出投票环节，清空票池
 	game.State.VotingStep = false
 	game.VotePool = map[string]string{}
-	return
+	// 发送votingStep
+	broadcast(game)
 }
 
-func nominate(mux *sync.RWMutex, game *model.Room, playerId string, targets []string) {
-	cfg := model.GetConfig()
+func nominate(mux *sync.Mutex, game *model.Room, playerId string, targets []string) {
 	mux.Lock()
 	defer mux.Unlock()
 
@@ -409,15 +286,7 @@ func nominate(mux *sync.RWMutex, game *model.Room, playerId string, targets []st
 			}
 		}
 		// 发送日志
-		for id, conn := range cfg.GamingConnPool[game.Id] {
-			if id == playerId {
-				if err := conn.WriteMessage(websocket.TextMessage, []byte(msgPlayer)); err != nil {
-					log.Println("Write error:", err)
-					return
-				}
-				break
-			}
-		}
+		emit(game, playerId)
 		return
 	}
 
@@ -445,12 +314,7 @@ func nominate(mux *sync.RWMutex, game *model.Room, playerId string, targets []st
 	}
 	game.Log += msg
 	// 发送日志
-	for _, conn := range cfg.GamingConnPool[game.Id] {
-		if err := conn.WriteMessage(websocket.TextMessage, []byte(msg)); err != nil {
-			log.Println("Write error:", err)
-			return
-		}
-	}
+	broadcast(game)
 
 	// 判断圣女
 	var canGoToVotingStep = true
@@ -471,12 +335,7 @@ func nominate(mux *sync.RWMutex, game *model.Room, playerId string, targets []st
 						}
 						game.Log += msg
 						// 发送日志
-						for _, conn := range cfg.GamingConnPool[game.Id] {
-							if err := conn.WriteMessage(websocket.TextMessage, []byte(msg)); err != nil {
-								log.Println("Write error:", err)
-								return
-							}
-						}
+						broadcast(game)
 						break
 					}
 				}
@@ -489,10 +348,11 @@ func nominate(mux *sync.RWMutex, game *model.Room, playerId string, targets []st
 	if canGoToVotingStep {
 		game.State.VotingStep = true
 	}
+	// 广播votingStep
+	broadcast(game)
 }
 
-func vote(mux *sync.RWMutex, game *model.Room, playerId string) {
-	cfg := model.GetConfig()
+func vote(mux *sync.Mutex, game *model.Room, playerId string) {
 	mux.Lock()
 	defer mux.Unlock()
 
@@ -514,6 +374,7 @@ func vote(mux *sync.RWMutex, game *model.Room, playerId string) {
 				game.Players[i].State.Voted = true
 				nominated.State.VoteCount += 1
 				msgPlayer += fmt.Sprintf("决意投给 [%s] \n", nominated.Name)
+				game.Players[i].Log += msgPlayer
 			}
 			// 管家的投票在endVoting结算
 			if game.Players[i].Character != Butler {
@@ -522,23 +383,13 @@ func vote(mux *sync.RWMutex, game *model.Room, playerId string) {
 			// 总日志加入票池
 			game.VotePool[player.Id] = msgAll
 			// 发送个人日志
-			for id, conn := range cfg.GamingConnPool[game.Id] {
-				if id == playerId {
-					game.Players[i].Log += msgPlayer
-					if err := conn.WriteMessage(websocket.TextMessage, []byte(msgPlayer)); err != nil {
-						log.Println("Write error:", err)
-						return
-					}
-					break
-				}
-			}
+			emit(game, playerId)
 			break
 		}
 	}
 }
 
-func cast(mux *sync.RWMutex, game *model.Room, playerId string, targets []string) {
-	cfg := model.GetConfig()
+func cast(mux *sync.Mutex, game *model.Room, playerId string, targets []string) {
 	mux.Lock()
 	defer mux.Unlock()
 
@@ -610,15 +461,7 @@ func cast(mux *sync.RWMutex, game *model.Room, playerId string, targets []string
 						msgPlayer += info
 						msgAll += info
 						// 发送日志
-						for id, conn := range cfg.GamingConnPool[game.Id] {
-							if id == playerId {
-								if err := conn.WriteMessage(websocket.TextMessage, []byte(msgPlayer)); err != nil {
-									log.Println("Write error:", err)
-									return
-								}
-								break
-							}
-						}
+						emit(game, playerId)
 						break
 					}
 				}
@@ -641,32 +484,19 @@ func cast(mux *sync.RWMutex, game *model.Room, playerId string, targets []string
 						msg += fmt.Sprintf("枪杀了 [%s] \n", target.Name)
 					} else {
 						// 拼接日志
-						msg += fmt.Sprintf("无事发生\n", target.Name)
+						msg += "无事发生\n"
 					}
 					for i := range game.Players {
 						game.Players[i].Log += msg
 					}
 					game.Log += msg
 					// 发送日志
-					for _, conn := range cfg.GamingConnPool[game.Id] {
-						if err := conn.WriteMessage(websocket.TextMessage, []byte(msg)); err != nil {
-							log.Println("Write error:", err)
-							return
-						}
-					}
+					broadcast(game)
 				} else {
 					msg := "您已没有子弹"
 					game.Players[i].Log += msg
 					// 发送日志
-					for id, conn := range cfg.GamingConnPool[game.Id] {
-						if id == player.Id {
-							if err := conn.WriteMessage(websocket.TextMessage, []byte(msg)); err != nil {
-								log.Println("Write error:", err)
-								return
-							}
-							break
-						}
-					}
+					emit(game, player.Id)
 				}
 			case Ravenkeeper:
 				for _, player := range game.Players {
@@ -692,20 +522,11 @@ func cast(mux *sync.RWMutex, game *model.Room, playerId string, targets []string
 	game.Log += msgAll + "\n"
 
 	// 发送日志
-	for id, conn := range cfg.GamingConnPool[game.Id] {
-		if id == playerId {
-			if err := conn.WriteMessage(websocket.TextMessage, []byte(msgPlayer)); err != nil {
-				log.Println("Write error:", err)
-				return
-			}
-			break
-		}
-	}
+	emit(game, playerId)
 }
 
 // 执行有顺序性，不可修改执行顺序
-func checkoutNight(mux *sync.RWMutex, game *model.Room) {
-	cfg := model.GetConfig()
+func checkoutNight(mux *sync.Mutex, game *model.Room) {
 	mux.Lock()
 	defer mux.Unlock()
 
@@ -832,15 +653,7 @@ func checkoutNight(mux *sync.RWMutex, game *model.Room) {
 				game.Players[i].Log += msgPlayer
 				game.Log += msgAll
 				// 发送日志
-				for id, conn := range cfg.GamingConnPool[game.Id] {
-					if id == player.Id {
-						if err := conn.WriteMessage(websocket.TextMessage, []byte(msgPlayer)); err != nil {
-							log.Println("Write error:", err)
-							return
-						}
-						break
-					}
-				}
+				emit(game, player.Id)
 			// 给图书管理员提供信息
 			case Librarian:
 				var realOutsider model.Player
@@ -916,15 +729,7 @@ func checkoutNight(mux *sync.RWMutex, game *model.Room) {
 				game.Players[i].Log += msgPlayer
 				game.Log += msgAll
 				// 发送日志
-				for id, conn := range cfg.GamingConnPool[game.Id] {
-					if id == player.Id {
-						if err := conn.WriteMessage(websocket.TextMessage, []byte(msgPlayer)); err != nil {
-							log.Println("Write error:", err)
-							return
-						}
-						break
-					}
-				}
+				emit(game, player.Id)
 			// 给调查员提供信息
 			case Investigator:
 				var realMinion model.Player
@@ -982,15 +787,7 @@ func checkoutNight(mux *sync.RWMutex, game *model.Room) {
 				game.Players[i].Log += msgPlayer
 				game.Log += msgAll
 				// 发送日志
-				for id, conn := range cfg.GamingConnPool[game.Id] {
-					if id == player.Id {
-						if err := conn.WriteMessage(websocket.TextMessage, []byte(msgPlayer)); err != nil {
-							log.Println("Write error:", err)
-							return
-						}
-						break
-					}
-				}
+				emit(game, player.Id)
 			// 给厨师提供信息
 			case Chef:
 				connected := 0 // 记录连座数
@@ -1035,15 +832,7 @@ func checkoutNight(mux *sync.RWMutex, game *model.Room) {
 				game.Players[i].Log += msgPlayer
 				game.Log += msgAll
 				// 发送日志
-				for id, conn := range cfg.GamingConnPool[game.Id] {
-					if id == player.Id {
-						if err := conn.WriteMessage(websocket.TextMessage, []byte(msgPlayer)); err != nil {
-							log.Println("Write error:", err)
-							return
-						}
-						break
-					}
-				}
+				emit(game, player.Id)
 			// 给共情者提供信息
 			case Empath:
 				evilQuantity := 0 // 记录左右邪恶玩家数量
@@ -1084,15 +873,7 @@ func checkoutNight(mux *sync.RWMutex, game *model.Room) {
 				game.Players[i].Log += msgPlayer
 				game.Log += msgAll
 				// 发送日志
-				for id, conn := range cfg.GamingConnPool[game.Id] {
-					if id == player.Id {
-						if err := conn.WriteMessage(websocket.TextMessage, []byte(msgPlayer)); err != nil {
-							log.Println("Write error:", err)
-							return
-						}
-						break
-					}
-				}
+				emit(game, player.Id)
 			// 给间谍提供信息
 			case Spy:
 				// 拼接日志
@@ -1106,15 +887,7 @@ func checkoutNight(mux *sync.RWMutex, game *model.Room) {
 				game.Players[i].Log += msgPlayer
 				game.Log += msgAll
 				// 发送日志
-				for id, conn := range cfg.GamingConnPool[game.Id] {
-					if id == player.Id {
-						if err := conn.WriteMessage(websocket.TextMessage, []byte(msgPlayer)); err != nil {
-							log.Println("Write error:", err)
-							return
-						}
-						break
-					}
-				}
+				emit(game, player.Id)
 			}
 		}
 	}
@@ -1178,21 +951,13 @@ func checkoutNight(mux *sync.RWMutex, game *model.Room) {
 					scarletWoman.State.Evil = true
 					scarletWoman.State.Demon = true
 					// 拼接日志
-					info := fmt.Sprintf("已变为小恶魔\n")
+					info := "已变为小恶魔\n"
 					msgPlayer += info
 					msgAll += fmt.Sprintf("[%s] ", scarletWoman.Name) + info
 					scarletWoman.Log += msgPlayer
 					game.Log += msgAll
 					// 发送日志
-					for id, conn := range cfg.GamingConnPool[game.Id] {
-						if id == scarletWoman.Id {
-							if err := conn.WriteMessage(websocket.TextMessage, []byte(msgPlayer)); err != nil {
-								log.Println("Write error:", err)
-								return
-							}
-							break
-						}
-					}
+					emit(game, scarletWoman.Id)
 				}
 				// 如果没有魅魔或魅魔死了
 				if reflect.ValueOf(scarletWoman).IsZero() && len(minionsAlive) != 0 {
@@ -1208,21 +973,13 @@ func checkoutNight(mux *sync.RWMutex, game *model.Room) {
 						}
 					}
 					// 拼接日志
-					info := fmt.Sprintf("已变为小恶魔\n")
+					info := "已变为小恶魔\n"
 					msgPlayer += info
 					msgAll += fmt.Sprintf("[%s] ", minionsAlive[randInt].Name) + info
 					minionsAlive[randInt].Log += msgPlayer
 					game.Log += msgAll
 					// 发送日志
-					for id, conn := range cfg.GamingConnPool[game.Id] {
-						if id == minionsAlive[randInt].Id {
-							if err := conn.WriteMessage(websocket.TextMessage, []byte(msgPlayer)); err != nil {
-								log.Println("Write error:", err)
-								return
-							}
-							break
-						}
-					}
+					emit(game, minionsAlive[randInt].Id)
 				}
 			}
 			// 判断刀市长
@@ -1281,15 +1038,7 @@ func checkoutNight(mux *sync.RWMutex, game *model.Room) {
 							game.Players[fromPlayer.Index].Log += msgPlayer
 							game.Log += msgAll
 							// 发送日志
-							for id, conn := range cfg.GamingConnPool[game.Id] {
-								if id == fromPlayer.Id {
-									if err := conn.WriteMessage(websocket.TextMessage, []byte(msgPlayer)); err != nil {
-										log.Println("Write error:", err)
-										return
-									}
-									break
-								}
-							}
+							emit(game, fromPlayer.Id)
 							break
 						}
 					}
@@ -1358,15 +1107,7 @@ func checkoutNight(mux *sync.RWMutex, game *model.Room) {
 					game.Players[i].Log += msgPlayer
 					game.Log += msgAll
 					// 发送日志
-					for id, conn := range cfg.GamingConnPool[game.Id] {
-						if id == player.Id {
-							if err := conn.WriteMessage(websocket.TextMessage, []byte(msgPlayer)); err != nil {
-								log.Println("Write error:", err)
-								return
-							}
-							break
-						}
-					}
+					emit(game, player.Id)
 				}
 			// 给掘墓人提供信息
 			case Undertaker:
@@ -1408,15 +1149,7 @@ func checkoutNight(mux *sync.RWMutex, game *model.Room) {
 					game.Players[i].Log += msgPlayer
 					game.Log += msgAll
 					// 发送日志
-					for id, conn := range cfg.GamingConnPool[game.Id] {
-						if id == player.Id {
-							if err := conn.WriteMessage(websocket.TextMessage, []byte(msgPlayer)); err != nil {
-								log.Println("Write error:", err)
-								return
-							}
-							break
-						}
-					}
+					emit(game, player.Id)
 				}
 			}
 		}
@@ -1447,15 +1180,7 @@ func checkoutNight(mux *sync.RWMutex, game *model.Room) {
 			game.Players[fromPlayer.Index].Log += msgPlayer
 			game.Log += msgAll
 			// 发送日志
-			for id, conn := range cfg.GamingConnPool[game.Id] {
-				if id == fromPlayer.Id {
-					if err := conn.WriteMessage(websocket.TextMessage, []byte(msgPlayer)); err != nil {
-						log.Println("Write error:", err)
-						return
-					}
-					break
-				}
-			}
+			emit(game, fromPlayer.Id)
 			break
 		}
 	}
@@ -1475,15 +1200,7 @@ func checkoutNight(mux *sync.RWMutex, game *model.Room) {
 			game.Players[fromPlayer.Index].Log += msgPlayer
 			game.Log += msgAll
 			// 发送日志
-			for id, conn := range cfg.GamingConnPool[game.Id] {
-				if id == fromPlayer.Id {
-					if err := conn.WriteMessage(websocket.TextMessage, []byte(msgPlayer)); err != nil {
-						log.Println("Write error:", err)
-						return
-					}
-					break
-				}
-			}
+			emit(game, fromPlayer.Id)
 			break
 		}
 	}
@@ -1502,17 +1219,12 @@ func checkoutNight(mux *sync.RWMutex, game *model.Room) {
 	}
 	game.Log += msg
 	// 发送日志
-	for _, conn := range cfg.GamingConnPool[game.Id] {
-		if err := conn.WriteMessage(websocket.TextMessage, []byte(msg)); err != nil {
-			log.Println("Write error:", err)
-			return
-		}
-	}
+	broadcast(game)
 	// 结算本局
 	checkout(game, nil) // 这里不要传入executed，因为晚上不处决人，晚上可能死圣徒
 }
 
-func checkoutDay(mux *sync.RWMutex, game *model.Room) {
+func checkoutDay(mux *sync.Mutex, game *model.Room) {
 	mux.Lock()
 	defer mux.Unlock()
 	// 结算本局
@@ -1521,7 +1233,6 @@ func checkoutDay(mux *sync.RWMutex, game *model.Room) {
 
 // checkout 结算本局
 func checkout(game *model.Room, executed *model.Player) {
-	cfg := model.GetConfig()
 	msg := ""
 	var realDemonCount int   // 恶魔数量，被占卜认定的不算
 	var canCivilNominate int // 可提名人数
@@ -1603,45 +1314,12 @@ func checkout(game *model.Room, executed *model.Player) {
 	}
 	game.Log += msg
 	// 发送日志
-	for _, conn := range cfg.GamingConnPool[game.Id] {
-		if err := conn.WriteMessage(websocket.TextMessage, []byte(msg)); err != nil {
-			log.Println("Write error:", err)
-			return
-		}
-	}
+	broadcast(game)
 
 	if game.Result != "" {
-		// 发送game 以便前端跳转review
-		marshaledGame, err := json.Marshal(*game)
-		if err != nil {
-			log.Println("JSON marshal error:", err)
-			return
-		}
-		for _, conn := range cfg.GameConnPool[game.Id] {
-			if err := conn.WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
-				log.Println("Write error:", err)
-				return
-			}
-		}
-		// 关闭房间内所有玩家的game长连接
-		for _, player := range game.Players {
-			err := cfg.GameConnPool[game.Id][player.Id].Close()
-			if err != nil {
-				log.Println(err)
-				return
-			}
-			delete(cfg.GameConnPool[game.Id], player.Id)
-		}
-		// 关闭房间内所有玩家的gaming长连接
-		for _, player := range game.Players {
-			err := cfg.GamingConnPool[game.Id][player.Id].Close()
-			if err != nil {
-				log.Println(err)
-				return
-			}
-			delete(cfg.GamingConnPool[game.Id], player.Id)
-		}
 		game.Status = "复盘中"
+		// 发送game 以便前端跳转review
+		broadcast(game)
 	}
 }
 
@@ -1669,4 +1347,41 @@ func findThreeCharactersNotInGame(players []model.Player) string {
 		msg += fmt.Sprintf("{%s} ", character)
 	}
 	return msg + "\n"
+}
+
+// broadcast 广播game
+func broadcast(game *model.Room) {
+	marshaledGame, err := json.Marshal(*game)
+	if err != nil {
+		log.Println("JSON marshal error:", err)
+		return
+	}
+	game.GameConnPool.Range(func(id, conn any) bool {
+		game.ResMux.Lock()
+		defer game.ResMux.Unlock()
+		if err = conn.(*websocket.Conn).WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
+			log.Println("Write error:", err)
+			return false
+		}
+		return true
+	})
+}
+
+// emit 发送game到指定终端
+func emit(game *model.Room, destinationId string) {
+	marshaledGame, err := json.Marshal(*game)
+	if err != nil {
+		log.Println("JSON marshal error:", err)
+		return
+	}
+	game.GameConnPool.Range(func(id, conn any) bool {
+		if id == destinationId {
+			if err := conn.(*websocket.Conn).WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
+				log.Println("Write error:", err)
+				return false
+			}
+			return false
+		}
+		return true
+	})
 }

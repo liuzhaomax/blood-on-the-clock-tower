@@ -15,7 +15,6 @@ import config from "../../config/config"
 const Context = React.createContext({
     name: "Default",
 })
-let socketGaming
 let socket
 let wolfAudio = new Audio("/audio/wolf.wav")
 let cockAudio = new Audio("/audio/cock.wav")
@@ -42,22 +41,12 @@ function Gaming() {
         }
         socket.onerror = function(error) {
             console.error("WebSocket error:", error)
-        }
-        // 获取日志 长连接
-        socketGaming = new WebSocket(`${config.beBaseUrl}/gaming/${roomId}/${localStorage.getItem("PlayerID")}`)
-        socketGaming.onmessage = function(event) {
-            // console.log("Received log from server:", event.data)
-            addLog(event.data, ...wordClassPairs)
-            // 如果有了result，那必然game的连接已被关闭，这里loadGame不起作用，无法跳转review
-            loadGame()
-        }
-        socketGaming.onerror = function(error) {
-            console.error("WebSocket error:", error)
             establishConn() // 断线重连
         }
     }
     const loadGame = () => {
-        socket.send("load_game")
+        let req = JSON.stringify({action: "load_game", targets: []})
+        socket.send(req)
     }
     const jumpToHome = () => {
         navigate("/home", {
@@ -78,7 +67,8 @@ function Gaming() {
         castLock = false
         setIsReturnRoomModalOpen(false)
         jumpToHome()
-        socket.send("quit_game")
+        let req = JSON.stringify({action: "quit_game", targets: []})
+        socket.send(req)
     }
     const handleReturnRoomCancel = () => {
         setIsReturnRoomModalOpen(false)
@@ -122,17 +112,6 @@ function Gaming() {
         [/(提名)/g, "highlight highlight-nominate"], // 提名
         [/(投票)/g, "highlight highlight-vote"], // 投票
     ]
-    const addLog = (text, ...wordClassPairs) => {
-        let replacedText = updateText(text, ...wordClassPairs[0])
-        if (wordClassPairs.length > 1) {
-            for (let i = 1; i < wordClassPairs.length; i++) {
-                replacedText = updateText(replacedText, ...wordClassPairs[i])
-            }
-        }
-        if (document.getElementById("LOG")) {
-            document.getElementById("LOG").innerHTML = document.getElementById("LOG").innerHTML + `<span>${replacedText}</span>`
-        }
-    }
     const updateText = (text, word, className) => {
         if (typeof word === "string") {
             let regex = new RegExp(word, "g")
@@ -431,31 +410,31 @@ function Gaming() {
     }
     const emitToggleNight = () => {
         let req = JSON.stringify({action: "toggle_night", targets: []})
-        socketGaming.send(req) // 会在后端更新stage、night
+        socket.send(req) // 会在后端更新stage、night
     }
     const emitCheckoutNight = () => {
         let req = JSON.stringify({action: "checkout_night", targets: []})
-        socketGaming.send(req) // 结算本阶段
+        socket.send(req) // 结算本阶段
     }
     const emitCheckoutDay = () => {
         let req = JSON.stringify({action: "checkout_day", targets: []})
-        socketGaming.send(req) // 结算本阶段
+        socket.send(req) // 结算本阶段
     }
     const emitCast = () => {
         let req = JSON.stringify({action: "cast", targets: castToPlayersId})
-        socketGaming.send(req) // 会在后端更新stage、night
+        socket.send(req) // 会在后端更新stage、night
     }
     const emitNominate = () => {
         let req = JSON.stringify({action: "nominate", targets: nominateToPlayersId})
-        socketGaming.send(req) // 会在后端更新stage、night
+        socket.send(req) // 会在后端更新stage、night
     }
     const emitVote = () => {
         let req = JSON.stringify({action: "vote", targets: []})
-        socketGaming.send(req) // 会在后端更新stage、night
+        socket.send(req) // 会在后端更新stage、night
     }
     const emitEndVoting = () => {
         let req = JSON.stringify({action: "end_voting", targets: []})
-        socketGaming.send(req) // 会在后端更新stage、night
+        socket.send(req) // 会在后端更新stage、night
     }
 
     // 跳转review页面

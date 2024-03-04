@@ -1,7 +1,6 @@
 package model
 
 import (
-	"github.com/gorilla/websocket"
 	"sync"
 )
 
@@ -11,11 +10,7 @@ var once sync.Once
 func init() {
 	once.Do(func() {
 		cfg = &Config{}
-		cfg.HomeConnPool = map[string]*websocket.Conn{}
-		cfg.RoomConnPool = map[string]map[string]*websocket.Conn{}
-		cfg.GameConnPool = map[string]map[string]*websocket.Conn{}
-		cfg.GamingConnPool = map[string]map[string]*websocket.Conn{}
-		cfg.MuxPool = map[string]*sync.RWMutex{}
+		cfg.HomeConnPool = &sync.Map{}
 	})
 }
 
@@ -24,12 +19,8 @@ func GetConfig() *Config {
 }
 
 type Config struct {
-	Rooms          []Room
-	HomeConnPool   map[string]*websocket.Conn            // 首页 玩家长连接 [playId]conn
-	RoomConnPool   map[string]map[string]*websocket.Conn // 等待开始 玩家的长连接 [roomId][playId]conn
-	GameConnPool   map[string]map[string]*websocket.Conn // 游戏中玩家的game长连接 [roomId][playId]conn
-	GamingConnPool map[string]map[string]*websocket.Conn // 游戏中玩家的日志长连接 [roomId][playId]conn
-	MuxPool        map[string]*sync.RWMutex              // 游戏进行锁 [roomId]*nux
+	Rooms        []Room
+	HomeConnPool *sync.Map // 首页 玩家长连接 [playId]conn
 }
 
 type Room struct {
@@ -43,11 +34,15 @@ type Room struct {
 	Result    string    `json:"result"` // 游戏结果
 	Log       string    `json:"log"`    // 总日志
 	Players   []Player  `json:"players"`
-	State     GameState `json:"state"` // 游戏中各身份状态
+	State     GameState `json:"state"`    // 游戏中各身份状态
+	Executed  *Player   `json:"executed"` // 本轮被处决者
 	// 技能施放池，存储所有施放技能人，当前阶段施放的技能作用目标
 	CastPool map[string][]string `json:"castPool"` // 本轮施法池 [playId][]targetId{}
 	VotePool map[string]string   `json:"votePool"` // 本轮票池 [playId]log{}
-	Executed *Player             `json:"executed"` // 本轮被处决者
+	// 通信管理
+	GameConnPool *sync.Map   `json:"-"` // game长连接[playId]conn
+	Mux          *sync.Mutex `json:"-"` // 业务逻辑使用的锁
+	ResMux       *sync.Mutex `json:"-"` // 发送响应使用的锁
 }
 
 type GameState struct {
@@ -92,9 +87,4 @@ type PlayerReady struct {
 	Nominate  bool `json:"nominate"`  // 可以提名
 	Nominated bool `json:"nominated"` // 可以被提名
 	Vote      int  `json:"vote"`      // 可以投票的票数
-}
-
-type ActionReq struct {
-	Action  string   `json:"action"`
-	Targets []string `json:"targets"`
 }

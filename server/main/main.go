@@ -19,7 +19,6 @@ func main() {
 	http.HandleFunc("/room/", handler.LoadRoom)
 	// 游戏中页
 	http.HandleFunc("/game/", handler.LoadGame)
-	http.HandleFunc("/gaming/", handler.Gaming)
 
 	// 检测是否5小时没有操作，是就销毁房间
 	go func() {
@@ -47,12 +46,13 @@ func main() {
 				log.Println("JSON marshal error:", err)
 				return
 			}
-			for _, conn := range cfg.HomeConnPool {
-				if err := conn.WriteMessage(websocket.TextMessage, marshalRooms); err != nil {
+			cfg.HomeConnPool.Range(func(id, conn any) bool {
+				if err = conn.(*websocket.Conn).WriteMessage(websocket.TextMessage, marshalRooms); err != nil {
 					log.Println("Write error:", err)
-					return
+					return false
 				}
-			}
+				return true
+			})
 
 			time.Sleep(time.Hour * 4)
 		}
