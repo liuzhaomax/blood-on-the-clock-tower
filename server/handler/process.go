@@ -133,6 +133,7 @@ func toggleNight(mux *sync.Mutex, game *model.Room) {
 				game.Players[i].Log += msg
 				// 发送日志
 				emit(game, player.Id)
+				break
 			}
 		}
 		// 发送恶魔身份给爪牙
