@@ -33,7 +33,6 @@ function Gaming() {
         // 获取game 长连接
         socket = new WebSocket(`${config.beBaseUrl}/game/${roomId}/${localStorage.getItem("PlayerID")}`)
         socket.onopen = function() {
-            console.log("game连接成功")
             loadGame()
         }
         socket.onmessage = function(event) {
