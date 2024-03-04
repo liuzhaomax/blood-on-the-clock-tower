@@ -507,6 +507,7 @@ func vote(mux *sync.Mutex, game *model.Room, playerId string) {
 				game.Players[i].State.Voted = true
 				nominated.State.VoteCount += 1
 				msgPlayer += fmt.Sprintf("决意投给 [%s] \n", nominated.Name)
+				game.Players[i].Log += msgPlayer
 			}
 			// 管家的投票在endVoting结算
 			if game.Players[i].Character != Butler {

@@ -39,7 +39,7 @@ type Room struct {
 	// 技能施放池，存储所有施放技能人，当前阶段施放的技能作用目标
 	CastPool map[string][]string `json:"castPool"` // 本轮施法池 [playId][]targetId{}
 	VotePool map[string]string   `json:"votePool"` // 本轮票池 [playId]log{}
-	// 房间连接
+	// 通信管理
 	GameConnPool *sync.Map   `json:"-"` // game长连接[playId]conn
 	Mux          *sync.Mutex `json:"-"` // 业务逻辑使用的锁
 	ResMux       *sync.Mutex `json:"-"` // 发送响应使用的锁
