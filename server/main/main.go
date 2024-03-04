@@ -19,7 +19,6 @@ func main() {
 	http.HandleFunc("/room/", handler.LoadRoom)
 	// 游戏中页
 	http.HandleFunc("/game/", handler.LoadGame)
-	http.HandleFunc("/gaming/", handler.Gaming)
 
 	// 检测是否5小时没有操作，是就销毁房间
 	go func() {

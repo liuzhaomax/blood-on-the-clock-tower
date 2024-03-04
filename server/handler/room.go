@@ -7,7 +7,6 @@ import (
 	"log"
 	"net/http"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -194,8 +193,6 @@ func startGame(room *model.Room) {
 	}
 	// 初始化pool
 	cfg.GameConnPool[room.Id] = map[string]*websocket.Conn{}
-	cfg.GamingConnPool[room.Id] = map[string]*websocket.Conn{}
-	cfg.MuxPool[room.Id] = &sync.RWMutex{}
 
 	CfgMutex.Unlock()
 

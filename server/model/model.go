@@ -14,8 +14,6 @@ func init() {
 		cfg.HomeConnPool = map[string]*websocket.Conn{}
 		cfg.RoomConnPool = map[string]map[string]*websocket.Conn{}
 		cfg.GameConnPool = map[string]map[string]*websocket.Conn{}
-		cfg.GamingConnPool = map[string]map[string]*websocket.Conn{}
-		cfg.MuxPool = map[string]*sync.RWMutex{}
 	})
 }
 
@@ -24,12 +22,10 @@ func GetConfig() *Config {
 }
 
 type Config struct {
-	Rooms          []Room
-	HomeConnPool   map[string]*websocket.Conn            // 首页 玩家长连接 [playId]conn
-	RoomConnPool   map[string]map[string]*websocket.Conn // 等待开始 玩家的长连接 [roomId][playId]conn
-	GameConnPool   map[string]map[string]*websocket.Conn // 游戏中玩家的game长连接 [roomId][playId]conn
-	GamingConnPool map[string]map[string]*websocket.Conn // 游戏中玩家的日志长连接 [roomId][playId]conn
-	MuxPool        map[string]*sync.RWMutex              // 游戏进行锁 [roomId]*nux
+	Rooms        []Room
+	HomeConnPool map[string]*websocket.Conn            // 首页 玩家长连接 [playId]conn
+	RoomConnPool map[string]map[string]*websocket.Conn // 等待开始 玩家的长连接 [roomId][playId]conn
+	GameConnPool map[string]map[string]*websocket.Conn // 游戏中玩家的game长连接 [roomId][playId]conn
 }
 
 type Room struct {
@@ -92,9 +88,4 @@ type PlayerReady struct {
 	Nominate  bool `json:"nominate"`  // 可以提名
 	Nominated bool `json:"nominated"` // 可以被提名
 	Vote      int  `json:"vote"`      // 可以投票的票数
-}
-
-type ActionReq struct {
-	Action  string   `json:"action"`
-	Targets []string `json:"targets"`
 }

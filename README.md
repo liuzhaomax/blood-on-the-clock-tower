@@ -212,17 +212,17 @@
         + 功能：改变房间state
         + 输入：action:start_game, playload:""
         + 输出：room
-+ 游戏中页
-    + 加载游戏 /game/:roomId/:playerId
++ 游戏中页 /game/:roomId/:playerId
+    + 加载游戏 
         + 功能：根据人数，分配身份；夜晚读秒
-        + 输入：action:load_game
+        + 输入：action:load_game, targets:[]
         + 输出：game
-    + 退出游戏 /game/:roomId/:playerId
-        + 输入：action:quit_game
+    + 退出游戏 
+        + 输入：action:quit_game, targets:[]
         + 输出：game
-    + 游戏过程 /gaming/:roomId/:playerId
-        + 输入：action, targets:[playerId]
-        + 输出：操作结果日志string
+    + 游戏过程 
+        + 输入：action:各种操作, targets:[playerId]
+        + 输出：game
 + 游戏结算页 /review/:roomId
     + 加载结算 /room/:roomId
         + 输入：action:review_game, playload:playerId
