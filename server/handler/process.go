@@ -270,7 +270,6 @@ func endVoting(mux *sync.Mutex, game *model.Room) {
 	game.VotePool = map[string]string{}
 	// 发送votingStep
 	broadcast(game)
-	return
 }
 
 func nominate(mux *sync.Mutex, game *model.Room, playerId string, targets []string) {
