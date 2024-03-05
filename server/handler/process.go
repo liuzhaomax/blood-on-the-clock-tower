@@ -127,7 +127,7 @@ func toggleNight(mux *sync.Mutex, game *model.Room) {
 		for i, player := range game.Players {
 			if player.CharacterType == Minions {
 				minions[player.Name] = player.Character
-				msg += fmt.Sprintf("本局恶魔 [%s] 的身份是 {%s}\n", demon.Name, demon.Character)
+				msg += fmt.Sprintf("您发现恶魔 [%s] 的身份是 {%s}\n", demon.Name, demon.Character)
 				game.Players[i].Log += msg
 				// 发送日志
 				emit(game, player.Id)
@@ -137,7 +137,7 @@ func toggleNight(mux *sync.Mutex, game *model.Room) {
 		// 发送恶魔身份给爪牙
 		msg = ""
 		for name, character := range minions {
-			msg += fmt.Sprintf("本局 [%s] 是爪牙\n", name)
+			msg += fmt.Sprintf("您发现 [%s] 是爪牙\n", name)
 			if character == Spy {
 				msg += fmt.Sprintf("其身份是 {%s}\n", character)
 			}
@@ -950,7 +950,7 @@ func checkoutNight(mux *sync.Mutex, game *model.Room) {
 					scarletWoman.State.Evil = true
 					scarletWoman.State.Demon = true
 					// 拼接日志
-					info := "已变为小恶魔\n"
+					info := "已变为 {小恶魔} \n"
 					msgPlayer += info
 					msgAll += fmt.Sprintf("[%s] ", scarletWoman.Name) + info
 					scarletWoman.Log += msgPlayer
@@ -1013,35 +1013,49 @@ func checkoutNight(mux *sync.Mutex, game *model.Room) {
 			switch player.Character {
 			// 给守鸦人提供信息
 			case Ravenkeeper:
+				info := ""
 				// 没有死人
 				if killed == nil {
 					break
 				}
 				// 不是酒鬼，没被毒或被守护，死的正是守鸦人自己
-				if !player.State.Drunk && !player.State.Poisoned &&
-					player.Id == killed.Id {
-					for fromPlayer, toPlayerIndexSlice := range castPoolObj {
-						if fromPlayer.Id == player.Id {
-							// 拼接日志
-							msgAll += fmt.Sprintf("[%s] ", player.Name)
-							character := ""
+				for fromPlayer, toPlayerIndexSlice := range castPoolObj {
+					msgAll += fmt.Sprintf("[%s] ", player.Name)
+					if fromPlayer.Id == player.Id {
+						// 给守鸦人提供正确信息
+						if !player.State.Drunk && !player.State.Poisoned && player.Id == killed.Id {
 							// 看隐士情况，是看成他被当成的身份
+							character := ""
 							if game.Players[toPlayerIndexSlice[0]].Character == Recluse {
 								character = game.Players[toPlayerIndexSlice[0]].State.RegardedAs
 							} else {
 								character = game.Players[toPlayerIndexSlice[0]].Character
 							}
-							info := fmt.Sprintf("发现 [%s] 的身份是 {%s}\n", game.Players[toPlayerIndexSlice[0]].Name, character)
-							msgPlayer += info
-							msgAll += info
-							game.Players[fromPlayer.Index].Log += msgPlayer
-							game.Log += msgAll
-							// 发送日志
-							emit(game, fromPlayer.Id)
+							info = fmt.Sprintf("发现 [%s] 的身份是 {%s}\n", game.Players[toPlayerIndexSlice[0]].Name, character)
+							break
+						}
+						// 给守鸦人提供伪信息
+						if (player.State.Drunk || player.State.Poisoned) && player.Id == killed.Id {
+							character := ""
+							allChars := append(append(append(TownsfolkPool, OutsidersPool...), MinionsPool...), DemonsPool...)
+							for {
+								randInt := rand.Intn(len(allChars))
+								if game.Players[randInt].Character != Ravenkeeper {
+									character = game.Players[randInt].Character
+									break
+								}
+							}
+							info = fmt.Sprintf("发现 [%s] 的身份是 {%s}\n", game.Players[toPlayerIndexSlice[0]].Name, character)
 							break
 						}
 					}
 				}
+				msgPlayer += info
+				msgAll += info
+				game.Players[player.Index].Log += msgPlayer
+				game.Log += msgAll
+				// 发送日志
+				emit(game, player.Id)
 			// 给共情者提供信息
 			case Empath:
 				if !player.State.Dead { // 当晚死亡得不到信息
