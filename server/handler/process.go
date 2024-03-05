@@ -469,21 +469,19 @@ func cast(mux *sync.Mutex, game *model.Room, playerId string, targets []string) 
 				if player.State.Drunk {
 					break
 				}
-				// 不考虑下毒了且没被保护
-				if player.State.Poisoned && !player.State.Protected {
+				// 不考虑下毒了
+				if player.State.Poisoned {
+					game.Players[i].State.Bullet = false // 子弹不管怎样都会发射
 					break
 				}
 				// 考虑子弹
-				if player.State.Bullet {
+				if game.Players[i].State.Bullet {
 					msg := fmt.Sprintf("[%s] ", player.Name)
 					game.Players[i].State.Bullet = false // 子弹不管怎样都会发射
 					if target.CharacterType == Demons || target.State.RegardedAs == Imp {
 						target.State.Dead = true
 						// 拼接日志
 						msg += fmt.Sprintf("枪杀了 [%s] \n", target.Name)
-					} else {
-						// 拼接日志
-						msg += "无事发生\n"
 					}
 					for i := range game.Players {
 						game.Players[i].Log += msg
@@ -1040,8 +1038,8 @@ func checkoutNight(mux *sync.Mutex, game *model.Room) {
 							allChars := append(append(append(TownsfolkPool, OutsidersPool...), MinionsPool...), DemonsPool...)
 							for {
 								randInt := rand.Intn(len(allChars))
-								if game.Players[randInt].Character != Ravenkeeper {
-									character = game.Players[randInt].Character
+								if allChars[randInt] != Ravenkeeper {
+									character = allChars[randInt]
 									break
 								}
 							}
