@@ -9,6 +9,7 @@ import {blood} from "../../utils/blood/blood"
 import {sleep} from "../../utils/time"
 import config from "../../config/config"
 import ICP from "../../assets/images/ICP.png"
+import bat from "../../assets/video/bat.gif"
 
 if (localStorage.getItem("PlayerID") === null) {
     localStorage.setItem("PlayerID", genShortUUID())
@@ -200,7 +201,11 @@ function Home() {
                     <feDisplacementMap in="SourceGraphic" in2="turbNoise" xChannelSelector="G" yChannelSelector="B" scale="6" result="disp"></feDisplacementMap>
                 </filter>
             </svg>
-            <img id="Bat-gif" src={process.env.PUBLIC_URL + "/video/bat.gif"} alt="Bat GIF"/>
+            {window.innerWidth >= 958 ?
+                <img id="Bat-gif" src={bat} alt="Bat GIF"/>
+                :
+                <></>
+            }
             <Flex className="layout" wrap="wrap">
                 <Button className="btn-main" onClick={showDrawer}>创建房间</Button>
             </Flex>
