@@ -381,7 +381,7 @@ function Gaming() {
         }
         if (stage === 1) {
             // 发送日夜切换指令到后端，后端重置状态
-            emitToggleNight()
+            await emitToggleNight()
             // 防抖
             castLock = true
             await sleep(2000)
@@ -389,9 +389,9 @@ function Gaming() {
         }
         if (stage !== 1 && stage % 2 === 0) {
             // 夜转日，结算前一夜，此时前端stage是双数，但是后端stage依然是单数，因为emitToggleNight还未运行
-            emitCheckoutNight()
+            await emitCheckoutNight()
             // 发送日夜切换指令到后端，后端重置状态
-            emitToggleNight()
+            await emitToggleNight()
             // 防抖
             castLock = true
             await sleep(2000)
@@ -399,9 +399,9 @@ function Gaming() {
         }
         if (stage !== 1 && stage % 2 === 1) {
             // 日转夜，结算前一天，此时前端stage是单数，但是后端stage依然是双数，因为emitToggleNight还未运行
-            emitCheckoutDay()
+            await emitCheckoutDay()
             // 发送日夜切换指令到后端，后端重置状态
-            emitToggleNight()
+            await emitToggleNight()
             // 防抖
             castLock = true
             await sleep(2000)

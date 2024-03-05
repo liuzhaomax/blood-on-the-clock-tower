@@ -13,8 +13,8 @@ import (
 
 var Upgrader = websocket.Upgrader{
 	HandshakeTimeout: time.Hour * 2,
-	ReadBufferSize:   1024,
-	WriteBufferSize:  1024,
+	ReadBufferSize:   10240,
+	WriteBufferSize:  10240,
 	CheckOrigin: func(r *http.Request) bool {
 		return true
 	},

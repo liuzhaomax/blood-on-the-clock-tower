@@ -114,8 +114,6 @@ func toggleNight(mux *sync.Mutex, game *model.Room) {
 	}
 	// 第一夜恶魔爪牙互认身份
 	if game.State.Stage == 1 {
-		var wg = sync.WaitGroup{}
-		wg.Add(3)
 		msg = ""
 		var demon model.Player
 		for i, player := range game.Players {
@@ -1330,6 +1328,7 @@ func findThreeCharactersNotInGame(players []model.Player) string {
 	var chars []string
 	msg := "这三个村民身份不在本局中："
 	for {
+		hasRepeatedCharacter = false
 		randInt := rand.Intn(len(TownsfolkPool))
 		for _, player := range players {
 			if player.Character == TownsfolkPool[randInt] {
@@ -1352,14 +1351,14 @@ func findThreeCharactersNotInGame(players []model.Player) string {
 
 // broadcast 广播game
 func broadcast(game *model.Room) {
+	game.ResMux.Lock()
+	defer game.ResMux.Unlock()
 	marshaledGame, err := json.Marshal(*game)
 	if err != nil {
 		log.Println("JSON marshal error:", err)
 		return
 	}
 	game.GameConnPool.Range(func(id, conn any) bool {
-		game.ResMux.Lock()
-		defer game.ResMux.Unlock()
 		if err = conn.(*websocket.Conn).WriteMessage(websocket.TextMessage, marshaledGame); err != nil {
 			log.Println("Write error:", err)
 			return false
@@ -1370,6 +1369,8 @@ func broadcast(game *model.Room) {
 
 // emit 发送game到指定终端
 func emit(game *model.Room, destinationId string) {
+	game.ResMux.Lock()
+	defer game.ResMux.Unlock()
 	marshaledGame, err := json.Marshal(*game)
 	if err != nil {
 		log.Println("JSON marshal error:", err)
