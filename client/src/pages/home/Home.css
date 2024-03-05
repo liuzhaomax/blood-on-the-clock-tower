@@ -231,3 +231,49 @@
 #HOME .svg {
     display: none;
 }
+
+/*健康忠告*/
+#HOME #Warn-health {
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    align-items: center;
+}
+
+#HOME p {
+    margin: 0;
+    font-size: 14px;
+}
+
+/*备案*/
+#HOME #ICP {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    justify-content: center;
+    align-items: center;
+    font-size: 12px;
+}
+
+#HOME #ICP a:link {
+    color: white !important;
+}
+
+#HOME #ICP a:visited {
+    color: white !important;
+}
+
+#HOME #ICP a:hover {
+    color: gainsboro !important;
+}
+
+#HOME #ICP a:active {
+    color: white !important;
+}
+
+#HOME #ICP img {
+    width: 16px;
+    height: 16px;
+    margin-right: 5px;
+}
