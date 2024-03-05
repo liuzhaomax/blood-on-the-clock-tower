@@ -247,7 +247,7 @@ func endVoting(mux *sync.Mutex, game *model.Room) {
 	// 发送日志
 	broadcast(game)
 	// 判断圣徒 - 邪恶胜利条件4
-	if game.Executed != nil && game.Executed.Character == Saint {
+	if game.Executed != nil && game.Executed.Character == Saint && !game.Executed.State.Poisoned {
 		checkout(game, game.Executed)
 	}
 	// 判断魅魔 - 有人被处决，处决的人是小恶魔，活人大于等于5个，有魅魔且没死
@@ -1295,7 +1295,7 @@ func checkout(game *model.Room, executed *model.Player) {
 		game.Result = "平民阵营胜利"
 	}
 	// 邪恶胜利条件4
-	if executed != nil && executed.Character == Saint {
+	if executed != nil && executed.Character == Saint && !executed.State.Poisoned {
 		msg += "达成邪恶胜利条件四：圣徒被投票处决\n"
 		msg += "本局结束，邪恶胜利\n"
 		game.Result = "邪恶阵营胜利"

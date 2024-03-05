@@ -16,6 +16,7 @@ const Context = React.createContext({
     name: "Default",
 })
 let socket
+// let timer
 let wolfAudio = new Audio("/audio/wolf.wav")
 let cockAudio = new Audio("/audio/cock.wav")
 let castLock = false // 入夜后给施放技能的时间，后端没有，只在前端限制，因为只限制主机
@@ -55,6 +56,17 @@ function Gaming() {
         })
     }
 
+    // // 防断线
+    // useEffect(() => {
+    //     timer = setInterval(() => {
+    //         keepAlive()
+    //     }, 30000)
+    // }, [])
+    // const keepAlive = () => {
+    //     let req = JSON.stringify({action: "ping", targets: []})
+    //     socket.send(req)
+    // }
+
     // 退出房间
     const returnRoom = () => {
         showReturnRoomModal()
@@ -66,6 +78,7 @@ function Gaming() {
     const handleReturnRoomOk = () => {
         castLock = false
         setIsReturnRoomModalOpen(false)
+        // clearInterval(timer)
         jumpToHome()
         let req = JSON.stringify({action: "quit_game", targets: []})
         socket.send(req)
