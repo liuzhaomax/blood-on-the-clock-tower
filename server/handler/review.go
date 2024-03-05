@@ -11,6 +11,9 @@ func reviewGame(room *model.Room, playerId string, conn *websocket.Conn) {
 	cfg := model.GetConfig()
 	CfgMutex.Lock()
 	defer CfgMutex.Unlock()
+	if room == nil {
+		return
+	}
 	room.GameConnPool.Store(playerId, conn)
 
 	// 把room发给请求者
@@ -19,7 +22,7 @@ func reviewGame(room *model.Room, playerId string, conn *websocket.Conn) {
 		log.Println("JSON marshal error:", err)
 		return
 	}
-	connVal, _ := cfg.HomeConnPool.LoadOrStore(playerId, conn)
+	connVal, _ := room.GameConnPool.LoadOrStore(playerId, conn)
 	if err = connVal.(*websocket.Conn).WriteMessage(websocket.TextMessage, marshalRoom); err != nil {
 		log.Println("Write error:", err)
 		return
