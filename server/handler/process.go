@@ -273,7 +273,7 @@ func endVoting(mux *sync.Mutex, game *model.Room) {
 	// 发送votingStep
 	broadcast(game)
 	// 立即结算
-	checkout(game, nil)
+	checkout(game, game.Executed)
 }
 
 func nominate(mux *sync.Mutex, game *model.Room, playerId string, targets []string) {
