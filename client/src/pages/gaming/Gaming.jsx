@@ -19,6 +19,8 @@ let socket
 // let timer
 let wolfAudio = new Audio("/audio/wolf.wav")
 let cockAudio = new Audio("/audio/cock.wav")
+let civilWinAudio = new Audio("/audio/civil_win.wav")
+let evilWinAudio = new Audio("/audio/evil_win.wav")
 let castLock = false // 入夜后给施放技能的时间，后端没有，只在前端限制，因为只限制主机
 
 function Gaming() {
@@ -389,34 +391,34 @@ function Gaming() {
         // TODO 语音- 请大家操作或输入验证码
         if (stage % 2 === 1) {
             wolfAudio.play() // 狼叫
-        } else {
+        } else if (stage % 2 === 0) {
             cockAudio.play() // 鸡叫
         }
         if (stage === 1) {
+            castLock = true
             // 发送日夜切换指令到后端，后端重置状态
             await emitToggleNight()
             // 防抖
-            castLock = true
             await sleep(2000)
             castLock = false
         }
         if (stage !== 1 && stage % 2 === 0) {
+            castLock = true
             // 夜转日，结算前一夜，此时前端stage是双数，但是后端stage依然是单数，因为emitToggleNight还未运行
             await emitCheckoutNight()
             // 发送日夜切换指令到后端，后端重置状态
             await emitToggleNight()
             // 防抖
-            castLock = true
             await sleep(2000)
             castLock = false
         }
         if (stage !== 1 && stage % 2 === 1) {
+            castLock = true
             // 日转夜，结算前一天，此时前端stage是单数，但是后端stage依然是双数，因为emitToggleNight还未运行
             await emitCheckoutDay()
             // 发送日夜切换指令到后端，后端重置状态
             await emitToggleNight()
             // 防抖
-            castLock = true
             await sleep(2000)
             castLock = false
         }
@@ -457,10 +459,14 @@ function Gaming() {
     const loadAnimation = async () => {
         if (game) {
             if (game.result) {
+                await wolfAudio.pause()
+                await cockAudio.pause()
                 if (game.result.substring(0, 2) === "平民") {
+                    civilWinAudio.play()
                     await showGif("Civil-gif", 5000)
                 }
                 if (game.result.substring(0, 2) === "邪恶") {
+                    evilWinAudio.play()
                     await showGif("Evil-gif", 5000)
                 }
                 jumpToReview()

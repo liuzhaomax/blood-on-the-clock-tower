@@ -338,6 +338,8 @@ func nominate(mux *sync.Mutex, game *model.Room, playerId string, targets []stri
 						game.Log += msg
 						// 发送日志
 						broadcast(game)
+						// 反弹死了算是已有处决人
+						game.Executed = &game.Players[i]
 						break
 					}
 				}
@@ -1278,13 +1280,14 @@ func checkout(game *model.Room, executed *model.Player) {
 		if player.Character == Slayer && player.State.Bullet {
 			hasSlayerBullet = true
 		}
-		if player.State.Dead {
-			canVote += player.Ready.Vote // 加死人的票数
-		} else {
-			canVote += 1 // 加活人的人数
-		}
 		if !player.State.Dead && (player.CharacterType == Demons || player.CharacterType == Minions) {
 			evilAliveCount++
+		}
+		// 可投票数 = 持票死人人数 + 活人人数
+		if !player.State.Dead {
+			canVote += 1
+		} else {
+			canVote += player.Ready.Vote
 		}
 		// 对应邪恶胜利条件3
 		if !player.State.Dead {
@@ -1311,8 +1314,8 @@ func checkout(game *model.Room, executed *model.Player) {
 	}
 	// 邪恶胜利条件2
 	halfAlive := int(math.Ceil(float64(aliveCount / 2)))
-	if game.Result == "" && canVote <= halfAlive && evilAliveCount >= halfAlive && !hasSlayerBullet && !mayorAlive {
-		msg += "达成邪恶胜利条件二：可投的票数不大于活人的半数（向上取整），且存活的邪恶玩家数量不小于活人的半数（向上取整），且没有杀手或有杀手没有子弹，且没有市长或市长已死或酒鬼市长\n"
+	if game.Result == "" && aliveCount <= 4 && canVote-evilAliveCount <= halfAlive && evilAliveCount >= halfAlive && !hasSlayerBullet && !mayorAlive {
+		msg += "达成邪恶胜利条件二：活人数小于等于4，平民可投的票数不大于活人的半数（向上取整），且存活的邪恶玩家数量不小于活人的半数（向上取整），且没有杀手或有杀手没有子弹，且没有市长或市长已死或酒鬼市长\n"
 		msg += "本局结束，邪恶胜利\n"
 		game.Result = "邪恶阵营胜利"
 	}
@@ -1344,15 +1347,18 @@ func findThreeCharactersNotInGame(players []model.Player) string {
 		hasRepeatedCharacter = false
 		randInt := rand.Intn(len(TownsfolkPool))
 		for _, player := range players {
+			// 和所有场上村民比，是否有重复
 			if player.Character == TownsfolkPool[randInt] {
 				hasRepeatedCharacter = true
 			}
+			// 和三个身份比，是否有重复
 			for _, char := range chars {
-				if player.Character == char {
+				if char == TownsfolkPool[randInt] {
 					hasRepeatedCharacter = true
 					break
 				}
 			}
+			// 有重复，则跳出重新随机一个身份
 			if hasRepeatedCharacter {
 				break
 			}

@@ -14,6 +14,9 @@ import bat from "../../assets/video/bat.gif"
 if (localStorage.getItem("PlayerID") === null) {
     localStorage.setItem("PlayerID", genShortUUID())
 }
+if (localStorage.getItem("PlayerName") === null) {
+    localStorage.setItem("PlayerName", "好人1号-" + genShortUUID().slice(-6))
+}
 
 const Context = React.createContext({
     name: "Default",
@@ -58,6 +61,7 @@ function Home() {
     const [open, setOpen] = useState(false)
     const showDrawer = () => {
         setOpen(true)
+        setPlayerName(localStorage.getItem("PlayerName"))
     }
     const onClose = () => {
         setOpen(false)
@@ -69,6 +73,7 @@ function Home() {
         setRoomId(room.id)
         setRoomName(room.name)
         setRoomSelected(room)
+        setPlayerName(localStorage.getItem("PlayerName"))
     }
     const onClose1 = () => {
         setOpen1(false)
@@ -117,6 +122,7 @@ function Home() {
 
     const handlePlayerNameChange = (event) => {
         setPlayerName(event.target.value)
+        localStorage.setItem("PlayerName", event.target.value)
     }
 
     const joinRoom = () => {
