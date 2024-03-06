@@ -39,6 +39,7 @@ function Gaming() {
             loadGame()
         }
         socket.onmessage = function(event) {
+            // TODO 内测用，记得关闭
             console.log("Received message from server:", JSON.parse(event.data))
             setGame(JSON.parse(event.data))
         }
