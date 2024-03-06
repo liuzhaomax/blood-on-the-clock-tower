@@ -63,6 +63,7 @@ func toggleNight(mux *sync.Mutex, game *model.Room) {
 		for i := range game.Players {
 			// 活人调整状态 - 让所有活人重新可以投票，夜转日结算，没投票还有票
 			if !game.Players[i].State.Dead {
+				game.Players[i].Ready.Nominate = true
 				game.Players[i].Ready.Nominated = true
 				game.Players[i].Ready.Vote = 1
 			}
@@ -252,7 +253,8 @@ func endVoting(mux *sync.Mutex, game *model.Room) {
 		checkout(game, game.Executed)
 	}
 	// 判断魅魔 - 有人被处决，处决的人是小恶魔，活人大于等于5个，有魅魔且没死
-	if game.Executed != nil && game.Executed.Character == Imp && aliveCount-1 >= 5 && scarletWomanIndex > 0 {
+	if game.Executed != nil && game.Executed.Character == Imp && aliveCount-1 >= 5 &&
+		scarletWomanIndex > 0 && !game.Players[scarletWomanIndex].State.Poisoned {
 		scarletWoman := &game.Players[scarletWomanIndex]
 		// 拼接日志
 		msgPlayer := "您"
@@ -324,7 +326,7 @@ func nominate(mux *sync.Mutex, game *model.Room, playerId string, targets []stri
 			if !player.State.Poisoned {
 				msg = msgName
 				for i, player := range game.Players {
-					if player.Id == playerId && player.CharacterType == Townsfolk {
+					if player.Id == playerId && player.CharacterType == Townsfolk && !player.State.Drunk {
 						game.Players[i].State.Dead = true
 						game.Players[i].Ready.Nominate = false
 						game.Players[i].Ready.Nominated = false
@@ -458,14 +460,16 @@ func cast(mux *sync.Mutex, game *model.Room, playerId string, targets []string) 
 				for i, player := range game.Players {
 					if targets[0] == player.Id {
 						target = &game.Players[i]
-						info := fmt.Sprintf(" 对 [%s] 进行了枪毙！", player.Name)
+						info := fmt.Sprintf(" 对 [%s] 进行了枪毙！\n", player.Name)
 						msgPlayer += info
 						msgAll += info
-						// 发送日志
-						emit(game, playerId)
 						break
 					}
 				}
+				game.Players[i].Log += msgPlayer
+				game.Log += msgAll
+				// 发送日志
+				emit(game, playerId)
 				// 杀手立即判断死活
 				// 不考虑酒鬼
 				if player.State.Drunk {
@@ -492,6 +496,8 @@ func cast(mux *sync.Mutex, game *model.Room, playerId string, targets []string) 
 						game.Log += msg
 						// 发送日志
 						broadcast(game)
+						// 立即结算
+						checkout(game, nil)
 					} else {
 						// 拼接日志
 						msg += "枪杀失败，无事发生\n"
@@ -1254,7 +1260,6 @@ func checkoutDay(mux *sync.Mutex, game *model.Room) {
 func checkout(game *model.Room, executed *model.Player) {
 	msg := ""
 	var realDemonCount int   // 恶魔数量，被占卜认定的不算
-	var canCivilNominate int // 可提名人数
 	var hasSlayerBullet bool // 有杀手且杀手有子弹
 	var aliveCount int       // 活人数量
 	var canVote int          // 可投票数量
@@ -1269,14 +1274,10 @@ func checkout(game *model.Room, executed *model.Player) {
 		if player.Character == Mayor && !player.State.Dead && !player.State.Drunk {
 			mayorAlive = true
 		}
-		// 对应邪恶胜利条件1
+		// 对应邪恶胜利条件2
 		if player.Character == Slayer && player.State.Bullet {
 			hasSlayerBullet = true
 		}
-		if !player.State.Dead && player.Ready.Nominate && (player.CharacterType == Townsfolk || player.CharacterType == Outsiders) {
-			canCivilNominate++
-		}
-		// 对应邪恶胜利条件2
 		if player.State.Dead {
 			canVote += player.Ready.Vote // 加死人的票数
 		} else {
@@ -1302,15 +1303,9 @@ func checkout(game *model.Room, executed *model.Player) {
 		msg += "本局结束，平民胜利\n"
 		game.Result = "平民阵营胜利"
 	}
-	// 邪恶胜利条件4
-	if game.Result == "" && executed != nil && executed.Character == Saint && !executed.State.Poisoned {
-		msg += "达成邪恶胜利条件四：圣徒被投票处决，且未中毒\n"
-		msg += "本局结束，邪恶胜利\n"
-		game.Result = "邪恶阵营胜利"
-	}
 	// 邪恶胜利条件1
-	if game.Result == "" && canCivilNominate == 0 && !hasSlayerBullet && !mayorAlive {
-		msg += "达成邪恶胜利条件一：场上没有平民可以提名，且没有杀手或有杀手没有子弹，且没有市长或市长已死或酒鬼市长\n"
+	if game.Result == "" && executed != nil && executed.Character == Saint && !executed.State.Poisoned {
+		msg += "达成邪恶胜利条件一：圣徒被投票处决，且未中毒\n"
 		msg += "本局结束，邪恶胜利\n"
 		game.Result = "邪恶阵营胜利"
 	}
@@ -1351,6 +1346,15 @@ func findThreeCharactersNotInGame(players []model.Player) string {
 		for _, player := range players {
 			if player.Character == TownsfolkPool[randInt] {
 				hasRepeatedCharacter = true
+			}
+			for _, char := range chars {
+				if player.Character == char {
+					hasRepeatedCharacter = true
+					break
+				}
+			}
+			if hasRepeatedCharacter {
+				break
 			}
 		}
 		if !hasRepeatedCharacter {
