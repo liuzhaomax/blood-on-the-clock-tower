@@ -1296,7 +1296,7 @@ func checkout(game *model.Room, executed *model.Player) {
 	}
 	// 邪恶胜利条件4
 	if executed != nil && executed.Character == Saint && !executed.State.Poisoned {
-		msg += "达成邪恶胜利条件四：圣徒被投票处决\n"
+		msg += "达成邪恶胜利条件四：圣徒被投票处决，且未中毒\n"
 		msg += "本局结束，邪恶胜利\n"
 		game.Result = "邪恶阵营胜利"
 	}
