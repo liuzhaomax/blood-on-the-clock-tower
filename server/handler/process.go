@@ -155,6 +155,7 @@ func toggleNight(mux *sync.Mutex, game *model.Room) {
 
 		// 给恶魔提供3个不在场的村民身份
 		msg = findThreeCharactersNotInGame(game.Players)
+		game.Players[demon.Index].Log += msg
 		// 保存到总日志
 		game.Log += msg
 		// 发送
@@ -386,6 +387,7 @@ func vote(mux *sync.Mutex, game *model.Room, playerId string) {
 			break
 		}
 	}
+	// 投完票才会更新其他人的投标签，所以这里没有广播
 }
 
 func cast(mux *sync.Mutex, game *model.Room, playerId string, targets []string) {
@@ -480,15 +482,17 @@ func cast(mux *sync.Mutex, game *model.Room, playerId string, targets []string) 
 					game.Players[i].State.Bullet = false // 子弹不管怎样都会发射
 					if target.CharacterType == Demons || target.State.RegardedAs == Imp {
 						target.State.Dead = true
+						target.Ready.Nominate = false
+						target.Ready.Nominated = false
 						// 拼接日志
 						msg += fmt.Sprintf("枪杀了 [%s] \n", target.Name)
+						for i := range game.Players {
+							game.Players[i].Log += msg
+						}
+						game.Log += msg
+						// 发送日志
+						broadcast(game)
 					}
-					for i := range game.Players {
-						game.Players[i].Log += msg
-					}
-					game.Log += msg
-					// 发送日志
-					broadcast(game)
 				} else {
 					msg := "您已没有子弹"
 					game.Players[i].Log += msg
@@ -989,6 +993,8 @@ func checkoutNight(mux *sync.Mutex, game *model.Room) {
 						game.Players[randInt].CharacterType != Demons {
 						// 死的是除了恶魔的其他任意一人
 						game.Players[randInt].State.Dead = true
+						game.Players[randInt].Ready.Nominate = false
+						game.Players[randInt].Ready.Nominated = false
 						killed = &game.Players[randInt]
 						break
 					}
@@ -1258,7 +1264,7 @@ func checkout(game *model.Room, executed *model.Player) {
 			realDemonCount++
 		}
 		// 对应平民胜利条件2
-		if player.Character == Mayor && !player.State.Dead {
+		if player.Character == Mayor && !player.State.Dead && !player.State.Drunk {
 			mayorAlive = true
 		}
 		// 对应邪恶胜利条件1
@@ -1283,51 +1289,49 @@ func checkout(game *model.Room, executed *model.Player) {
 		}
 	}
 	// 平民胜利条件1（恶魔受不了了自杀情况）
-	if realDemonCount == 0 {
+	if game.Result == "" && realDemonCount == 0 {
 		msg += "达成平民胜利条件一：恶魔被铲除\n"
 		msg += "本局结束，平民胜利\n"
 		game.Result = "平民阵营胜利"
 	}
 	// 平民胜利条件2
-	if aliveCount == 3 && !game.State.Night && mayorAlive && executed == nil {
+	if game.Result == "" && aliveCount == 3 && !game.State.Night && mayorAlive && executed == nil {
 		msg += "达成平民胜利条件二：白天剩三人，其中一个是市长，且当日无人被处决\n"
 		msg += "本局结束，平民胜利\n"
 		game.Result = "平民阵营胜利"
 	}
 	// 邪恶胜利条件4
-	if executed != nil && executed.Character == Saint && !executed.State.Poisoned {
+	if game.Result == "" && executed != nil && executed.Character == Saint && !executed.State.Poisoned {
 		msg += "达成邪恶胜利条件四：圣徒被投票处决，且未中毒\n"
 		msg += "本局结束，邪恶胜利\n"
 		game.Result = "邪恶阵营胜利"
 	}
 	// 邪恶胜利条件1
-	if canCivilNominate == 0 && !hasSlayerBullet && !mayorAlive {
-		msg += "达成邪恶胜利条件一：场上没有平民可以提名，且没有杀手或有杀手没有子弹，且没有市长或市长已死\n"
+	if game.Result == "" && canCivilNominate == 0 && !hasSlayerBullet && !mayorAlive {
+		msg += "达成邪恶胜利条件一：场上没有平民可以提名，且没有杀手或有杀手没有子弹，且没有市长或市长已死或酒鬼市长\n"
 		msg += "本局结束，邪恶胜利\n"
 		game.Result = "邪恶阵营胜利"
 	}
 	// 邪恶胜利条件2
 	halfAlive := int(math.Ceil(float64(aliveCount / 2)))
-	if canVote <= halfAlive && evilAliveCount >= halfAlive && !hasSlayerBullet && !mayorAlive {
-		msg += "达成邪恶胜利条件二：可投的票数不大于活人的半数（向上取整），且存活的邪恶玩家数量不小于活人的半数（向上取整），且没有杀手或有杀手没有子弹，且没有市长或市长已死\n"
+	if game.Result == "" && canVote <= halfAlive && evilAliveCount >= halfAlive && !hasSlayerBullet && !mayorAlive {
+		msg += "达成邪恶胜利条件二：可投的票数不大于活人的半数（向上取整），且存活的邪恶玩家数量不小于活人的半数（向上取整），且没有杀手或有杀手没有子弹，且没有市长或市长已死或酒鬼市长\n"
 		msg += "本局结束，邪恶胜利\n"
 		game.Result = "邪恶阵营胜利"
 	}
 	// 邪恶胜利条件3
-	if evilAliveCount == aliveCount {
+	if game.Result == "" && evilAliveCount == aliveCount {
 		msg += "达成邪恶胜利条件三：平民阵营被屠城\n"
 		msg += "本局结束，邪恶胜利\n"
 		game.Result = "邪恶阵营胜利"
 	}
-	// 拼接日志
-	for i := range game.Players {
-		game.Players[i].Log += msg
-	}
-	game.Log += msg
-	// 发送日志
-	broadcast(game)
 
 	if game.Result != "" {
+		// 拼接日志
+		for i := range game.Players {
+			game.Players[i].Log += msg
+		}
+		game.Log += msg
 		game.Status = "复盘中"
 		// 发送game 以便前端跳转review
 		broadcast(game)
