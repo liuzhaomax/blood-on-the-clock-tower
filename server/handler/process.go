@@ -1043,8 +1043,8 @@ func checkoutNight(mux *sync.Mutex, game *model.Room) {
 					break
 				}
 				// 不是酒鬼，没被毒或被守护，死的正是守鸦人自己
+				msgAll += fmt.Sprintf("[%s] ", player.Name)
 				for fromPlayer, toPlayerIndexSlice := range castPoolObj {
-					msgAll += fmt.Sprintf("[%s] ", player.Name)
 					if fromPlayer.Id == player.Id {
 						// 给守鸦人提供正确信息
 						if !player.State.Drunk && !player.State.Poisoned && player.Id == killed.Id {
