@@ -647,9 +647,6 @@ function Gaming() {
         if (!game.state.votingStep) {
             return "不在投票处决环节不能投票"
         }
-        if (me.character === "管家") {
-            return "您只能跟随主人投票"
-        }
         if (me.ready.vote > 0 && game.state.votingStep) {
             let content = "你确定要投票给玩家 "
             for (let j = 0; j < game.players.length; j++) {
@@ -716,14 +713,14 @@ function Gaming() {
             }
             for (let i = 0; i < selectedPlayersObj.length; i++) {
                 if (selectedPlayersObj[i].character === "管家") {
-                    return "您不能跟随自己"
+                    return "您不能认主自己"
                 }
             }
             if (selectedPlayers.length === 1) {
-                content += "跟随？他投你可选投，他不投你投无效。"
+                content += "认主？他投你可选投，他不投你投无效。"
                 break
             }
-            return "您只能选1个人跟随"
+            return "您只能选1个人认主"
         case "僧侣":
             if (!game.state.night) {
                 return "白天不能守护"
