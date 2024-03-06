@@ -272,6 +272,8 @@ func endVoting(mux *sync.Mutex, game *model.Room) {
 	game.VotePool = map[string]string{}
 	// 发送votingStep
 	broadcast(game)
+	// 立即结算
+	checkout(game, nil)
 }
 
 func nominate(mux *sync.Mutex, game *model.Room, playerId string, targets []string) {
@@ -400,6 +402,7 @@ func cast(mux *sync.Mutex, game *model.Room, playerId string, targets []string) 
 
 	var msgPlayer = "您"
 	var msgAll = ""
+	var slayerTarget *model.Player
 	for i, player := range game.Players {
 		if player.Id == playerId && !player.State.Dead {
 			msgAll += fmt.Sprintf("[%s] ", player.Name)
@@ -407,7 +410,7 @@ func cast(mux *sync.Mutex, game *model.Room, playerId string, targets []string) 
 			case Poisoner:
 				for _, player := range game.Players {
 					if targets[0] == player.Id {
-						info := fmt.Sprintf("对 [%s] 进行了投毒！", player.Name)
+						info := fmt.Sprintf("对 [%s] 进行了投毒！\n", player.Name)
 						msgPlayer += info
 						msgAll += info
 						break
@@ -424,7 +427,7 @@ func cast(mux *sync.Mutex, game *model.Room, playerId string, targets []string) 
 				}
 				for _, player := range game.Players {
 					if targets[1] == player.Id {
-						info := player.Name + "] 进行了卜算！"
+						info := player.Name + "] 进行了卜算！\n"
 						msgPlayer += info
 						msgAll += info
 						break
@@ -433,7 +436,7 @@ func cast(mux *sync.Mutex, game *model.Room, playerId string, targets []string) 
 			case Butler:
 				for _, player := range game.Players {
 					if targets[0] == player.Id {
-						info := fmt.Sprintf(" 对 [%s] 进行了认主！", player.Name)
+						info := fmt.Sprintf(" 对 [%s] 进行了认主！\n", player.Name)
 						msgPlayer += info
 						msgAll += info
 						break
@@ -442,7 +445,7 @@ func cast(mux *sync.Mutex, game *model.Room, playerId string, targets []string) 
 			case Monk:
 				for _, player := range game.Players {
 					if targets[0] == player.Id {
-						info := fmt.Sprintf(" 对 [%s] 进行了守护！", player.Name)
+						info := fmt.Sprintf(" 对 [%s] 进行了守护！\n", player.Name)
 						msgPlayer += info
 						msgAll += info
 						break
@@ -451,68 +454,26 @@ func cast(mux *sync.Mutex, game *model.Room, playerId string, targets []string) 
 			case Imp:
 				for _, player := range game.Players {
 					if targets[0] == player.Id {
-						info := fmt.Sprintf(" 对 [%s] 进行了杀害！", player.Name)
+						info := fmt.Sprintf(" 对 [%s] 进行了杀害！\n", player.Name)
 						msgPlayer += info
 						msgAll += info
 						break
 					}
 				}
 			case Slayer:
-				var target *model.Player
 				for i, player := range game.Players {
 					if targets[0] == player.Id {
-						target = &game.Players[i]
+						slayerTarget = &game.Players[i]
 						info := fmt.Sprintf(" 对 [%s] 进行了枪毙！\n", player.Name)
 						msgPlayer += info
 						msgAll += info
 						break
 					}
 				}
-				game.Players[i].Log += msgPlayer
-				game.Log += msgAll
-				// 发送日志
-				emit(game, playerId)
-				// 杀手立即判断死活
-				// 不考虑酒鬼
-				if player.State.Drunk {
-					break
-				}
-				// 不考虑下毒了
-				if player.State.Poisoned {
-					game.Players[i].State.Bullet = false // 子弹不管怎样都会发射
-					break
-				}
-				// 考虑子弹
-				if game.Players[i].State.Bullet {
-					msg := fmt.Sprintf("[%s] ", player.Name)
-					game.Players[i].State.Bullet = false // 子弹不管怎样都会发射
-					if target.CharacterType == Demons || target.State.RegardedAs == Imp {
-						target.State.Dead = true
-						target.Ready.Nominate = false
-						target.Ready.Nominated = false
-						// 拼接日志
-						msg += fmt.Sprintf("枪杀了 [%s] \n", target.Name)
-						for i := range game.Players {
-							game.Players[i].Log += msg
-						}
-						game.Log += msg
-						// 发送日志
-						broadcast(game)
-						// 立即结算
-						checkout(game, nil)
-					} else {
-						// 拼接日志
-						msg += "枪杀失败，无事发生\n"
-						game.Players[i].Log += msg
-						game.Log += msg
-						// 发送日志
-						emit(game, player.Id)
-					}
-				}
 			case Ravenkeeper:
 				for _, player := range game.Players {
 					if targets[0] == player.Id {
-						info := fmt.Sprintf(" 对 [%s] 进行了反向通灵，如果施法者没死，则技能无效！", player.Name)
+						info := fmt.Sprintf(" 对 [%s] 进行了反向通灵，如果施法者没死，则技能无效！\n", player.Name)
 						msgPlayer += info
 						msgAll += info
 						break
@@ -526,14 +487,62 @@ func cast(mux *sync.Mutex, game *model.Room, playerId string, targets []string) 
 	game.CastPool[playerId] = targets
 	for i, player := range game.Players {
 		if player.Id == playerId {
-			game.Players[i].Log += msgPlayer + "\n"
+			game.Players[i].Log += msgPlayer
 			break
 		}
 	}
-	game.Log += msgAll + "\n"
-
+	game.Log += msgAll
 	// 发送日志
 	emit(game, playerId)
+
+	// 判断杀手
+	if slayerTarget != nil {
+		msgPlayer = "您"
+		msgAll = ""
+		for i, player := range game.Players {
+			if player.Character == Slayer {
+				// 不考虑酒鬼
+				if player.State.Drunk {
+					break
+				}
+				// 不考虑下毒了
+				if player.State.Poisoned {
+					game.Players[i].State.Bullet = false // 子弹不管怎样都会发射
+					break
+				}
+				// 考虑子弹
+				if game.Players[i].State.Bullet {
+					msgAll += fmt.Sprintf("[%s] ", player.Name)
+					game.Players[i].State.Bullet = false // 子弹不管怎样都会发射
+					if slayerTarget.CharacterType == Demons || slayerTarget.State.RegardedAs == Imp {
+						slayerTarget.State.Dead = true
+						slayerTarget.Ready.Nominate = false
+						slayerTarget.Ready.Nominated = false
+						// 拼接日志
+						msgAll += fmt.Sprintf("枪杀了 [%s] \n", slayerTarget.Name)
+						for i := range game.Players {
+							game.Players[i].Log += msgAll
+						}
+						game.Log += msgAll
+						// 发送日志
+						broadcast(game)
+						// 立即结算
+						checkout(game, nil)
+					} else {
+						// 拼接日志
+						info := "枪杀失败，无事发生\n"
+						msgPlayer += info
+						msgAll += info
+						game.Players[i].Log += msgPlayer
+						game.Log += msgAll
+						// 发送日志
+						emit(game, player.Id)
+					}
+					break
+				}
+			}
+		}
+	}
 }
 
 // 执行有顺序性，不可修改执行顺序
@@ -1273,7 +1282,7 @@ func checkout(game *model.Room, executed *model.Player) {
 			realDemonCount++
 		}
 		// 对应平民胜利条件2
-		if player.Character == Mayor && !player.State.Dead && !player.State.Drunk {
+		if player.Character == Mayor && !player.State.Dead && !player.State.Drunk && !player.State.Poisoned {
 			mayorAlive = true
 		}
 		// 对应邪恶胜利条件2

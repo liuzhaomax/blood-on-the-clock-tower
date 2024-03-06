@@ -770,9 +770,6 @@ function Gaming() {
             if (game.state.night) {
                 return "夜晚不能开枪"
             }
-            if (!me.state.bullet) {
-                return "您已没有子弹，不能开枪"
-            }
             for (let i = 0; i < selectedPlayersObj.length; i++) {
                 if (selectedPlayersObj[i].state.dead) {
                     return "您不能枪毙已死的人"
