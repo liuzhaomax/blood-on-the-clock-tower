@@ -492,12 +492,14 @@ func cast(mux *sync.Mutex, game *model.Room, playerId string, targets []string) 
 						game.Log += msg
 						// 发送日志
 						broadcast(game)
+					} else {
+						// 拼接日志
+						msg += "枪杀失败，无事发生\n"
+						game.Players[i].Log += msg
+						game.Log += msg
+						// 发送日志
+						emit(game, player.Id)
 					}
-				} else {
-					msg := "您已没有子弹"
-					game.Players[i].Log += msg
-					// 发送日志
-					emit(game, player.Id)
 				}
 			case Ravenkeeper:
 				for _, player := range game.Players {
@@ -1342,7 +1344,7 @@ func findThreeCharactersNotInGame(players []model.Player) string {
 	hasRepeatedCharacter := false
 	round := 0
 	var chars []string
-	msg := "这三个村民身份不在本局中："
+	msg := "您发现这三个村民身份不在本局中："
 	for {
 		hasRepeatedCharacter = false
 		randInt := rand.Intn(len(TownsfolkPool))

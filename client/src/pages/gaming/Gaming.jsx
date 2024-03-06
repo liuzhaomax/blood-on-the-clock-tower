@@ -586,7 +586,6 @@ function Gaming() {
                 (castToPlayersId.length === 2 &&
                 me.character === "占卜师")
             )) {
-            console.log(selectedPlayers)
             emitCast()
         }
     }
@@ -764,6 +763,9 @@ function Gaming() {
         case "杀手":
             if (game.state.night) {
                 return "夜晚不能开枪"
+            }
+            if (!me.state.bullet) {
+                return "您已没有子弹，不能开枪"
             }
             for (let i = 0; i < selectedPlayersObj.length; i++) {
                 if (selectedPlayersObj[i].state.dead) {
