@@ -924,7 +924,8 @@ func checkoutNight(mux *sync.Mutex, game *model.Room) {
 	for fromPlayer, toPlayerIndexSlice := range castPoolObj {
 		// 判断士兵
 		if game.Players[toPlayerIndexSlice[0]].Character == Soldier &&
-			!game.Players[toPlayerIndexSlice[0]].State.Poisoned {
+			!game.Players[toPlayerIndexSlice[0]].State.Poisoned &&
+			!game.Players[toPlayerIndexSlice[0]].State.Drunk {
 			break
 		}
 		// 判断被僧侣守护
