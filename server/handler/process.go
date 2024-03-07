@@ -256,6 +256,9 @@ func endVoting(mux *sync.Mutex, game *model.Room) {
 	if game.Executed != nil && game.Executed.Character == Imp && aliveCount-1 >= 5 &&
 		scarletWomanIndex > 0 && !game.Players[scarletWomanIndex].State.Poisoned {
 		scarletWoman := &game.Players[scarletWomanIndex]
+		scarletWoman.Character = Imp
+		scarletWoman.CharacterType = Demons
+		scarletWoman.State.Demon = true
 		// 拼接日志
 		msgPlayer := "您"
 		msgAll := ""
@@ -501,20 +504,11 @@ func cast(mux *sync.Mutex, game *model.Room, playerId string, targets []string) 
 		msgAll = ""
 		for i, player := range game.Players {
 			if player.Character == Slayer {
-				// 不考虑酒鬼
-				if player.State.Drunk {
-					break
-				}
-				// 不考虑下毒了
-				if player.State.Poisoned {
-					game.Players[i].State.Bullet = false // 子弹不管怎样都会发射
-					break
-				}
-				// 考虑子弹
+				// 考虑子弹，有子弹才有后续判定日志，没子弹不会有成功失败提示
 				if game.Players[i].State.Bullet {
 					msgAll += fmt.Sprintf("[%s] ", player.Name)
 					game.Players[i].State.Bullet = false // 子弹不管怎样都会发射
-					if slayerTarget.CharacterType == Demons || slayerTarget.State.RegardedAs == Imp {
+					if slayerTarget.CharacterType == Demons || slayerTarget.State.RegardedAs == Imp && !player.State.Drunk && !player.State.Poisoned {
 						slayerTarget.State.Dead = true
 						slayerTarget.Ready.Nominate = false
 						slayerTarget.Ready.Nominated = false

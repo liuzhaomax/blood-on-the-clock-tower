@@ -463,12 +463,12 @@ function Gaming() {
                 await wolfAudio.pause()
                 await cockAudio.pause()
                 if (game.result.substring(0, 2) === "平民") {
-                    civilWinAudio.play()
-                    await showGif("Civil-gif", 5000)
+                    showGif("Civil-gif", 5000)
+                    await civilWinAudio.play()
                 }
                 if (game.result.substring(0, 2) === "邪恶") {
-                    evilWinAudio.play()
-                    await showGif("Evil-gif", 5000)
+                    showGif("Evil-gif", 5000)
+                    await evilWinAudio.play()
                 }
                 jumpToReview()
             }
