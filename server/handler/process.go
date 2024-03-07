@@ -1326,8 +1326,9 @@ func checkout(game *model.Room, executed *model.Player) {
 			evilAliveCount++
 		}
 	}
-	// 平民胜利条件1（恶魔受不了了自杀情况）
-	if game.Result == "" && realDemonCount == 0 && scarletWomanAlive && aliveCount >= 5 {
+	// 平民胜利条件1（恶魔受不了了自杀情况），这里有三种铲除恶魔的可能：1、杀手，2、处决，3、自刀。
+	// 杀手和处决在此处判断魅魔，自刀在判定刀人时已经发生转化，所以realDemonCount不可能为0
+	if game.Result == "" && realDemonCount == 0 && (!scarletWomanAlive || scarletWomanAlive && aliveCount >= 5) {
 		msg += "达成平民胜利条件一：恶魔被铲除干净\n"
 		msg += "本局结束，平民胜利\n"
 		game.Result = "平民阵营胜利"

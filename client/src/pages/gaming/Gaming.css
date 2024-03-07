@@ -278,10 +278,9 @@
 
 /*胜利动画*/
 #GAMING .gif {
-    position: absolute;
+    position: fixed;
     width: auto;
     height: 100%;
-    top: -100px;
     z-index: 999;
     display: none;
 }
