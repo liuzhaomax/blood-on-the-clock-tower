@@ -1,7 +1,8 @@
-# 血染钟楼 Blood on the ClockTower 
+# 血染钟楼线下辅助器 Blood on the ClockTower 
 
-> 血染钟楼桌游线下辅助器
 > https://blood.liuzhaomax.cn/
+
+[![Release](https://img.shields.io/github/v/release/liuzhaomax/blood-on-the-clock-tower)](https://github.com/liuzhaomax/blood-on-the-clock-tower/releases)
 
 **亮点**：
 + 取代说书人角色，所有线下小伙伴都可以深度参与解谜
