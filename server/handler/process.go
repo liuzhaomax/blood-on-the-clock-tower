@@ -96,7 +96,7 @@ func toggleNight(mux *sync.Mutex, game *model.Room) {
 						game.Players[i].State.Casted = false
 					}
 				case Slayer:
-					if game.State.Stage%2 == 0 && game.Players[i].State.Bullet {
+					if game.State.Stage%2 == 0 {
 						game.Players[i].State.Casted = false
 					}
 				case Ravenkeeper:
