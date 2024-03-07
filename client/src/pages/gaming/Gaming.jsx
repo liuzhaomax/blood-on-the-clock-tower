@@ -40,7 +40,7 @@ function Gaming() {
         }
         socket.onmessage = function(event) {
             // TODO 内测用，记得关闭
-            console.log("Received message from server:", JSON.parse(event.data))
+            // console.log("Received message from server:", JSON.parse(event.data))
             setGame(JSON.parse(event.data))
         }
         socket.onerror = function(error) {
@@ -383,7 +383,7 @@ function Gaming() {
         // 所有有技能的操作完，没技能的点完验证码，时间等待结束，不在投票阶段，则切换日夜，切换后首先结算前一阶段
         return !game.state.votingStep
             && !castLock
-            // && ready // TODO 测试用，记得解锁     内侧后删除
+            // && ready // TODO 测试用，记得解锁，有bug，需要在点击切换日夜时，同步获取game更新casted状态
             || game.state.stage === 0
     }
 
@@ -893,11 +893,11 @@ function Gaming() {
             }
         }
     }
-    // TODO 测试代码 开始   内侧后删除
+    // TODO 测试代码 开始
     const handleCaptchaCancel = () => {
         setIsCaptchaModalOpen(false)
     }
-    // TODO 测试代码 结束   内侧后删除
+    // TODO 测试代码 结束
 
     // 游戏说明
     const [open, setOpen] = useState(false)
@@ -957,7 +957,9 @@ function Gaming() {
             <Context.Provider value={contextValue}>
                 {contextHolder}
             </Context.Provider>
-            <Modal title="验证码" open={isCaptchaModalOpen} onCancel={handleCaptchaCancel} footer={null}>
+            <Modal title="验证码" open={isCaptchaModalOpen}
+                onCancel={handleCaptchaCancel}
+                footer={null}>
                 <div id="CaptchaModal">
                     {isCaptchaModalOpen ?
                         <div className="verify-box">

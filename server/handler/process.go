@@ -76,31 +76,27 @@ func toggleNight(mux *sync.Mutex, game *model.Room) {
 			if !game.Players[i].State.Dead {
 				switch game.Players[i].Character {
 				case Poisoner:
-					if game.State.Stage%2 == 1 {
+					if game.State.Stage%2 == 1 && !game.Players[i].State.Dead {
 						game.Players[i].State.Casted = false
 					}
 				case FortuneTeller:
-					if game.State.Stage%2 == 1 {
+					if game.State.Stage%2 == 1 && !game.Players[i].State.Dead {
 						game.Players[i].State.Casted = false
 					}
 				case Butler:
-					if game.State.Stage%2 == 1 {
+					if game.State.Stage%2 == 1 && !game.Players[i].State.Dead {
 						game.Players[i].State.Casted = false
 					}
 				case Monk:
-					if game.State.Stage%2 == 1 && game.State.Stage != 1 {
+					if game.State.Stage%2 == 1 && game.State.Stage != 1 && !game.Players[i].State.Dead {
 						game.Players[i].State.Casted = false
 					}
 				case Imp:
-					if game.State.Stage%2 == 1 && game.State.Stage != 1 {
-						game.Players[i].State.Casted = false
-					}
-				case Slayer:
-					if game.State.Stage%2 == 0 {
+					if game.State.Stage%2 == 1 && game.State.Stage != 1 && !game.Players[i].State.Dead {
 						game.Players[i].State.Casted = false
 					}
 				case Ravenkeeper:
-					if game.State.Stage%2 == 1 && game.State.Stage != 1 {
+					if game.State.Stage%2 == 1 && game.State.Stage != 1 && !game.Players[i].State.Dead {
 						game.Players[i].State.Casted = false
 					}
 				default:
