@@ -582,10 +582,13 @@ func checkoutNight(mux *sync.Mutex, game *model.Room) {
 				game.Players[toPlayerIndexSlice[0]].State.Evil = false
 				game.Players[toPlayerIndexSlice[0]].State.RegardedAs = Recluse
 				if game.Players[toPlayerIndexSlice[0]].State.RegardedAsSaved == Imp {
-					game.Players[toPlayerIndexSlice[0]].State.Demon = false
 					// 判断隐士是否是占卜认定的恶魔
-					var demonQuantity = 0
-					var hasFortuneTeller = false
+					// 这个恶魔数量至少为1，有占卜或恶魔隐士就是2，有占卜且有恶魔隐士且恶魔隐士是占卜认定的恶魔是2，有占卜且有恶魔隐士就是3
+					// 因为这是在恶魔隐士的域内，所以没有可能是1，也没有可能出现有占卜没有恶魔隐士的情况
+					// 情况化简为：2 -> 没占卜有恶魔隐士 || 有占卜且有恶魔隐士且恶魔隐士是占卜认定的恶魔-重叠情况，3 -> 有占卜且有恶魔隐士，且认定恶魔与恶魔隐士不重叠
+					// 进一步化简为：有占卜 && 恶魔数量是2 -> 重叠
+					var demonQuantity = 0        // 这个恶魔数量，是不看死活的
+					var hasFortuneTeller = false // 是否有占卜师
 					for _, player := range game.Players {
 						if player.State.Demon {
 							demonQuantity += 1
@@ -594,7 +597,9 @@ func checkoutNight(mux *sync.Mutex, game *model.Room) {
 							hasFortuneTeller = true
 						}
 					}
-					// 如果他是，那他demon还是true
+					// 先把他变成不是恶魔，再判断
+					game.Players[toPlayerIndexSlice[0]].State.Demon = false
+					// 如果有占卜且有恶魔隐士且恶魔隐士是占卜认定的恶魔，那他demon还是true
 					if hasFortuneTeller && demonQuantity == 2 {
 						game.Players[toPlayerIndexSlice[0]].State.Demon = true
 					}
@@ -681,13 +686,13 @@ func checkoutNight(mux *sync.Mutex, game *model.Room) {
 				var other model.Player
 				var hasOutsider bool
 				var character string
-				if !player.State.Drunk && !player.State.Poisoned {
-					for _, player := range game.Players {
-						if player.CharacterType == Outsiders {
-							hasOutsider = true
-							break
-						}
+				for _, player := range game.Players {
+					if player.CharacterType == Outsiders {
+						hasOutsider = true
+						break
 					}
+				}
+				if !player.State.Drunk && !player.State.Poisoned {
 					if hasOutsider {
 						// 生成随机信息
 						for {
@@ -1328,7 +1333,7 @@ func checkout(game *model.Room, executed *model.Player) {
 	}
 	// 平民胜利条件1（恶魔受不了了自杀情况），这里有三种铲除恶魔的可能：1、杀手，2、处决，3、自刀。
 	// 杀手和处决在此处判断魅魔，自刀在判定刀人时已经发生转化，所以realDemonCount不可能为0
-	if game.Result == "" && realDemonCount == 0 && (!scarletWomanAlive || scarletWomanAlive && aliveCount >= 5) {
+	if game.Result == "" && realDemonCount == 0 && (!scarletWomanAlive || scarletWomanAlive && aliveCount < 5) {
 		msg += "达成平民胜利条件一：恶魔被铲除干净\n"
 		msg += "本局结束，平民胜利\n"
 		game.Result = "平民阵营胜利"
