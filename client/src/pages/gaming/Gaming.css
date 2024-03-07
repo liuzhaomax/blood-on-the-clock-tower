@@ -281,6 +281,7 @@
     position: fixed;
     width: auto;
     height: 100%;
+    top: -80px;
     z-index: 999;
     display: none;
 }

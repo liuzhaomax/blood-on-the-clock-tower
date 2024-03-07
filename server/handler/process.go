@@ -254,7 +254,7 @@ func endVoting(mux *sync.Mutex, game *model.Room) {
 	}
 	// 判断魅魔 - 有人被处决，处决的人是小恶魔，活人大于等于5个，有魅魔且没死
 	if game.Executed != nil && game.Executed.Character == Imp && aliveCount-1 >= 5 &&
-		scarletWomanIndex > 0 && !game.Players[scarletWomanIndex].State.Poisoned {
+		scarletWomanIndex > 0 && !game.Players[scarletWomanIndex].State.Poisoned { // 活人人数是转换死人状态之前统计的，要减一
 		scarletWoman := &game.Players[scarletWomanIndex]
 		scarletWoman.Character = Imp
 		scarletWoman.CharacterType = Demons
@@ -262,7 +262,7 @@ func endVoting(mux *sync.Mutex, game *model.Room) {
 		// 拼接日志
 		msgPlayer := "您"
 		msgAll := ""
-		info := "已变为小恶魔\n"
+		info := "已变为 {小恶魔} \n"
 		msgPlayer += info
 		msgAll += fmt.Sprintf("[%s] ", scarletWoman.Name) + info
 		scarletWoman.Log += msgPlayer
@@ -504,9 +504,9 @@ func cast(mux *sync.Mutex, game *model.Room, playerId string, targets []string) 
 		msgAll = ""
 		for i, player := range game.Players {
 			if player.Character == Slayer {
+				msgAll += fmt.Sprintf("[%s] ", player.Name)
 				// 考虑子弹，有子弹才有后续判定日志，没子弹不会有成功失败提示
 				if game.Players[i].State.Bullet {
-					msgAll += fmt.Sprintf("[%s] ", player.Name)
 					game.Players[i].State.Bullet = false // 子弹不管怎样都会发射
 					if slayerTarget.CharacterType == Demons || slayerTarget.State.RegardedAs == Imp && !player.State.Drunk && !player.State.Poisoned {
 						slayerTarget.State.Dead = true
@@ -520,8 +520,37 @@ func cast(mux *sync.Mutex, game *model.Room, playerId string, targets []string) 
 						game.Log += msgAll
 						// 发送日志
 						broadcast(game)
+						// 判断魅魔 - 小恶魔被枪毙，活人大于等于5个，有魅魔且没死
+						var aliveCount int // 活人数量
+						var scarletWomanIndex = -1
+						for _, player := range game.Players {
+							if !player.State.Dead {
+								aliveCount++
+							}
+							if player.Character == ScarletWoman && !player.State.Dead {
+								scarletWomanIndex = player.Index
+							}
+						}
+						if slayerTarget.Character == Imp && aliveCount >= 5 &&
+							scarletWomanIndex > 0 && !game.Players[scarletWomanIndex].State.Poisoned {
+							scarletWoman := &game.Players[scarletWomanIndex]
+							scarletWoman.Character = Imp
+							scarletWoman.CharacterType = Demons
+							scarletWoman.State.Demon = true
+							// 拼接日志
+							msgPlayer := "您"
+							msgAll := ""
+							info := "已变为 {小恶魔} \n"
+							msgPlayer += info
+							msgAll += fmt.Sprintf("[%s] ", scarletWoman.Name) + info
+							scarletWoman.Log += msgPlayer
+							game.Log += msgAll
+							// 发送日志
+							emit(game, scarletWoman.Id)
+						}
 						// 立即结算
 						checkout(game, nil)
+						break
 					} else {
 						// 拼接日志
 						info := "枪杀失败，无事发生\n"
@@ -532,6 +561,16 @@ func cast(mux *sync.Mutex, game *model.Room, playerId string, targets []string) 
 						// 发送日志
 						emit(game, player.Id)
 					}
+					break
+				} else {
+					// 拼接日志
+					info := "空枪，无事发生\n"
+					msgPlayer += info
+					msgAll += info
+					game.Players[i].Log += msgPlayer
+					game.Log += msgAll
+					// 发送日志
+					emit(game, player.Id)
 					break
 				}
 			}
@@ -1326,7 +1365,8 @@ func checkout(game *model.Room, executed *model.Player) {
 		}
 	}
 	// 平民胜利条件1（恶魔受不了了自杀情况），这里有三种铲除恶魔的可能：1、杀手，2、处决，3、自刀。
-	// 杀手和处决在此处判断魅魔，自刀在判定刀人时已经发生转化，所以realDemonCount不可能为0
+	// 处决在结算投票时判定，枪杀在枪手施法后判定，自刀在判定刀人时判定，所以realDemonCount不可能为0
+	// 魅魔再判定为双保险可删没测
 	if game.Result == "" && realDemonCount == 0 && (!scarletWomanAlive || scarletWomanAlive && aliveCount < 5) {
 		msg += "达成平民胜利条件一：恶魔被铲除干净\n"
 		msg += "本局结束，平民胜利\n"
