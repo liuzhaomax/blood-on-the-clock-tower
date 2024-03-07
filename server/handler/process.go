@@ -617,12 +617,14 @@ func checkoutNight(mux *sync.Mutex, game *model.Room) {
 			case Washerwoman:
 				var folk model.Player
 				var other model.Player
+				var character string
 				if !player.State.Drunk && !player.State.Poisoned {
 					// 生成随机信息
 					for {
 						randInt := rand.Intn(len(game.Players))
 						if game.Players[randInt].CharacterType == Townsfolk && game.Players[randInt].Id != player.Id {
 							folk = game.Players[randInt]
+							character = game.Players[randInt].Character
 							break
 						}
 					}
@@ -653,7 +655,7 @@ func checkoutNight(mux *sync.Mutex, game *model.Room) {
 					for {
 						randInt := rand.Intn(len(TownsfolkPool))
 						if TownsfolkPool[randInt] != Washerwoman && TownsfolkPool[randInt] != folk.Character && TownsfolkPool[randInt] != other.Character {
-							folk.Character = TownsfolkPool[randInt]
+							character = TownsfolkPool[randInt]
 							break
 						}
 					}
@@ -663,9 +665,9 @@ func checkoutNight(mux *sync.Mutex, game *model.Room) {
 				var info string
 				randInt := rand.Intn(2) // 随机顺序
 				if randInt == 0 {
-					info = fmt.Sprintf("发现 [%s] 和 [%s] 其中一个是 {%s}\n", folk.Name, other.Name, folk.Character)
+					info = fmt.Sprintf("发现 [%s] 和 [%s] 其中一个是 {%s}\n", folk.Name, other.Name, character)
 				} else {
-					info = fmt.Sprintf("发现 [%s] 和 [%s] 其中一个是 {%s}\n", other.Name, folk.Name, folk.Character)
+					info = fmt.Sprintf("发现 [%s] 和 [%s] 其中一个是 {%s}\n", other.Name, folk.Name, character)
 				}
 				msgPlayer += info
 				msgAll += info
@@ -678,6 +680,7 @@ func checkoutNight(mux *sync.Mutex, game *model.Room) {
 				var outsider model.Player
 				var other model.Player
 				var hasOutsider bool
+				var character string
 				if !player.State.Drunk && !player.State.Poisoned {
 					for _, player := range game.Players {
 						if player.CharacterType == Outsiders {
@@ -689,10 +692,15 @@ func checkoutNight(mux *sync.Mutex, game *model.Room) {
 						// 生成随机信息
 						for {
 							randInt := rand.Intn(len(game.Players))
-							if game.Players[randInt].CharacterType == Outsiders && game.Players[randInt].Id != player.Id {
+							if (game.Players[randInt].CharacterType == Outsiders || game.Players[randInt].State.Drunk) && game.Players[randInt].Id != player.Id {
 								outsider = game.Players[randInt]
+								character = game.Players[randInt].Character
 								break
 							}
+						}
+						// 如果是酒鬼被选中
+						if outsider.CharacterType != Outsiders {
+							character = Drunk
 						}
 						for {
 							randInt := rand.Intn(len(game.Players))
@@ -718,8 +726,8 @@ func checkoutNight(mux *sync.Mutex, game *model.Room) {
 					// 生成伪外来者身份名
 					for {
 						randInt := rand.Intn(len(OutsidersPool))
-						if OutsidersPool[randInt] != Drunk && OutsidersPool[randInt] != outsider.Character && OutsidersPool[randInt] != other.Character {
-							outsider.Character = OutsidersPool[randInt]
+						if OutsidersPool[randInt] != Recluse && OutsidersPool[randInt] != outsider.Character && OutsidersPool[randInt] != other.Character {
+							character = OutsidersPool[randInt]
 							break
 						}
 					}
@@ -730,17 +738,17 @@ func checkoutNight(mux *sync.Mutex, game *model.Room) {
 				if !hasOutsider {
 					info = "发现本局 {没有外来者}\n"
 				} else {
-					randFixedNum := 21 // 假话：没有外来者，的最大概率是1/21
-					if len(game.Players) > 21 {
+					randFixedNum := 51 // 假话：没有外来者，的概率是1/51
+					if len(game.Players) > randFixedNum {
 						randFixedNum = len(game.Players)
 					}
 					randInt := rand.Intn(randFixedNum)
 					if randInt == 0 {
 						info = "发现本局 {没有外来者}\n"
 					} else if randInt%2 == 1 {
-						info = fmt.Sprintf("发现 [%s] 和 [%s] 其中一个是 {%s}\n", outsider.Name, other.Name, outsider.Character)
+						info = fmt.Sprintf("发现 [%s] 和 [%s] 其中一个是 {%s}\n", outsider.Name, other.Name, character)
 					} else {
-						info = fmt.Sprintf("发现 [%s] 和 [%s] 其中一个是 {%s}\n", other.Name, outsider.Name, outsider.Character)
+						info = fmt.Sprintf("发现 [%s] 和 [%s] 其中一个是 {%s}\n", other.Name, outsider.Name, character)
 					}
 				}
 				msgPlayer += info
@@ -753,12 +761,14 @@ func checkoutNight(mux *sync.Mutex, game *model.Room) {
 			case Investigator:
 				var minion model.Player
 				var other model.Player
+				var character string
 				if !player.State.Drunk && !player.State.Poisoned {
 					// 生成随机信息
 					for {
 						randInt := rand.Intn(len(game.Players))
 						if game.Players[randInt].CharacterType == Minions && game.Players[randInt].Id != player.Id {
 							minion = game.Players[randInt]
+							character = game.Players[randInt].Character
 							break
 						}
 					}
@@ -789,7 +799,7 @@ func checkoutNight(mux *sync.Mutex, game *model.Room) {
 					for {
 						randInt := rand.Intn(len(MinionsPool))
 						if MinionsPool[randInt] != minion.Character && MinionsPool[randInt] != other.Character {
-							minion.Character = MinionsPool[randInt]
+							character = MinionsPool[randInt]
 							break
 						}
 					}
@@ -799,9 +809,9 @@ func checkoutNight(mux *sync.Mutex, game *model.Room) {
 				var info string
 				randInt := rand.Intn(2)
 				if randInt == 0 {
-					info = fmt.Sprintf("发现 [%s] 和 [%s] 其中一个是 {%s}\n", minion.Name, other.Name, minion.Character)
+					info = fmt.Sprintf("发现 [%s] 和 [%s] 其中一个是 {%s}\n", minion.Name, other.Name, character)
 				} else {
-					info = fmt.Sprintf("发现 [%s] 和 [%s] 其中一个是 {%s}\n", other.Name, minion.Name, minion.Character)
+					info = fmt.Sprintf("发现 [%s] 和 [%s] 其中一个是 {%s}\n", other.Name, minion.Name, character)
 				}
 				msgPlayer += info
 				msgAll += info
@@ -1055,10 +1065,10 @@ func checkoutNight(mux *sync.Mutex, game *model.Room) {
 				msgAll += fmt.Sprintf("[%s] ", player.Name)
 				for fromPlayer, toPlayerIndexSlice := range castPoolObj {
 					if fromPlayer.Id == player.Id {
+						character := ""
 						// 给守鸦人提供正确信息
 						if !player.State.Drunk && !player.State.Poisoned && player.Id == killed.Id {
 							// 看隐士情况，是看成他被当成的身份
-							character := ""
 							if game.Players[toPlayerIndexSlice[0]].Character == Recluse {
 								character = game.Players[toPlayerIndexSlice[0]].State.RegardedAs
 							} else {
@@ -1069,7 +1079,6 @@ func checkoutNight(mux *sync.Mutex, game *model.Room) {
 						}
 						// 给守鸦人提供伪信息
 						if (player.State.Drunk || player.State.Poisoned) && player.Id == killed.Id {
-							character := ""
 							for {
 								randInt := rand.Intn(len(AllChars))
 								if AllChars[randInt] != Ravenkeeper {
@@ -1280,27 +1289,24 @@ func checkoutDay(mux *sync.Mutex, game *model.Room) {
 // checkout 结算本局
 func checkout(game *model.Room, executed *model.Player) {
 	msg := ""
-	var realDemonCount int   // 恶魔数量，被占卜认定的不算
-	var hasSlayerBullet bool // 有杀手且杀手有子弹
-	var aliveCount int       // 活人数量
-	var canVote int          // 可投票数量
-	var evilAliveCount int   // 邪恶玩家存活数量
-	var mayorAlive bool      // 市长是否存活
+	var realDemonCount int     // 恶魔数量，被占卜认定的不算
+	var hasSlayerBullet bool   // 有杀手且杀手有子弹
+	var aliveCount int         // 活人数量
+	var canVote int            // 可投票数量
+	var evilAliveCount int     // 邪恶玩家存活数量
+	var mayorAlive bool        // 市长是否存活
+	var scarletWomanAlive bool // 魅魔是否存活
 	for _, player := range game.Players {
 		// 对应平民胜利条件1
 		if player.CharacterType == Demons && !player.State.Dead {
 			realDemonCount++
 		}
+		if player.Character == ScarletWoman && !player.State.Dead && !player.State.Poisoned {
+			scarletWomanAlive = true
+		}
 		// 对应平民胜利条件2
 		if player.Character == Mayor && !player.State.Dead && !player.State.Drunk && !player.State.Poisoned {
 			mayorAlive = true
-		}
-		// 对应邪恶胜利条件2
-		if player.Character == Slayer && player.State.Bullet {
-			hasSlayerBullet = true
-		}
-		if !player.State.Dead && (player.CharacterType == Demons || player.CharacterType == Minions) {
-			evilAliveCount++
 		}
 		// 可投票数 = 持票死人人数 + 活人人数
 		if !player.State.Dead {
@@ -1308,14 +1314,21 @@ func checkout(game *model.Room, executed *model.Player) {
 		} else {
 			canVote += player.Ready.Vote
 		}
-		// 对应邪恶胜利条件3
+		// 对应邪恶胜利条件2
 		if !player.State.Dead {
 			aliveCount++
 		}
+		// 对应邪恶胜利条件3
+		if player.Character == Slayer && player.State.Bullet {
+			hasSlayerBullet = true
+		}
+		if !player.State.Dead && (player.CharacterType == Demons || player.CharacterType == Minions) {
+			evilAliveCount++
+		}
 	}
 	// 平民胜利条件1（恶魔受不了了自杀情况）
-	if game.Result == "" && realDemonCount == 0 {
-		msg += "达成平民胜利条件一：恶魔被铲除\n"
+	if game.Result == "" && realDemonCount == 0 && scarletWomanAlive && aliveCount >= 5 {
+		msg += "达成平民胜利条件一：恶魔被铲除干净\n"
 		msg += "本局结束，平民胜利\n"
 		game.Result = "平民阵营胜利"
 	}
@@ -1332,15 +1345,15 @@ func checkout(game *model.Room, executed *model.Player) {
 		game.Result = "邪恶阵营胜利"
 	}
 	// 邪恶胜利条件2
-	halfAlive := int(math.Ceil(float64(aliveCount / 2)))
-	if game.Result == "" && aliveCount <= 4 && canVote-evilAliveCount <= halfAlive && evilAliveCount >= halfAlive && !hasSlayerBullet && !mayorAlive {
-		msg += "达成邪恶胜利条件二：活人数小于等于4，平民可投的票数不大于活人的半数（向上取整），且存活的邪恶玩家数量不小于活人的半数（向上取整），且没有杀手或有杀手没有子弹，且没有市长或市长已死或酒鬼市长\n"
+	if game.Result == "" && evilAliveCount == aliveCount {
+		msg += "达成邪恶胜利条件二：平民阵营被屠城\n"
 		msg += "本局结束，邪恶胜利\n"
 		game.Result = "邪恶阵营胜利"
 	}
 	// 邪恶胜利条件3
-	if game.Result == "" && evilAliveCount == aliveCount {
-		msg += "达成邪恶胜利条件三：平民阵营被屠城\n"
+	halfAlive := int(math.Ceil(float64(aliveCount / 2)))
+	if game.Result == "" && aliveCount <= 4 && canVote-evilAliveCount <= halfAlive && evilAliveCount >= halfAlive && !hasSlayerBullet && !mayorAlive {
+		msg += "达成邪恶胜利条件三：活人数小于等于4，平民可投的票数不大于活人的半数（向上取整），且存活的邪恶玩家数量不小于活人的半数（向上取整），且没有杀手或有杀手没有子弹，且没有市长或市长已死或酒鬼市长\n"
 		msg += "本局结束，邪恶胜利\n"
 		game.Result = "邪恶阵营胜利"
 	}

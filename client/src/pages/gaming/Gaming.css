@@ -280,7 +280,7 @@
 #GAMING .gif {
     position: absolute;
     width: auto;
-    height: 120%;
+    height: 100%;
     top: -100px;
     z-index: 999;
     display: none;
