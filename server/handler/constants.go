@@ -73,3 +73,5 @@ var CharacterPool = map[string][]string{
 	Minions:   MinionsPool,
 	Demons:    DemonsPool,
 }
+
+var AllChars = append(append(append(TownsfolkPool, OutsidersPool...), MinionsPool...), DemonsPool...)

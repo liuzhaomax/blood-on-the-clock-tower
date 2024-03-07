@@ -615,20 +615,20 @@ func checkoutNight(mux *sync.Mutex, game *model.Room) {
 			switch player.Character {
 			// 给洗衣妇提供信息
 			case Washerwoman:
-				var realFolk model.Player
+				var folk model.Player
 				var other model.Player
 				if !player.State.Drunk && !player.State.Poisoned {
 					// 生成随机信息
 					for {
 						randInt := rand.Intn(len(game.Players))
 						if game.Players[randInt].CharacterType == Townsfolk && game.Players[randInt].Id != player.Id {
-							realFolk = game.Players[randInt]
+							folk = game.Players[randInt]
 							break
 						}
 					}
 					for {
 						randInt := rand.Intn(len(game.Players))
-						if game.Players[randInt].Id != realFolk.Id && game.Players[randInt].Id != player.Id {
+						if game.Players[randInt].Id != folk.Id && game.Players[randInt].Id != player.Id {
 							other = game.Players[randInt]
 							break
 						}
@@ -638,23 +638,22 @@ func checkoutNight(mux *sync.Mutex, game *model.Room) {
 					for {
 						randInt := rand.Intn(len(game.Players))
 						if game.Players[randInt].Id != player.Id {
-							realFolk = game.Players[randInt]
+							folk = game.Players[randInt]
 							break
 						}
 					}
 					for {
 						randInt := rand.Intn(len(game.Players))
-						if game.Players[randInt].Id != realFolk.Id && game.Players[randInt].Id != player.Id {
+						if game.Players[randInt].Id != folk.Id && game.Players[randInt].Id != player.Id {
 							other = game.Players[randInt]
 							break
 						}
 					}
 					// 生成伪村民身份名
-					fakeCharacter := player.Character
 					for {
 						randInt := rand.Intn(len(TownsfolkPool))
-						if fakeCharacter != TownsfolkPool[randInt] {
-							realFolk.Character = TownsfolkPool[randInt]
+						if TownsfolkPool[randInt] != Washerwoman && TownsfolkPool[randInt] != folk.Character && TownsfolkPool[randInt] != other.Character {
+							folk.Character = TownsfolkPool[randInt]
 							break
 						}
 					}
@@ -664,9 +663,9 @@ func checkoutNight(mux *sync.Mutex, game *model.Room) {
 				var info string
 				randInt := rand.Intn(2) // 随机顺序
 				if randInt == 0 {
-					info = fmt.Sprintf("发现 [%s] 和 [%s] 其中一个是 {%s}\n", realFolk.Name, other.Name, realFolk.Character)
+					info = fmt.Sprintf("发现 [%s] 和 [%s] 其中一个是 {%s}\n", folk.Name, other.Name, folk.Character)
 				} else {
-					info = fmt.Sprintf("发现 [%s] 和 [%s] 其中一个是 {%s}\n", other.Name, realFolk.Name, realFolk.Character)
+					info = fmt.Sprintf("发现 [%s] 和 [%s] 其中一个是 {%s}\n", other.Name, folk.Name, folk.Character)
 				}
 				msgPlayer += info
 				msgAll += info
@@ -676,10 +675,10 @@ func checkoutNight(mux *sync.Mutex, game *model.Room) {
 				emit(game, player.Id)
 			// 给图书管理员提供信息
 			case Librarian:
-				var realOutsider model.Player
+				var outsider model.Player
 				var other model.Player
+				var hasOutsider bool
 				if !player.State.Drunk && !player.State.Poisoned {
-					var hasOutsider bool
 					for _, player := range game.Players {
 						if player.CharacterType == Outsiders {
 							hasOutsider = true
@@ -691,13 +690,13 @@ func checkoutNight(mux *sync.Mutex, game *model.Room) {
 						for {
 							randInt := rand.Intn(len(game.Players))
 							if game.Players[randInt].CharacterType == Outsiders && game.Players[randInt].Id != player.Id {
-								realOutsider = game.Players[randInt]
+								outsider = game.Players[randInt]
 								break
 							}
 						}
 						for {
 							randInt := rand.Intn(len(game.Players))
-							if game.Players[randInt].Id != realOutsider.Id && game.Players[randInt].Id != player.Id {
+							if game.Players[randInt].Id != outsider.Id && game.Players[randInt].Id != player.Id {
 								other = game.Players[randInt]
 								break
 							}
@@ -707,11 +706,11 @@ func checkoutNight(mux *sync.Mutex, game *model.Room) {
 					// 生成伪信息
 					randInt := rand.Intn(len(game.Players))
 					if game.Players[randInt].Id != player.Id {
-						realOutsider = game.Players[randInt]
+						outsider = game.Players[randInt]
 					}
 					for {
 						randInt := rand.Intn(len(game.Players))
-						if game.Players[randInt].Id != realOutsider.Id && game.Players[randInt].Id != player.Id {
+						if game.Players[randInt].Id != outsider.Id && game.Players[randInt].Id != player.Id {
 							other = game.Players[randInt]
 							break
 						}
@@ -719,8 +718,8 @@ func checkoutNight(mux *sync.Mutex, game *model.Room) {
 					// 生成伪外来者身份名
 					for {
 						randInt := rand.Intn(len(OutsidersPool))
-						if OutsidersPool[randInt] != Drunk {
-							realOutsider.Character = OutsidersPool[randInt]
+						if OutsidersPool[randInt] != Drunk && OutsidersPool[randInt] != outsider.Character && OutsidersPool[randInt] != other.Character {
+							outsider.Character = OutsidersPool[randInt]
 							break
 						}
 					}
@@ -728,7 +727,7 @@ func checkoutNight(mux *sync.Mutex, game *model.Room) {
 				// 拼接日志
 				msgAll += fmt.Sprintf("[%s] ", player.Name)
 				var info string
-				if reflect.ValueOf(realOutsider).IsZero() {
+				if !hasOutsider {
 					info = "发现本局 {没有外来者}\n"
 				} else {
 					randFixedNum := 21 // 假话：没有外来者，的最大概率是1/21
@@ -739,9 +738,9 @@ func checkoutNight(mux *sync.Mutex, game *model.Room) {
 					if randInt == 0 {
 						info = "发现本局 {没有外来者}\n"
 					} else if randInt%2 == 1 {
-						info = fmt.Sprintf("发现 [%s] 和 [%s] 其中一个是 {%s}\n", realOutsider.Name, other.Name, realOutsider.Character)
+						info = fmt.Sprintf("发现 [%s] 和 [%s] 其中一个是 {%s}\n", outsider.Name, other.Name, outsider.Character)
 					} else {
-						info = fmt.Sprintf("发现 [%s] 和 [%s] 其中一个是 {%s}\n", other.Name, realOutsider.Name, realOutsider.Character)
+						info = fmt.Sprintf("发现 [%s] 和 [%s] 其中一个是 {%s}\n", other.Name, outsider.Name, outsider.Character)
 					}
 				}
 				msgPlayer += info
@@ -752,20 +751,20 @@ func checkoutNight(mux *sync.Mutex, game *model.Room) {
 				emit(game, player.Id)
 			// 给调查员提供信息
 			case Investigator:
-				var realMinion model.Player
+				var minion model.Player
 				var other model.Player
 				if !player.State.Drunk && !player.State.Poisoned {
 					// 生成随机信息
 					for {
 						randInt := rand.Intn(len(game.Players))
 						if game.Players[randInt].CharacterType == Minions && game.Players[randInt].Id != player.Id {
-							realMinion = game.Players[randInt]
+							minion = game.Players[randInt]
 							break
 						}
 					}
 					for {
 						randInt := rand.Intn(len(game.Players))
-						if game.Players[randInt].Id != realMinion.Id && game.Players[randInt].Id != player.Id {
+						if game.Players[randInt].Id != minion.Id && game.Players[randInt].Id != player.Id {
 							other = game.Players[randInt]
 							break
 						}
@@ -775,22 +774,24 @@ func checkoutNight(mux *sync.Mutex, game *model.Room) {
 					for {
 						randInt := rand.Intn(len(game.Players))
 						if game.Players[randInt].Id != player.Id {
-							realMinion = game.Players[randInt]
+							minion = game.Players[randInt]
 							break
 						}
 					}
 					for {
 						randInt := rand.Intn(len(game.Players))
-						if game.Players[randInt].Id != realMinion.Id && game.Players[randInt].Id != player.Id {
+						if game.Players[randInt].Id != minion.Id && game.Players[randInt].Id != player.Id {
 							other = game.Players[randInt]
 							break
 						}
 					}
 					// 生成伪爪牙身份名
-					randInt := rand.Intn(len(MinionsPool))
-					if MinionsPool[randInt] != Drunk {
-						realMinion.Character = MinionsPool[randInt]
-						break
+					for {
+						randInt := rand.Intn(len(MinionsPool))
+						if MinionsPool[randInt] != minion.Character && MinionsPool[randInt] != other.Character {
+							minion.Character = MinionsPool[randInt]
+							break
+						}
 					}
 				}
 				// 拼接日志
@@ -798,9 +799,9 @@ func checkoutNight(mux *sync.Mutex, game *model.Room) {
 				var info string
 				randInt := rand.Intn(2)
 				if randInt == 0 {
-					info = fmt.Sprintf("发现 [%s] 和 [%s] 其中一个是 {%s}\n", realMinion.Name, other.Name, realMinion.Character)
+					info = fmt.Sprintf("发现 [%s] 和 [%s] 其中一个是 {%s}\n", minion.Name, other.Name, minion.Character)
 				} else {
-					info = fmt.Sprintf("发现 [%s] 和 [%s] 其中一个是 {%s}\n", other.Name, realMinion.Name, realMinion.Character)
+					info = fmt.Sprintf("发现 [%s] 和 [%s] 其中一个是 {%s}\n", other.Name, minion.Name, minion.Character)
 				}
 				msgPlayer += info
 				msgAll += info
@@ -811,38 +812,42 @@ func checkoutNight(mux *sync.Mutex, game *model.Room) {
 			// 给厨师提供信息
 			case Chef:
 				connected := 0 // 记录连座数
-				if !player.State.Drunk && !player.State.Poisoned {
-					// 生成连座信息
-					meetEvil := false
-					meetEvilAgain := false
-					for i, player := range game.Players {
-						if player.State.Evil {
-							if meetEvil {
-								meetEvilAgain = true
-							}
-							if meetEvilAgain {
-								connected += 1
-								meetEvilAgain = false
-							}
-							if i == len(game.Players)-1 && game.Players[0].State.Evil {
-								connected += 1
-								break
-							}
-							meetEvil = true
-						} else {
-							meetEvil = false
+				// 生成连座信息
+				meetEvil := false
+				meetEvilAgain := false
+				for i, player := range game.Players {
+					if player.State.Evil {
+						if meetEvil {
+							meetEvilAgain = true
 						}
+						if meetEvilAgain {
+							connected += 1
+							meetEvilAgain = false
+						}
+						if i == len(game.Players)-1 && game.Players[0].State.Evil {
+							connected += 1
+							break
+						}
+						meetEvil = true
+					} else {
+						meetEvil = false
 					}
-				} else {
-					// 生成伪信息
+				}
+				// 生成伪信息
+				if player.State.Drunk || player.State.Poisoned {
 					evilQuantity := 0
 					for _, player := range game.Players {
 						if player.State.Evil {
 							evilQuantity += 1
 						}
 					}
-					randInt := rand.Intn(evilQuantity)
-					connected = randInt
+					for {
+						randInt := rand.Intn(evilQuantity)
+						if connected != randInt {
+							connected = randInt
+							break
+						}
+					}
 				}
 				// 拼接日志
 				msgAll += fmt.Sprintf("[%s] ", player.Name)
@@ -856,34 +861,38 @@ func checkoutNight(mux *sync.Mutex, game *model.Room) {
 			// 给共情者提供信息
 			case Empath:
 				evilQuantity := 0 // 记录左右邪恶玩家数量
-				if !player.State.Drunk && !player.State.Poisoned {
-					// 生成连座信息
-					if player.Index == 0 {
-						if game.Players[len(game.Players)-1].State.Evil {
-							evilQuantity += 1
-						}
-						if game.Players[player.Index+1].State.Evil {
-							evilQuantity += 1
-						}
-					} else if player.Index == len(game.Players)-1 {
-						if game.Players[player.Index-1].State.Evil {
-							evilQuantity += 1
-						}
-						if game.Players[0].State.Evil {
-							evilQuantity += 1
-						}
-					} else {
-						if game.Players[player.Index-1].State.Evil {
-							evilQuantity += 1
-						}
-						if game.Players[player.Index+1].State.Evil {
-							evilQuantity += 1
-						}
+				// 生成连座信息
+				if player.Index == 0 {
+					if game.Players[len(game.Players)-1].State.Evil {
+						evilQuantity += 1
+					}
+					if game.Players[player.Index+1].State.Evil {
+						evilQuantity += 1
+					}
+				} else if player.Index == len(game.Players)-1 {
+					if game.Players[player.Index-1].State.Evil {
+						evilQuantity += 1
+					}
+					if game.Players[0].State.Evil {
+						evilQuantity += 1
 					}
 				} else {
-					// 生成伪信息
-					randInt := rand.Intn(3)
-					evilQuantity = randInt
+					if game.Players[player.Index-1].State.Evil {
+						evilQuantity += 1
+					}
+					if game.Players[player.Index+1].State.Evil {
+						evilQuantity += 1
+					}
+				}
+				// 生成伪信息
+				if player.State.Drunk || player.State.Poisoned {
+					for {
+						randInt := rand.Intn(3)
+						if evilQuantity != randInt {
+							evilQuantity = randInt
+							break
+						}
+					}
 				}
 				// 拼接日志
 				msgAll += fmt.Sprintf("[%s] ", player.Name)
@@ -1061,11 +1070,10 @@ func checkoutNight(mux *sync.Mutex, game *model.Room) {
 						// 给守鸦人提供伪信息
 						if (player.State.Drunk || player.State.Poisoned) && player.Id == killed.Id {
 							character := ""
-							allChars := append(append(append(TownsfolkPool, OutsidersPool...), MinionsPool...), DemonsPool...)
 							for {
-								randInt := rand.Intn(len(allChars))
-								if allChars[randInt] != Ravenkeeper {
-									character = allChars[randInt]
+								randInt := rand.Intn(len(AllChars))
+								if AllChars[randInt] != Ravenkeeper {
+									character = AllChars[randInt]
 									break
 								}
 							}
@@ -1084,57 +1092,61 @@ func checkoutNight(mux *sync.Mutex, game *model.Room) {
 			case Empath:
 				if !player.State.Dead { // 当晚死亡得不到信息
 					evilQuantity := 0 // 记录左右邪恶玩家数量
-					if !player.State.Drunk && !player.State.Poisoned && !player.State.Dead {
-						// 生成连座信息
-						var left int
-						var right int
-						if player.Index == 0 {
-							left = len(game.Players) - 1
-							right = player.Index + 1
-						} else if player.Index == len(game.Players)-1 {
-							left = player.Index - 1
-							right = 0
-						} else {
-							left = player.Index - 1
-							right = player.Index + 1
+					// 生成连座信息
+					var left int
+					var right int
+					if player.Index == 0 {
+						left = len(game.Players) - 1
+						right = player.Index + 1
+					} else if player.Index == len(game.Players)-1 {
+						left = player.Index - 1
+						right = 0
+					} else {
+						left = player.Index - 1
+						right = player.Index + 1
+					}
+					var leftPrev = -1
+					var rightPrev = -1
+					for {
+						if leftPrev != left {
+							leftPrev = left
+							if game.Players[left].State.Dead {
+								left--
+								if left < 0 {
+									left = len(game.Players) - 1
+								}
+							} else {
+								if game.Players[left].State.Evil {
+									evilQuantity += 1
+								}
+							}
 						}
-						var leftPrev = -1
-						var rightPrev = -1
+						if rightPrev != right {
+							rightPrev = right
+							if game.Players[right].State.Dead {
+								right++
+								if right > len(game.Players)-1 {
+									right = 0
+								}
+							} else {
+								if game.Players[right].State.Evil {
+									evilQuantity += 1
+								}
+							}
+						}
+						if leftPrev == left && rightPrev == right || left == right {
+							break
+						}
+					}
+					// 生成伪信息
+					if player.State.Drunk || player.State.Poisoned {
 						for {
-							if leftPrev != left {
-								leftPrev = left
-								if game.Players[left].State.Dead {
-									left--
-									if left < 0 {
-										left = len(game.Players) - 1
-									}
-								} else {
-									if game.Players[left].State.Evil {
-										evilQuantity += 1
-									}
-								}
-							}
-							if rightPrev != right {
-								rightPrev = right
-								if game.Players[right].State.Dead {
-									right++
-									if right > len(game.Players)-1 {
-										right = 0
-									}
-								} else {
-									if game.Players[right].State.Evil {
-										evilQuantity += 1
-									}
-								}
-							}
-							if leftPrev == left && rightPrev == right || left == right {
+							randInt := rand.Intn(3)
+							if randInt != evilQuantity {
+								evilQuantity = randInt
 								break
 							}
 						}
-					} else {
-						// 生成伪信息
-						randInt := rand.Intn(3)
-						evilQuantity = randInt
 					}
 					// 拼接日志
 					msgAll += fmt.Sprintf("[%s] ", player.Name)
@@ -1156,30 +1168,27 @@ func checkoutNight(mux *sync.Mutex, game *model.Room) {
 						msgPlayer += info
 						msgAll += info
 					} else {
-						var executedPlayer *model.Player
+						character := ""
 						if !player.State.Drunk && !player.State.Poisoned {
 							// 生成死亡玩家身份信息
-							executedPlayer = game.Executed
+							character = game.Executed.Character
+							// 看隐士情况，是看成他被当成的身份
+							if game.Executed.Character == Recluse {
+								character = game.Executed.State.RegardedAs
+							}
 						} else {
 							// 生成伪信息
 							for {
-								randInt := rand.Intn(len(game.Players))
-								if randInt != player.Index && randInt != game.Executed.Index {
-									executedPlayer = &game.Players[randInt]
+								randInt := rand.Intn(len(AllChars))
+								if AllChars[randInt] != player.Character && AllChars[randInt] != game.Executed.Character {
+									character = AllChars[randInt]
 									break
 								}
 							}
 						}
 						// 拼接日志
 						msgAll += fmt.Sprintf("[%s] ", player.Name)
-						// 看隐士情况，是看成他被当成的身份
-						character := ""
-						if executedPlayer.Character == Recluse {
-							character = executedPlayer.State.RegardedAs
-						} else {
-							character = executedPlayer.Character
-						}
-						info := fmt.Sprintf("发现今晚被处决的玩家 [%s] 的身份是 {%s}\n", executedPlayer.Name, character)
+						info := fmt.Sprintf("发现今晚被处决的玩家 [%s] 的身份是 {%s}\n", game.Executed.Name, character)
 						msgPlayer += info
 						msgAll += info
 					}
