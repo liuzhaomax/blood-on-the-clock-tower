@@ -493,6 +493,8 @@ func cast(mux *sync.Mutex, game *model.Room, playerId string, targets []string) 
 	game.Log += msgAll
 	// 发送日志
 	emit(game, playerId)
+	// 发送game 更新casted状态
+	broadcast(game)
 
 	// 判断杀手
 	if slayerTarget != nil {
