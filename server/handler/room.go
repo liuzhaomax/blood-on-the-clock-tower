@@ -81,7 +81,7 @@ func listPlayers(room *model.Room, playerId string, conn *websocket.Conn) {
 		goodToStart = goodToStart && player.Waiting
 	}
 	if goodToStart {
-		room.Status = "等待开始"
+		room.Status = RoomWaitingToGo
 		room.Init = false
 		room.Result = ""
 		room.Log = ""
@@ -176,7 +176,7 @@ func startGame(room *model.Room) {
 		goodToStart = goodToStart && player.Waiting
 	}
 	if goodToStart {
-		room.Status = "游戏中"
+		room.Status = RoomGaming
 		room.Init = false
 		room.Result = ""
 		room.Log = ""

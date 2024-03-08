@@ -53,7 +53,15 @@ func returnRoom(room *model.Room, playerId string) {
 		}
 	}
 
-	// 把room发给请求者
+	roomReady := true
+	for _, player := range room.Players {
+		roomReady = roomReady && player.Waiting
+	}
+	if roomReady {
+		room.Status = RoomWaitingToGo
+	}
+
+	// 把room发给房间内所有人
 	marshalRoom, err := json.Marshal(*room)
 	if err != nil {
 		log.Println("JSON marshal error:", err)
@@ -61,6 +69,20 @@ func returnRoom(room *model.Room, playerId string) {
 	}
 	room.GameConnPool.Range(func(id, conn any) bool {
 		if err = conn.(*websocket.Conn).WriteMessage(websocket.TextMessage, marshalRoom); err != nil {
+			log.Println("Write error:", err)
+			return false
+		}
+		return true
+	})
+	// 把roomList发给房间外所有人
+	cfg := model.GetConfig()
+	marshalRooms, err := json.Marshal(cfg.Rooms)
+	if err != nil {
+		log.Println("JSON marshal error:", err)
+		return
+	}
+	cfg.HomeConnPool.Range(func(id, conn any) bool {
+		if err = conn.(*websocket.Conn).WriteMessage(websocket.TextMessage, marshalRooms); err != nil {
 			log.Println("Write error:", err)
 			return false
 		}

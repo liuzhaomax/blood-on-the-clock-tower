@@ -75,3 +75,9 @@ var CharacterPool = map[string][]string{
 }
 
 var AllChars = append(append(append(TownsfolkPool, OutsidersPool...), MinionsPool...), DemonsPool...)
+
+const (
+	RoomWaitingToGo = "等待开始"
+	RoomGaming      = "游戏中"
+	RoomReviewing   = "复盘中"
+)

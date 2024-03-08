@@ -78,7 +78,7 @@ func createRoom(room model.Room) {
 	CfgMutex.Lock()
 	defer CfgMutex.Unlock()
 
-	room.Status = "等待开始"
+	room.Status = RoomWaitingToGo
 	room.CreatedAt = time.Now().Format(time.RFC3339)
 	cfg.Rooms = append(cfg.Rooms, room)
 	// 发送房间列表给所有人

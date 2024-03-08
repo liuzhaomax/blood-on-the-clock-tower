@@ -25,7 +25,7 @@ const Context = React.createContext({
 let socketHome
 
 function Home() {
-    const [roomList, setRoomList] = useState(null)
+    const [roomList, setRoomList] = useState([])
 
     useEffect(() => {
         establishConn()
@@ -127,7 +127,7 @@ function Home() {
 
     const joinRoom = () => {
         // 如果房间status是游戏中，则无法加入
-        if (roomSelected && roomSelected.status === "游戏中") {
+        if (roomSelected && (roomSelected.status === "游戏中" || roomSelected.status === "复盘中")) {
             openGamingNotification("topRight")
             return
         }
@@ -167,7 +167,7 @@ function Home() {
     const openGamingNotification = (placement) => {
         api.info({
             message: "操作无效",
-            description: <Context.Consumer>{() => "游戏已开始，无法加入房间!"}</Context.Consumer>,
+            description: <Context.Consumer>{() => "游戏已开始或还在复盘，无法加入房间!"}</Context.Consumer>,
             placement,
         })
     }
@@ -193,7 +193,9 @@ function Home() {
     const hideGif = async (id, ms) => {
         let gif = document.getElementById(id)
         await sleep(ms)
-        gif.classList.add("hidden")
+        if (gif) {
+            gif.classList.add("hidden")
+        }
     }
     
     return (

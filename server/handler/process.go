@@ -1402,7 +1402,7 @@ func checkout(game *model.Room, executed *model.Player) {
 			game.Players[i].Log += msg
 		}
 		game.Log += msg
-		game.Status = "复盘中"
+		game.Status = RoomReviewing
 		// 发送game 以便前端跳转review
 		broadcast(game)
 	}

@@ -108,6 +108,7 @@ func initGame(mux *sync.Mutex, game *model.Room, playerId string, conn *websocke
 		game.CreatedAt = time.Now().Format(time.RFC3339)
 		game.Result = ""
 		game.Log = ""
+		game.Executed = nil
 		game.CastPool = map[string][]string{}
 		game.VotePool = map[string]string{}
 		game.State = model.GameState{}
