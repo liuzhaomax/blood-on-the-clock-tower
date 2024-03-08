@@ -120,7 +120,7 @@ export const startCaptcha = (box, titbox, fls, radios, container, onSuccess) => 
             clearTimeout(timer)
             // 1秒后执行start
             timer=setTimeout(() => {
-                startCaptcha(box, titbox, fls, radios, container)
+                startCaptcha(box, titbox, fls, radios, container, onSuccess)
             }, 1000)
             // 重置a
             a=0
