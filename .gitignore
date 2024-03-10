@@ -7,6 +7,7 @@ client/server/build/
 server/tls/
 client/src/tls
 client/public/root.txt
+client/public/baidu*
 
 sever/go.sum
 
