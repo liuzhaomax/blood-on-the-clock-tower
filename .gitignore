@@ -9,6 +9,7 @@ client/src/tls
 client/public/root.txt
 client/public/baidu*
 client/public/ads.txt
+seo
 
 sever/go.sum
 
