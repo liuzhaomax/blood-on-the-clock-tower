@@ -254,7 +254,7 @@ function Home() {
             <div id="ICP">
                 <img src={ICP} alt="ICP"/>
                 <a href="https://beian.mps.gov.cn/#/query/webSearch" target="\_blank" style={{color: "white",textDecoration:"none"}}>
-                    津ICP备2024011617号-1
+                    津ICP备2024011617号
                 </a>
             </div>
             <Drawer
