@@ -1,4 +1,4 @@
-name: Js
+name: React
 
 on:
   push:
