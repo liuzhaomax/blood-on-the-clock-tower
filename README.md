@@ -3,6 +3,7 @@
 > https://blood.liuzhaomax.cn/
 
 [![Release](https://img.shields.io/github/v/release/liuzhaomax/blood-on-the-clock-tower)](https://github.com/liuzhaomax/blood-on-the-clock-tower/releases)
+[![Build Status](https://github.com/liuzhaomax/blood-on-the-clock-tower/workflows/Run%20Tests/badge.svg?branch=master)](https://github.com/liuzhaomax/blood-on-the-clock-tower/releases)
 
 **亮点**：
 + 取代说书人角色，所有线下小伙伴都可以深度参与解谜
@@ -23,6 +24,32 @@
 + 目前只支持《血染钟楼：灾祸滋生》版本
 + 不提供说书人角色，就想当主持人的小伙伴不好意思了
 + 防场外不是绝对的，不过也可以利用场外来掩盖真相，比如故意操作很长时间
+
+**目录**
+<!-- TOC -->
+* [血染钟楼线下辅助器 Blood on the ClockTower](#-blood-on-the-clocktower)
+  * [1. 说明书](#1-)
+    * [1.1 游戏概述](#11-)
+    * [1.2 游戏流程（结合辅助器）](#12-)
+    * [1.3 技能细节](#13-)
+    * [1.4 进入游戏UI介绍](#14-ui)
+  * [2. 需求与设计](#2-)
+  * [3. 日志设计](#3-)
+    * [日志分类](#)
+    * [事件分类](#)
+    * [字体](#)
+  * [4. 游戏流程设计](#4-)
+    * [第一夜](#)
+    * [其他夜晚](#)
+    * [白天](#)
+  * [5. 功能测试](#5-)
+    * [5.1 胜利条件测试](#51-)
+    * [5.2 身份初始化测试](#52-)
+    * [5.3 技能交互测试](#53-)
+    * [5.4 特殊技能交互测试](#54-)
+  * [6. 里程碑](#6-)
+  * [TODO 后续版本](#todo-)
+<!-- TOC -->
 
 ## 1. 说明书
 ### 1.1 游戏概述
