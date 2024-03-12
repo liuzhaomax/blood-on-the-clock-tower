@@ -3,7 +3,7 @@
 > https://blood.liuzhaomax.cn/
 
 [![Release](https://img.shields.io/github/v/release/liuzhaomax/blood-on-the-clock-tower)](https://github.com/liuzhaomax/blood-on-the-clock-tower/releases)
-[![Build Status](https://github.com/liuzhaomax/blood-on-the-clock-tower/workflows/Run%20Tests/badge.svg?branch=master)](https://github.com/liuzhaomax/blood-on-the-clock-tower/releases)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/liuzhaomax/blood-on-the-clock-tower/blood.yml)](https://github.com/liuzhaomax/blood-on-the-clock-tower/tree/main)
 
 **亮点**：
 + 取代说书人角色，所有线下小伙伴都可以深度参与解谜
