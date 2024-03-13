@@ -123,7 +123,7 @@ function Gaming() {
         [/(?<=第).*?(?=天)|平安夜/g, "highlight highlight-number"], // 数字
         [/\[([^\]]+)]/g, "highlight highlight-player"], // 玩家名字
         [/\{[^}]+}/g, "highlight highlight-skill-result"], // 技能结果关键字
-        [/(投毒|卜算|认主|守护|杀害|枪毙|反弹|反向通灵|投给)/g, "highlight highlight-skill"], // 技能关键字
+        [/(投毒|卜算|认主|守护|杀害|枪毙|反弹|反向通灵|注册|投给)/g, "highlight highlight-skill"], // 技能关键字
         [/(死亡|处决结果)/g, "highlight highlight-severe"], // 重大事件关键字
         [/(提名)/g, "highlight highlight-nominate"], // 提名
         [/(投票)/g, "highlight highlight-vote"], // 投票
@@ -383,7 +383,7 @@ function Gaming() {
         // 所有有技能的操作完，没技能的点完验证码，时间等待结束，不在投票阶段，则切换日夜，切换后首先结算前一阶段
         return !game.state.votingStep
             && !castLock
-            && ready // TODO 测试时，可注释
+            // && ready // TODO 测试时，可注释
             || game.state.stage === 0
     }
 
@@ -771,6 +771,9 @@ function Gaming() {
             if (game.state.night) {
                 return "夜晚不能开枪"
             }
+            if (game.executed) {
+                return "已发生处决，不能开枪"
+            }
             for (let i = 0; i < selectedPlayersObj.length; i++) {
                 if (selectedPlayersObj[i].state.dead) {
                     return "您不能枪毙已死的人"
@@ -894,9 +897,9 @@ function Gaming() {
         }
     }
     // TODO 测试代码 开始
-    // const handleCaptchaCancel = () => {
-    //     setIsCaptchaModalOpen(false)
-    // }
+    const handleCaptchaCancel = () => {
+        setIsCaptchaModalOpen(false)
+    }
     // TODO 测试代码 结束
 
     // 游戏说明
@@ -958,7 +961,7 @@ function Gaming() {
                 {contextHolder}
             </Context.Provider>
             <Modal title="验证码" open={isCaptchaModalOpen}
-                // onCancel={handleCaptchaCancel}
+                onCancel={handleCaptchaCancel}
                 footer={null}>
                 <div id="CaptchaModal">
                     {isCaptchaModalOpen ?

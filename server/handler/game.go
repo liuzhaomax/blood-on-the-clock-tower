@@ -387,6 +387,8 @@ func initStatus(players []model.Player, replaceDrunk string) []model.Player {
 					break
 				}
 			}
+		case Spy:
+			players[i].State.RegisteredAsType = Minions
 		}
 	}
 
