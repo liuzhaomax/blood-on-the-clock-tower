@@ -581,18 +581,22 @@ function Gaming() {
         setIsCastModalOpen(false)
         // 后端判断 发动技能的条件是，取决于身份，drunk，白天黑夜，还有没有技能；前端随便发动，后端判断成不成功
         let me = getMe(game)
-        if (!me.state.casted && !game.state.votingStep && game.state.stage !== 0 &&
+        if (!me.state.casted && !game.state.votingStep && game.state.stage !== 0 && game.state.night &&
             (castToPlayersId.length === 1 &&
                 (me.character === "下毒者" ||
                 me.character === "管家" ||
                 me.character === "僧侣" ||
                 me.character === "小恶魔" ||
-                me.character === "守鸦人" ||
-                me.character === "杀手")
+                me.character === "守鸦人")
                 ||
                 (castToPlayersId.length === 2 &&
                 me.character === "占卜师")
             )) {
+            emitCast()
+        }
+        // 杀手可以在白天任何阶段开枪
+        if (!me.state.casted && game.state.stage !== 0 && castToPlayersId.length === 1
+            && me.character === "杀手" && !game.state.night) {
             emitCast()
         }
     }
