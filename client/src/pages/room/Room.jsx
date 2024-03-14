@@ -1,8 +1,11 @@
 import React, {useEffect, useMemo, useState} from "react"
 import "./Room.css"
-import {Button, Flex, notification} from "antd"
+import {Button, Drawer, Flex, notification} from "antd"
 import {useNavigate, useParams} from "react-router-dom"
 import config from "../../config/config"
+import Instruction from "../gaming/Instruction"
+import {ReadOutlined, FileTextOutlined} from "@ant-design/icons"
+import UpdateLog from "./UpdateLog"
 
 const Context = React.createContext({
     name: "Default",
@@ -142,6 +145,24 @@ function Room() {
         [],
     )
 
+    // 游戏说明
+    const [openInstruction, setOpenInstruction] = useState(false)
+    const showDrawerInstruction = () => {
+        setOpenInstruction(true)
+    }
+    const onCloseInstruction = () => {
+        setOpenInstruction(false)
+    }
+
+    // 更新日志
+    const [openUpdateLog, setOpenUpdateLog] = useState(false)
+    const showDrawerUpdateLog = () => {
+        setOpenUpdateLog(true)
+    }
+    const onCloseUpdateLog = () => {
+        setOpenUpdateLog(false)
+    }
+
     return (
         <div id="ROOM" className="ROOM">
             <Flex className="layout" horizontal="true" gap="middle" justify="space-evenly" align="center" wrap="wrap">
@@ -153,6 +174,10 @@ function Room() {
                     <></>
                 }
             </Flex>
+            <Flex className="layout" horizontal="true" gap="middle" justify="space-evenly" align="center" wrap="wrap">
+                <Button className="btn small-btn" onClick={showDrawerInstruction}><ReadOutlined /></Button>
+                <Button className="btn small-btn" onClick={showDrawerUpdateLog}><FileTextOutlined /></Button>
+            </Flex>
             <p>我的名字：<span>{room === null ? "" : findPlayerName()}</span></p>
             <p>↓ 场上玩家 ↓</p>
             <div className="layout seat-wrap" align="center">
@@ -163,6 +188,26 @@ function Room() {
             <Context.Provider value={contextValue}>
                 {contextHolder}
             </Context.Provider>
+            <Drawer
+                title="游戏说明书"
+                placement="top"
+                closable={false}
+                onClose={onCloseInstruction}
+                open={openInstruction}
+                key="top"
+            >
+                <Instruction/>
+            </Drawer>
+            <Drawer
+                title="更新日志"
+                placement="top"
+                closable={false}
+                onClose={onCloseUpdateLog}
+                open={openUpdateLog}
+                key="top"
+            >
+                <UpdateLog/>
+            </Drawer>
         </div>
     )
 }
