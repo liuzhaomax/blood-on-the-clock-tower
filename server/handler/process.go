@@ -21,10 +21,9 @@ func toggleNight(mux *sync.Mutex, game *model.Room) {
 	if game.Result == "" {
 		// Stage + 1
 		game.State.Stage += 1
-		// 日转夜 Day+1
+		// 夜转日 Day+1
 		if !game.State.Night {
-			game.State.Day = game.State.Day + 1
-			msg = fmt.Sprintf("第%d天，入夜~\n", game.State.Day)
+			msg = fmt.Sprintf("第%d天，入夜~\n", game.State.Day+1)
 			// 入夜清除中毒、守护、主人效果
 			for i := range game.Players {
 				game.Players[i].State.Poisoned = false
@@ -47,7 +46,8 @@ func toggleNight(mux *sync.Mutex, game *model.Room) {
 				}
 			}
 		} else {
-			msg = fmt.Sprintf("第%d天，天亮了~\n", game.State.Day)
+			game.State.Day += 1
+			msg = fmt.Sprintf("第%d天，天亮了~\n", game.State.Day+1)
 			// 天亮 清空executed
 			game.Executed = nil
 		}
@@ -1410,7 +1410,7 @@ func checkoutNight(mux *sync.Mutex, game *model.Room) {
 	// 发送日志
 	broadcast(game)
 	// 结算本局
-	checkout(game, nil) // 这里不要传入executed，因为晚上不处决人，晚上可能死圣徒
+	checkout(game, game.Executed)
 }
 
 func checkoutDay(mux *sync.Mutex, game *model.Room) {
@@ -1430,6 +1430,7 @@ func checkout(game *model.Room, executed *model.Player) {
 	var evilAliveCount int     // 邪恶玩家存活数量
 	var mayorAlive bool        // 市长是否存活
 	var scarletWomanAlive bool // 魅魔是否存活
+	var poisonerAlive bool     // 下毒者是否存活
 	for _, player := range game.Players {
 		// 对应平民胜利条件1
 		if player.CharacterType == Demons && !player.State.Dead {
@@ -1441,6 +1442,9 @@ func checkout(game *model.Room, executed *model.Player) {
 		// 对应平民胜利条件2
 		if player.Character == Mayor && !player.State.Dead && !player.State.Drunk && !player.State.Poisoned {
 			mayorAlive = true
+		}
+		if player.Character == Poisoner && !player.State.Dead {
+			poisonerAlive = true
 		}
 		// 可投票数 = 持票死人人数 + 活人人数
 		if !player.State.Dead {
@@ -1469,8 +1473,8 @@ func checkout(game *model.Room, executed *model.Player) {
 		game.Result = "平民阵营胜利"
 	}
 	// 平民胜利条件2
-	if game.Result == "" && aliveCount == 3 && !game.State.Night && mayorAlive && executed == nil {
-		msg += "达成平民胜利条件二：白天剩三人，其中一个是市长，且当日无人被处决\n"
+	if game.Result == "" && aliveCount == 3 && mayorAlive && executed == nil && !game.State.Night && !poisonerAlive {
+		msg += "达成平民胜利条件二：白天剩三人，其中一个是市长，且当日无人被处决，且三人不是下毒者市长小恶魔的组合\n"
 		msg += "本局结束，平民胜利\n"
 		game.Result = "平民阵营胜利"
 	}

@@ -47,7 +47,7 @@ type Room struct {
 
 type GameState struct {
 	Night      bool `json:"night"`
-	Day        int  `json:"day"`
+	Day        int  `json:"day"` // 0代表第一天，1代表第二天，有个加1的关系
 	Stage      int  `json:"stage"`
 	VotingStep bool `json:"votingStep"` // 投票环节
 }
