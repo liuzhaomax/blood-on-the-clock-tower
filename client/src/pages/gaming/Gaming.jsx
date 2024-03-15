@@ -183,12 +183,9 @@ function Gaming() {
     const [selectedPlayers, setSelectedPlayers] = useState([])
     const selectPlayer = (event) => {
         event.preventDefault()
-        // 守鸦人可以验死人，占卜可以验死人
+        // 当前玩家没死，就可以选择玩家，提名或施放技能
         let me = getMe(game)
-        if (!event.target.classList.contains("highlight-dead")
-            || (me.character === "守鸦人" && !me.state.dead)
-            || (me.character === "占卜师" && !me.state.dead)
-        ) {
+        if (!me.state.dead) {
             let selectedPlayersCopy = selectedPlayers.slice()
             if (event.target.classList.contains("seat-selected")) {
                 event.target.classList.remove("seat-selected")
@@ -213,22 +210,16 @@ function Gaming() {
     const updateSeatDead = () => {
         if (game) {
             let me = getMe(game)
-            for (let i = 0; i < game.players.length; i++) {
-                if (game.players[i].state.dead) {
-                    let seat = document.getElementById(game.players[i].id)
-                    if (!seat.classList.contains("highlight-dead")) {
-                        seat.classList.add("highlight-dead")
-                        seat.classList.add("highlight-dead-cant-be-selected")
-                    }
-                    if ((me.character === "守鸦人" || me.character === "占卜师")
-                        && !me.state.dead
-                        && seat.classList.contains("highlight-dead-cant-be-selected")) {
-                        seat.classList.remove("highlight-dead-cant-be-selected")
-                    }
-                    if (!(me.character === "守鸦人" || me.character === "占卜师")
-                        && !me.state.dead
-                        && seat.classList.contains("seat-selected")) {
-                        seat.classList.remove("seat-selected")
+            // 当前玩家死亡，他不能提名被提名，不能施法，则他看其他死了的玩家就是加灰色不能选择
+            // 当前玩家没死，他就不可能看到灰色
+            if (me.state.dead) {
+                for (let i = 0; i < game.players.length; i++) {
+                    if (game.players[i].state.dead) {
+                        let seat = document.getElementById(game.players[i].id)
+                        if (!seat.classList.contains("highlight-dead")) {
+                            seat.classList.add("highlight-dead")
+                            seat.classList.add("highlight-dead-cant-be-selected")
+                        }
                     }
                 }
             }
@@ -698,14 +689,6 @@ function Gaming() {
             if (!game.state.night) {
                 return "白天不能投毒"
             }
-            for (let i = 0; i < selectedPlayersObj.length; i++) {
-                if (selectedPlayersObj[i].state.dead) {
-                    return "您不能毒已死的人"
-                }
-                if (selectedPlayersObj[i].character === "下毒者") {
-                    return "您不能毒自己"
-                }
-            }
             if (selectedPlayers.length === 1) {
                 content += "下毒吗？"
                 break
@@ -736,9 +719,6 @@ function Gaming() {
                 return "白天不能守护"
             }
             for (let i = 0; i < selectedPlayersObj.length; i++) {
-                if (selectedPlayersObj[i].state.dead) {
-                    return "您不能守护已死的人"
-                }
                 if (selectedPlayersObj[i].character === "僧侣") {
                     return "您不能守护自己"
                 }
@@ -750,12 +730,7 @@ function Gaming() {
             return "您只能选1个人守护"
         case "小恶魔":
             if (!game.state.night) {
-                return "白天不能击杀"
-            }
-            for (let i = 0; i < selectedPlayersObj.length; i++) {
-                if (selectedPlayersObj[i].state.dead) {
-                    return "您不能杀害已死的人"
-                }
+                return "白天不能杀害"
             }
             if (selectedPlayers.length === 1) {
                 content += "进行杀害吗？"
@@ -777,14 +752,6 @@ function Gaming() {
             }
             if (game.executed) {
                 return "已发生处决，不能开枪"
-            }
-            for (let i = 0; i < selectedPlayersObj.length; i++) {
-                if (selectedPlayersObj[i].state.dead) {
-                    return "您不能枪毙已死的人"
-                }
-                if (selectedPlayersObj[i].character === "杀手") {
-                    return "您不能枪毙自己"
-                }
             }
             if (selectedPlayers.length === 1) {
                 content += "实行枪决吗？"
