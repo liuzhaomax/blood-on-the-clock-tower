@@ -34,11 +34,13 @@ type Room struct {
 	Result    string    `json:"result"` // 游戏结果
 	Log       string    `json:"log"`    // 总日志
 	Players   []Player  `json:"players"`
-	State     GameState `json:"state"`    // 游戏中各身份状态
-	Executed  *Player   `json:"executed"` // 本轮被处决者
+	State     GameState `json:"state"`     // 游戏中各身份状态
+	Executed  *Player   `json:"executed"`  // 本轮被处决者
+	Nominated *Player   `json:"nominated"` // 当前投票环节被提名者
 	// 技能施放池，存储所有施放技能人，当前阶段施放的技能作用目标
 	CastPool map[string][]string `json:"castPool"` // 本轮施法池 [playId][]targetId{}
-	VotePool map[string]string   `json:"votePool"` // 本轮票池 [playId]log{}
+	VotePool map[string]int      `json:"votePool"` // 本轮票池 [playId]int{}
+	VoteLogs map[string]string   `json:"voteLogs"` // 本轮票池日志 [playId]log{}
 	// 通信管理
 	GameConnPool *sync.Map   `json:"-"` // game长连接[playId]conn
 	Mux          *sync.Mutex `json:"-"` // 业务逻辑使用的锁
@@ -78,14 +80,13 @@ type PlayerState struct {
 	Bullet           bool   `json:"bullet"`           // 杀手
 	Blessed          bool   `json:"blessed"`          // 圣女
 	Master           bool   `json:"master"`           // 管家
+	VotedFromMaster  bool   `json:"votedFromMaster"`  // 管家的主人本轮是否投给该玩家
+	VotedFromButler  bool   `json:"votedFromButler"`  // 管家本轮是否投给该玩家
 	Casted           bool   `json:"casted"`           // 本轮是否已施放主动技能
-	Nominated        bool   `json:"nominated"`        // 本轮是否已被提名
-	Voted            bool   `json:"voted"`            // 本轮是否已投票
-	VoteCount        int    `json:"voteCount"`        // 得票数
 }
 
 type PlayerReady struct {
 	Nominate  bool `json:"nominate"`  // 可以提名
 	Nominated bool `json:"nominated"` // 可以被提名
-	Vote      int  `json:"vote"`      // 可以投票的票数
+	Vote      bool `json:"vote"`      // 可以投票
 }
