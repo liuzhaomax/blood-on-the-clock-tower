@@ -210,7 +210,7 @@ function Gaming() {
     const updateSeatDead = () => {
         if (game) {
             let me = getMe(game)
-            // 当前玩家死亡，他不能提名被提名，不能施法，则他看其他死了的玩家就是加灰色不能选择
+            // 当前玩家死亡，他不能提名，不能施法，则他看其他死了的玩家就是加灰色不能选择
             // 当前玩家没死，他就不可能看到灰色
             if (me.state.dead) {
                 for (let i = 0; i < game.players.length; i++) {
@@ -374,7 +374,7 @@ function Gaming() {
         // 所有有技能的操作完，没技能的点完验证码，时间等待结束，不在投票阶段，则切换日夜，切换后首先结算前一阶段
         return !game.state.votingStep
             && !castLock
-            && ready // TODO 测试时，可注释
+            // && ready // TODO 测试时，可注释
             || game.state.stage === 0
     }
 
@@ -607,11 +607,14 @@ function Gaming() {
         if (game.state.night) {
             return "夜晚不能提名"
         }
+        if (game.executed) {
+            return "今日已处决过人，不能提名"
+        }
         if (game.state.votingStep) {
             return "投票处决环节不能提名"
         }
         if (!me.ready.nominate) {
-            return "您本局已发起过提名"
+            return "您今日已发起过提名"
         }
         if (selectedPlayers.length === 0) {
             return "您想提名不能不选人"
@@ -868,9 +871,9 @@ function Gaming() {
         }
     }
     // TODO 测试代码 开始
-    // const handleCaptchaCancel = () => {
-    //     setIsCaptchaModalOpen(false)
-    // }
+    const handleCaptchaCancel = () => {
+        setIsCaptchaModalOpen(false)
+    }
     // TODO 测试代码 结束
 
     // 游戏说明
@@ -932,7 +935,7 @@ function Gaming() {
                 {contextHolder}
             </Context.Provider>
             <Modal title="验证码" open={isCaptchaModalOpen}
-                // onCancel={handleCaptchaCancel}
+                onCancel={handleCaptchaCancel}
                 footer={null}>
                 <div id="CaptchaModal">
                     {isCaptchaModalOpen ?
