@@ -374,7 +374,7 @@ function Gaming() {
         // 所有有技能的操作完，没技能的点完验证码，时间等待结束，不在投票阶段，则切换日夜，切换后首先结算前一阶段
         return !game.state.votingStep
             && !castLock
-            // && ready // TODO 测试时，可注释
+            && ready // TODO 测试时，可注释
             || game.state.stage === 0
     }
 
@@ -871,9 +871,9 @@ function Gaming() {
         }
     }
     // TODO 测试代码 开始
-    const handleCaptchaCancel = () => {
-        setIsCaptchaModalOpen(false)
-    }
+    // const handleCaptchaCancel = () => {
+    //     setIsCaptchaModalOpen(false)
+    // }
     // TODO 测试代码 结束
 
     // 游戏说明
@@ -935,7 +935,7 @@ function Gaming() {
                 {contextHolder}
             </Context.Provider>
             <Modal title="验证码" open={isCaptchaModalOpen}
-                onCancel={handleCaptchaCancel}
+                // onCancel={handleCaptchaCancel}
                 footer={null}>
                 <div id="CaptchaModal">
                     {isCaptchaModalOpen ?
