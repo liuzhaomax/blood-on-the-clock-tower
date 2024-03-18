@@ -22,13 +22,7 @@ func execute(game *model.Room) {
 		game.Players[i].Log += msg
 	}
 	game.Log += msg
-	// 发送日志
-	broadcast(game)
 
-	// 判断圣徒 - 邪恶胜利条件4
-	if game.Executed != nil && game.Executed.Character == Saint && !game.Executed.State.Poisoned {
-		checkout(game, game.Executed)
-	}
 	// 判断魅魔 - 有人被处决，处决的人是小恶魔，活人大于等于5个，有魅魔且没死
 	var aliveCount int // 活人数量
 	var scarletWomanIndex = -1
@@ -58,22 +52,17 @@ func execute(game *model.Room) {
 		emit(game, scarletWoman.Id)
 	}
 
-	// 处决结束，清空票池，这里只复位和提名投票有关的状态，技能影响状态在toggleNight复位
-	game.VoteLogs = map[string]string{}
-	game.VotePool = map[string]int{}
-	game.Nominated = nil
-	game.Executed = nil
-	for i := range game.Players {
-		game.Players[i].State.VotedFromButler = false
-		game.Players[i].State.VotedFromMaster = false
-	}
-	// 发送votingStep
+	// 发送日志
 	broadcast(game)
 	// 立即结算
 	checkout(game, game.Executed)
 }
 
 func findExecutee(game *model.Room) (*model.Player, int) {
+	// 被圣女弹死
+	if game.Executed != nil {
+		return game.Executed, 0
+	}
 	// 无人被提名
 	if len(game.VotePool) == 0 {
 		return nil, 0
@@ -84,17 +73,18 @@ func findExecutee(game *model.Room) (*model.Player, int) {
 			aliveCount++
 		}
 	}
-	var halfAliveCount = int(math.Ceil(float64(aliveCount / 2)))
+	var halfAliveCount = int(math.Ceil(float64(aliveCount) / 2))
 	var executeeId string
 	var executeeVoteCount int
 	var isHighestRepeated bool
 	for nominatedId, voteCount := range game.VotePool {
+		if voteCount >= halfAliveCount && voteCount == executeeVoteCount {
+			isHighestRepeated = true
+			continue
+		}
 		if voteCount >= halfAliveCount && voteCount > executeeVoteCount {
 			executeeId = nominatedId
 			executeeVoteCount = voteCount
-		}
-		if voteCount >= halfAliveCount && voteCount == executeeVoteCount {
-			isHighestRepeated = true
 		}
 	}
 	if executeeId != "" && !isHighestRepeated {

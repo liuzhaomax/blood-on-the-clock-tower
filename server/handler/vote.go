@@ -26,6 +26,8 @@ func vote(mux *sync.Mutex, game *model.Room, playerId string) {
 				// 管家的投票在endVoting结算
 				if game.Players[i].Character != Butler {
 					msgAll += fmt.Sprintf("投票 [%s] 成功\n", game.Nominated.Name)
+					// 总日志加入票池
+					game.VoteLogs[game.Nominated.Id] += msgAll
 				}
 				if game.Players[i].Character == Butler {
 					game.Nominated.State.VotedFromButler = true
@@ -33,8 +35,6 @@ func vote(mux *sync.Mutex, game *model.Room, playerId string) {
 				if game.Players[i].State.Master {
 					game.Nominated.State.VotedFromMaster = true
 				}
-				// 总日志加入票池
-				game.VoteLogs[game.Nominated.Id] += msgAll
 				// 发送个人日志
 				emit(game, playerId)
 				break

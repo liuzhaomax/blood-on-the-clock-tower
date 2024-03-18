@@ -46,8 +46,15 @@ func toggleNight(mux *sync.Mutex, game *model.Room) {
 		} else {
 			game.State.Day += 1
 			msg = fmt.Sprintf("第%d天，天亮了~\n", game.State.Day+1)
-			// 天亮 清空executed
+			// 天亮 清空executed，和其他与投票提名相关的状态
+			game.VoteLogs = map[string]string{}
+			game.VotePool = map[string]int{}
+			game.Nominated = nil
 			game.Executed = nil
+			for i := range game.Players {
+				game.Players[i].State.VotedFromButler = false
+				game.Players[i].State.VotedFromMaster = false
+			}
 		}
 		// 存入总日志
 		game.Log += msg
@@ -59,11 +66,11 @@ func toggleNight(mux *sync.Mutex, game *model.Room) {
 		game.State.Night = !game.State.Night
 
 		for i := range game.Players {
-			// 活人调整状态 - 让所有活人重新可以投票，夜转日结算，没投票还有票
+			// 活人调整状态 - 夜转日结算，没死可以再提名
 			if !game.Players[i].State.Dead {
 				game.Players[i].Ready.Nominate = true
-				game.Players[i].Ready.Nominated = true
 			}
+			game.Players[i].Ready.Nominated = true
 			// 调整玩家施放技能的准备状态
 			game.Players[i].State.Casted = true
 			game.CastPool = map[string][]string{}

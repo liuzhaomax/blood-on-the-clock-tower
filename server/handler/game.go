@@ -382,6 +382,9 @@ func initStatus(players []model.Player, replaceDrunk string) []model.Player {
 			players[i].CharacterType = Townsfolk
 			players[i].Character = replaceDrunk
 			players[i].State.Drunk = true
+			if replaceDrunk == Slayer {
+				players[i].State.Bullet = true
+			}
 		case FortuneTeller:
 			for {
 				randIdx := rand.Intn(len(players))

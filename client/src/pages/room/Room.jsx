@@ -194,7 +194,7 @@ function Room() {
                 closable={false}
                 onClose={onCloseInstruction}
                 open={openInstruction}
-                key="top"
+                key="instruction"
             >
                 <Instruction/>
             </Drawer>
@@ -204,7 +204,7 @@ function Room() {
                 closable={false}
                 onClose={onCloseUpdateLog}
                 open={openUpdateLog}
-                key="top"
+                key="updateLog"
             >
                 <UpdateLog/>
             </Drawer>

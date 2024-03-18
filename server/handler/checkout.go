@@ -170,22 +170,25 @@ func checkoutNight(mux *sync.Mutex, game *model.Room) {
 						// 生成随机信息
 						for {
 							randInt := rand.Intn(len(game.Players))
-							if (game.Players[randInt].CharacterType == Outsiders || game.Players[randInt].State.Drunk) &&
-								game.Players[randInt].Id != player.Id && game.Players[randInt].Character != Recluse &&
-								game.Players[randInt].Character != Spy {
+							if game.Players[randInt].CharacterType == Outsiders && game.Players[randInt].Id != player.Id &&
+								game.Players[randInt].Character != Recluse && game.Players[randInt].Character != Spy {
 								outsider = game.Players[randInt]
 								character = game.Players[randInt].Character
 								break
 							}
+							// 如果是酒鬼被选中
+							if game.Players[randInt].State.Drunk && game.Players[randInt].Id != player.Id &&
+								game.Players[randInt].Character != Recluse && game.Players[randInt].Character != Spy {
+								outsider = game.Players[randInt]
+								character = Drunk
+								break
+							}
+							// 如果间谍被选中
 							if game.Players[randInt].Character == Spy && game.Players[randInt].State.RegisteredAsType == Outsiders {
 								outsider = game.Players[randInt]
 								character = game.Players[randInt].State.RegardedAs
 								break
 							}
-						}
-						// 如果是酒鬼被选中
-						if outsider.CharacterType != Outsiders {
-							character = Drunk
 						}
 						for {
 							randInt := rand.Intn(len(game.Players))
@@ -781,7 +784,7 @@ func checkoutNight(mux *sync.Mutex, game *model.Room) {
 			msgAll = ""
 			// 拼接日志
 			msgAll += fmt.Sprintf("[%s] ", fromPlayer.Name)
-			info := fmt.Sprintf("认定 [%s] 为主人，他投你可选投，他不投你也不能投\n", game.Players[toPlayerIndexSlice[0]].Name)
+			info := fmt.Sprintf("认定 [%s] 为主人，他投你可选投，他不投你票无效\n", game.Players[toPlayerIndexSlice[0]].Name)
 			msgPlayer += info
 			msgAll += info
 			game.Players[fromPlayer.Index].Log += msgPlayer
@@ -840,6 +843,7 @@ func checkout(game *model.Room, executed *model.Player) {
 	var mayorAlive bool        // 市长是否存活
 	var scarletWomanAlive bool // 魅魔是否存活
 	var poisonerAlive bool     // 下毒者是否存活
+	var demonCount int         // 恶魔数量（不论死活）
 	for _, player := range game.Players {
 		// 对应平民胜利条件1
 		if player.CharacterType == Demons && !player.State.Dead {
@@ -870,6 +874,9 @@ func checkout(game *model.Room, executed *model.Player) {
 		if !player.State.Dead && (player.CharacterType == Demons || player.CharacterType == Minions) {
 			evilAliveCount++
 		}
+		if player.CharacterType == Demons {
+			demonCount++
+		}
 	}
 	// 平民胜利条件1（恶魔受不了了自杀情况），这里有三种铲除恶魔的可能：1、杀手，2、处决，3、自刀。
 	// 处决在结算投票时判定，枪杀在枪手施法后判定，自刀在判定刀人时判定，所以realDemonCount不可能为0
@@ -899,8 +906,8 @@ func checkout(game *model.Room, executed *model.Player) {
 	}
 	// 邪恶胜利条件3
 	halfAlive := int(math.Ceil(float64(aliveCount / 2)))
-	if game.Result == "" && aliveCount <= 4 && canVote-evilAliveCount <= halfAlive && evilAliveCount >= halfAlive && !hasSlayerBullet && !mayorAlive {
-		msg += "达成邪恶胜利条件三：活人数小于等于4，平民可投的票数不大于活人的半数（向上取整），且存活的邪恶玩家数量不小于活人的半数（向上取整），且没有杀手或有杀手没有子弹，且没有市长或市长已死或酒鬼市长\n"
+	if game.Result == "" && aliveCount <= 4 && demonCount == 1 && canVote-evilAliveCount <= halfAlive && evilAliveCount >= halfAlive && !hasSlayerBullet && !mayorAlive {
+		msg += "达成邪恶胜利条件三：活人数小于等于4，未发生爪牙转化为恶魔，平民可投的票数不大于活人的半数（向上取整），且存活的邪恶玩家数量不小于活人的半数（向上取整），且没有杀手或有杀手没有子弹，且没有市长或市长已死或酒鬼市长\n"
 		msg += "本局结束，邪恶胜利\n"
 		game.Result = "邪恶阵营胜利"
 	}

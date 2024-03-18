@@ -40,7 +40,7 @@ function Gaming() {
         }
         socket.onmessage = function(event) {
             // TODO 内测用，记得关闭
-            // console.log("Received message from server:", JSON.parse(event.data))
+            console.log("Received message from server:", JSON.parse(event.data))
             setGame(JSON.parse(event.data))
         }
         socket.onerror = function(error) {
@@ -212,14 +212,14 @@ function Gaming() {
             let me = getMe(game)
             // 当前玩家死亡，他不能提名，不能施法，则他看其他死了的玩家就是加灰色不能选择
             // 当前玩家没死，他就不可能看到灰色
-            if (me.state.dead) {
-                for (let i = 0; i < game.players.length; i++) {
-                    if (game.players[i].state.dead) {
-                        let seat = document.getElementById(game.players[i].id)
-                        if (!seat.classList.contains("highlight-dead")) {
-                            seat.classList.add("highlight-dead")
-                            seat.classList.add("highlight-dead-cant-be-selected")
-                        }
+            for (let i = 0; i < game.players.length; i++) {
+                if (game.players[i].state.dead) {
+                    let seat = document.getElementById(game.players[i].id)
+                    if (!seat.classList.contains("highlight-dead")) {
+                        seat.classList.add("highlight-dead")
+                    }
+                    if (me.state.dead && !seat.classList.contains("highlight-dead-cant-be-selected")) {
+                        seat.classList.add("highlight-dead-cant-be-selected")
                     }
                 }
             }
@@ -234,9 +234,9 @@ function Gaming() {
             for (let i = 0; i < game.players.length; i++) {
                 // 投票标签
                 tagTou = document.getElementById(game.players[i].id + "-tou")
-                if (game.players[i].ready.vote > 0 && tagTou.classList.contains("tag-hidden")) {
+                if (game.players[i].ready.vote && tagTou.classList.contains("tag-hidden")) {
                     tagTou.classList.remove("tag-hidden")
-                } else if (game.players[i].ready.vote === 0 && !tagTou.classList.contains("tag-hidden")) {
+                } else if (!game.players[i].ready.vote && !tagTou.classList.contains("tag-hidden")) {
                     tagTou.classList.add("tag-hidden")
                     if (game.players[i].state.master) {
                         butlerTou = true
@@ -526,7 +526,7 @@ function Gaming() {
         let me = getMe(game)
         if (me.ready.vote && game.state.votingStep && game.state.stage !== 0) {
             for (let j = 0; j < game.players.length; j++) {
-                if (game.players[j].state.nominated) {
+                if (game.nominated) {
                     emitVote()
                     break
                 }
@@ -646,15 +646,15 @@ function Gaming() {
             return "本局未开始，不能投票"
         }
         if (!me.ready.vote) {
-            return "您本阶段已投过票"
+            return "您已不能投票"
         }
         if (!game.state.votingStep) {
             return "不在投票处决环节不能投票"
         }
-        if (me.ready.vote > 0 && game.state.votingStep) {
+        if (me.ready.vote && game.state.votingStep) {
             let content = "你确定要投票给玩家 "
             for (let j = 0; j < game.players.length; j++) {
-                if (game.players[j].state.nominated) {
+                if (game.nominated) {
                     content += "<" + game.players[j].name + "> "
                     break
                 }
@@ -673,7 +673,7 @@ function Gaming() {
         if (me.state.dead) {
             return "您已死亡"
         }
-        if (game.state.votingStep) {
+        if (game.state.votingStep && me.character !== "杀手") {
             return "投票阶段不能发动技能"
         }
         let selectedPlayersObj = []
@@ -956,7 +956,7 @@ function Gaming() {
                 closable={false}
                 onClose={onClose}
                 open={open}
-                key="top"
+                key="instruction"
             >
                 <Instruction/>
             </Drawer>
