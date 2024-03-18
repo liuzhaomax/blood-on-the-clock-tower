@@ -223,9 +223,17 @@ func checkoutNight(mux *sync.Mutex, game *model.Room) {
 				// 拼接日志
 				msgAll += fmt.Sprintf("[%s] ", player.Name)
 				var info string
-				if !hasOutsider {
+				if !hasOutsider && !player.State.Drunk && !player.State.Poisoned {
 					info = "发现本局 {没有外来者}\n"
+				} else if hasOutsider && !player.State.Drunk && !player.State.Poisoned {
+					randInt := rand.Intn(2)
+					if randInt == 0 {
+						info = fmt.Sprintf("发现 [%s] 和 [%s] 其中一个是 {%s}\n", outsider.Name, other.Name, character)
+					} else {
+						info = fmt.Sprintf("发现 [%s] 和 [%s] 其中一个是 {%s}\n", other.Name, outsider.Name, character)
+					}
 				} else {
+					// 不管有没有外来者，铁假话，也可能说出没有外来者
 					randFixedNum := 51 // 假话：没有外来者，的概率是1/51
 					if len(game.Players) > randFixedNum {
 						randFixedNum = len(game.Players)
@@ -324,7 +332,7 @@ func checkoutNight(mux *sync.Mutex, game *model.Room) {
 				// 拼接日志
 				msgAll += fmt.Sprintf("[%s] ", player.Name)
 				var info string
-				if hasSpyOnly {
+				if hasSpyOnly && !player.State.Drunk && !player.State.Poisoned {
 					info = "发现本局 {没有爪牙}\n"
 				} else {
 					randInt := rand.Intn(2)
