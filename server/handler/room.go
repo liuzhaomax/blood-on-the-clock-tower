@@ -181,7 +181,10 @@ func startGame(room *model.Room) {
 		room.Result = ""
 		room.Log = ""
 		room.CastPool = map[string][]string{}
-		room.VotePool = map[string]string{}
+		room.VoteLogs = map[string]string{}
+		room.VotePool = map[string]int{}
+		room.Nominated = nil
+		room.Executed = nil
 		room.State = model.GameState{}
 	}
 

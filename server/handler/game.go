@@ -110,7 +110,10 @@ func initGame(mux *sync.Mutex, game *model.Room, playerId string, conn *websocke
 		game.Log = ""
 		game.Executed = nil
 		game.CastPool = map[string][]string{}
-		game.VotePool = map[string]string{}
+		game.VoteLogs = map[string]string{}
+		game.VotePool = map[string]int{}
+		game.Nominated = nil
+		game.Executed = nil
 		game.State = model.GameState{}
 		// 初始化玩家状态 防止非法返回房间引起bug
 		for i, player := range game.Players {
@@ -349,7 +352,7 @@ func initStatus(players []model.Player, replaceDrunk string) []model.Player {
 	for i, player := range players {
 		players[i].Ready.Nominate = true
 		players[i].Ready.Nominated = true
-		players[i].Ready.Vote = 1
+		players[i].Ready.Vote = true
 		switch player.Character {
 		case Imp:
 			players[i].State.Evil = true
