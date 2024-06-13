@@ -1,1 +1,1 @@
-sudo docker build -t bloodbe:latest .
+docker build -t bloodbe:latest .
